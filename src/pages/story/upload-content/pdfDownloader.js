@@ -75,26 +75,26 @@ const PdfDownloader = ({ storyData, isShikshalokam, downloadTriggered, handleDow
     }
   }, [downloadTriggered, contentPDF, currentState, current_company])
 
-  useEffect(() => {
-    if (!accessToken) return
+  // useEffect(() => {
+  //   if (!accessToken) return
 
-    let profID = cookie.get("profileid")
+  //   let profID = cookie.get("profileid")
 
-    getProfileUserApi(profID, accessToken)
-      .then(response => {
-        if (response) {
-          setUserData(prev => ({
-            ...prev,
-            authorName: response?.first_name,
-            organization: response?.org_associated,
-            address: !!response?.profile_address[0] ? response?.profile_address[0]?.district : "",
-          }))
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching profile user:", error)
-      })
-  }, [accessToken])
+  //   getProfileUserApi(profID, accessToken)
+  //     .then(response => {
+  //       if (response) {
+  //         setUserData(prev => ({
+  //           ...prev,
+  //           authorName: response?.first_name,
+  //           organization: response?.org_associated,
+  //           address: !!response?.profile_address[0] ? response?.profile_address[0]?.district : "",
+  //         }))
+  //       }
+  //     })
+  //     .catch(error => {
+  //       console.error("Error fetching profile user:", error)
+  //     })
+  // }, [accessToken])
 
   useEffect(() => {
     if (current_company) {

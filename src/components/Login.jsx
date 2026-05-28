@@ -433,7 +433,7 @@ function Login({ type, variant }) {
                       className="text-purple-600 hover:underline whitespace-nowrap"
                       onClick={e => {
                         e.preventDefault()
-                        window.open("/mohini" + ROUTES.TERMS_AND_CONDITIONS, "_blank")
+                        window.open(ROUTES.TERMS_AND_CONDITIONS, "_blank")
                         // navigate(ROUTES.TERMS_AND_CONDITIONS);
                       }}
                     >

@@ -1004,14 +1004,14 @@ const ShikshalokamVoiceBasedChat = ({ type = "", variant = "" }) => {
     }
   }, [botName])
 
-  useEffect(() => {
-    if (!profileToUse) {
-      setCompanySlug("shikshalokamstaging")
-      return
-    }
+  // useEffect(() => {
+  //   if (!profileToUse) {
+  //     setCompanySlug("shikshalokamstaging")
+  //     return
+  //   }
 
-    getProfileUserApi(profileToUse, accessToken).then(profile => setCompanySlug(profile?.company?.slug))
-  }, [profileToUse])
+  //   getProfileUserApi(profileToUse, accessToken).then(profile => setCompanySlug(profile?.company?.slug))
+  // }, [profileToUse])
 
   /**
    * Initialize new chat state based on existing chat history
