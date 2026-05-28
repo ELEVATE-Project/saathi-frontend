@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
 import { createMessage } from "../interview-voice"
-import { createUserProfileApi, getProfileUserApi } from "api/endpoints/user"
+import { createUserProfileApi } from "api/endpoints/user"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
 import { FaCircle } from "react-icons/fa6"
@@ -995,15 +995,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
       setBotNameToDisplay(botName)
     }
   }, [botName])
-
-  useEffect(() => {
-    if (!profileToUse) {
-      setCompanySlug("shikshalokamstaging")
-      return
-    }
-
-    getProfileUserApi(profileToUse, accessToken).then(profile => setCompanySlug(profile?.company?.slug))
-  }, [profileToUse])
 
   /**
    * Initialize new chat state based on existing chat history
