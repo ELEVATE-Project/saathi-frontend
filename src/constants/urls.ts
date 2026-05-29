@@ -15,7 +15,6 @@ export const API_ENDPOINTS = {
   GET_USER_PROFILE: "/api/user_profile",
   LOGIN: "/api/login/",
   LOGOUT: "/api/logout/",
-  PROFILE_USER: "/api/profileuser/",
   READ_ELEVATE_PROFILE: "/api/shikshalokam/read-elevate-profile/",
   SAVE_PTM_QUESTION: "/api/questions/save/",
   STORY_MEDIA: "/api/storymedia/",

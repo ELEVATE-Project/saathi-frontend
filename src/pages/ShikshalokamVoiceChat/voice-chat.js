@@ -8,7 +8,7 @@ import { buildWebSocketUrl } from "../../utils/helpers"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
 import { createMessage } from "../interview-voice"
 import { createStoryMediaApi, getStoryAllMedia, partialUpdateStoryById } from "api/endpoints/story"
-import { createUserProfileApi, getProfileUserApi } from "api/endpoints/user"
+import { createUserProfileApi } from "api/endpoints/user"
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload } from "react-icons/fi"
@@ -1003,15 +1003,6 @@ const ShikshalokamVoiceBasedChat = ({ type = "", variant = "" }) => {
       setBotNameToDisplay(botName)
     }
   }, [botName])
-
-  useEffect(() => {
-    if (!profileToUse) {
-      setCompanySlug("shikshalokamstaging")
-      return
-    }
-
-    getProfileUserApi(profileToUse, accessToken).then(profile => setCompanySlug(profile?.company?.slug))
-  }, [profileToUse])
 
   /**
    * Initialize new chat state based on existing chat history

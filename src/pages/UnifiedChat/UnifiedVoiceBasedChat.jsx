@@ -479,7 +479,7 @@ const UnifiedVoiceBasedChat = ({ flowType }) => {
               window.location.href = previousUrl
             } else {
               // navigate(flowConfig.homePageRoute)
-              window.location.replace("/mohini" + ROUTES.SHIKSHALOKAM_HOME_PAGE)
+              window.location.replace(ROUTES.SHIKSHALOKAM_HOME_PAGE)
             }
           } else {
             resetChatState()
@@ -513,11 +513,11 @@ const UnifiedVoiceBasedChat = ({ flowType }) => {
         console.log("flowType", flowType)
         stopAllAudio()
         if (flowType === sessionFlowName.megaPTM) {
-          window.location.replace("/mohini" + ROUTES.SHIKSHALOKAM_PTM_HOME_PAGE)
+          window.location.replace(ROUTES.SHIKSHALOKAM_PTM_HOME_PAGE)
         } else if (flowType === sessionFlowName.YLC) {
-          window.location.replace("/mohini" + ROUTES.SHIKSHALOKAM_YLC_HOME_PAGE)
+          window.location.replace(ROUTES.SHIKSHALOKAM_YLC_HOME_PAGE)
         } else {
-          window.location.replace("/mohini" + ROUTES.SHIKSHALOKAM_HOME_PAGE)
+          window.location.replace(ROUTES.SHIKSHALOKAM_HOME_PAGE)
         }
       }
     })
