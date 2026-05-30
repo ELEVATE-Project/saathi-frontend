@@ -950,7 +950,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           console.log("inside navigate happens")
           navigate(-2)
         } else {
-          showGuestPopup(navigateBack, stayOnPage)
+          navigateBack()
         }
       } else {
         setLanguage(languageList[0].value)
@@ -1845,6 +1845,9 @@ const DynamicVoiceChat = ({ type = "" }) => {
   async function downloadFileFromUrl(url) {
     try {
       const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`)
+      }
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -1988,12 +1991,13 @@ const DynamicVoiceChat = ({ type = "" }) => {
     try {
       if (!flowInfo.bot_route) return
 
-      if (id === "intro_msg_id" && isIntroPlayed.current === true) {
+      if (id === "intro_msg_id") {
+        setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
+        setIsNextAllowed(true)
+        setHasOverRideId(null)
         return
       }
-      if (id === "intro_msg_id") {
-        isIntroPlayed.current = true
-      }
+      setIsNextAllowed(false)
       let cachedAudioUrl = audioCache[id]
       let audio_result = ""
       let audio
@@ -2004,7 +2008,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
       let storedRoute = flowInfo.bot_route
 
-      if (!hasOverRideId) {
+      if (!hasOverRideId && id !== "intro_msg_id") {
         handleMessagesForBot(text)
       }
 
@@ -2288,7 +2292,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           {!showHomepage && (
             <ul className="div34">
               {chatHistory &&
-                chatHistory?.map((chat, i) => (
+                chatHistory?.filter(chat => chat.updated_at !== "intro_msg_id")?.map((chat, i) => (
                   <li key={i} className={`div34 div35 label1`}>
                     <div className={`div36 ${chat?.source === "user" && "div37"}`}>
                       <ChatMessage
@@ -2371,20 +2375,20 @@ const DynamicVoiceChat = ({ type = "" }) => {
                       <div className="div10">
                         <h3 className="h3-1">
                           {t(`${prefix}homepageHeading`)}
-                          <br />
-                          {t(`${prefix}homepageHeading1`)}
                         </h3>
+                        <p style={{ textAlign: "center", lineHeight: "1.8" }}>
+                          {t(`${prefix}homepageList`)}
+                          <br />
+                          {t(`${prefix}homepageList1`)}
+                          <br />
+                          {t(`${prefix}homepageList2`)}
+                        </p>
                       </div>
-                      <ul className="div11">
-                        <li>{t(`${prefix}homepageList`)}</li>
-                        <li>{t(`${prefix}homepageList1`)}</li>
-                        <li>{t(`${prefix}homepageList2`)}</li>
-                      </ul>
                     </>
                   )
                 })()}
 
-              {chatHistory?.length > 0 && (
+              {chatHistory?.length > 0 && chatHistory[0]?.updated_at !== "intro_msg_id" && chatHistory[0]?.msg !== introMessage && (
                 <div className="div26">
                   <div className="div36 div12">
                     <ChatMessage

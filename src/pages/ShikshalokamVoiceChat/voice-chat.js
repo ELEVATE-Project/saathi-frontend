@@ -2915,8 +2915,6 @@ function handleLlmError(errorMessage, errorType) {
                       <div className="div10">
                         <h3 className="h3-1">
                           {t(`${prefix}homepageHeading`)}
-                          <br />
-                          {t(`${prefix}homepageHeading1`)}
                         </h3>
                       </div>
                       <ul className="div11">
