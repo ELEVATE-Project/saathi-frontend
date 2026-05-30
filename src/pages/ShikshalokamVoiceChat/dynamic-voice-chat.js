@@ -950,7 +950,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           console.log("inside navigate happens")
           navigate(-2)
         } else {
-          showGuestPopup(navigateBack, stayOnPage)
+          navigateBack
         }
       } else {
         setLanguage(languageList[0].value)
@@ -1845,6 +1845,9 @@ const DynamicVoiceChat = ({ type = "" }) => {
   async function downloadFileFromUrl(url) {
     try {
       const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`)
+      }
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
