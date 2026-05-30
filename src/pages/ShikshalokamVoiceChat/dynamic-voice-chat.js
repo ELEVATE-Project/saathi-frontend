@@ -43,7 +43,6 @@ import List from "@editorjs/list"
 import MainHeader from "./shikshaChatHeader"
 import Notification, { showNotification } from "../../components/ToastMessage/TotastMessage"
 import PdfDownloader from "../story/upload-content/pdfDownloader"
-import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
@@ -106,7 +105,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
   const accessToken = useUserDataLocalStore(state => state.access_token)
-  const acceptedTnc = useUserStorage()(state => state.has_accepted_tnc)
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
@@ -140,7 +138,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const { setShowHomepage, setBotName, setChatbotClickedOn, setDefaultBotName, setIntroMessage, setIsChatVisible, setIsNewChatOpen, setIsOldChatOpen, setSelectedType, setSessionId, setStateMachineLength } = useChatStorage().getState()
 
   // user data actions
-  const { setAcceptedTnC, setCompanyName, setFirstName, setState } = useUserStorage().getState()
+  const { setCompanyName, setFirstName, setState } = useUserStorage().getState()
   const { llmError, setLlmError } = useChatStorage().getState()
   const { setProfileId: setProfileToUse } = useUserStorage().getState()
 
@@ -150,6 +148,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const isInitialLoadRef = useRef(true)
   const endPageToScrollRef = useRef(null)
   const isIntroPlayed = useRef(false)
+  const pendingExtraContent = useRef(null)
 
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
@@ -317,6 +316,9 @@ const DynamicVoiceChat = ({ type = "" }) => {
       handleScrollToView()
       setTalking(0)
       setIsStreamingComplete(true)
+      if (message?.extra_content) {
+        pendingExtraContent.current = message.extra_content
+      }
     }
   }, [])
 
@@ -326,19 +328,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
   // ========== useMemo Hooks ==========
 
   const projectId = useMemo(() => projectIdStore || searchParams.get("projectId"), [projectIdStore, searchParams])
-
-  const tncText = useMemo(() => {
-    let tncMap ={
-      [sessionFlowName.StudyTeacherInterview]: "fgd_tncText",
-      [sessionFlowName.StakeholderFGD]: "fgd_tncText",
-      [sessionFlowName.BiharStudentFGD]: "fgd_tncText",
-      [sessionFlowName.CommunityFGD]: "fgd_tncText",
-    }
-    if (tncMap[storageFlow]) {
-      return tncMap[storageFlow]
-    }
-    return "tncText"
-  }, [storageFlow])
 
   const shouldFetchChatSession = useMemo(() => {
     return storageFlow && [sessionFlowName.Reflection].includes(storageFlow)
@@ -738,18 +727,25 @@ const DynamicVoiceChat = ({ type = "" }) => {
         return
       }
 
+      const extra_content = pendingExtraContent.current
+      pendingExtraContent.current = null
+
       if (chat_history[chatHistory?.length - 1]?.source === "bot") {
         const lastMessage = chat_history[chatHistory?.length - 1]
         lastMessage.msg += " " + sentence
+        if (extra_content) lastMessage.extra_content = extra_content
         setChatHistory([...chat_history])
       } else {
         setChatHistory([
           ...chat_history,
-          createMessage({
-            msg: sentence,
-            source: "bot",
-            received: true,
-          }),
+          {
+            ...createMessage({
+              msg: sentence,
+              source: "bot",
+              received: true,
+            }),
+            ...(extra_content && { extra_content }),
+          },
         ])
       }
     },
@@ -949,9 +945,9 @@ const DynamicVoiceChat = ({ type = "" }) => {
       console.log("History length:", window.history.length)
       console.log("Can go back 1?", window.history.length > 1)
       console.log("Can go back 3?", window.history.length > 3)
-      if ((acceptedTnc || acceptedTnc === "ONGOING") && currentFlow) {
+      if (currentFlow) {
         if (ssoNavigationTriggered && accessToken) {
-          console.log("isnide navigate happens")
+          console.log("inside navigate happens")
           navigate(-2)
         } else {
           showGuestPopup(navigateBack, stayOnPage)
@@ -979,7 +975,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     return () => {
       window.removeEventListener("popstate", handleBack)
     }
-  }, [navigate, acceptedTnc])
+  }, [navigate])
 
   // ========================================================================
   // SECTION: Initial Configuration (Execution Order: 2 - On Mount & Specific Deps)
@@ -1008,7 +1004,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   /**
    * Initialize language selection for guest flows on mount
-   * Handles language change and TnC acceptance for guest users
+   * Handles language change for guest users
    */
   useEffect(() => {
     const handleLanguageSelect = language => {
@@ -1022,15 +1018,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         setLangProgress("IN_PROGRESS")
         setAudioCache({})
         setLanguage(language)
-
-        const isTncAccepted = acceptedTnc
-        if (isTncAccepted && isTncAccepted !== "ONGOING") {
-          setIsLoading(false)
-          setAcceptedTnC(true)
-          setShouldFetchIntro(true)
-        } else {
-          // setIsLoading(false)
-        }
+        setShouldFetchIntro(true)
       }
     }
     if (chatLanguage && storageFlow) {
@@ -1260,7 +1248,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
       return
     }
 
-    if (!endStoryMutation.isPending && isStreamingComplete && stateMachineLength && strandStep >= stateMachineLength && noStoryFound && (!llmError || llmError === "") && acceptedTnc && acceptedTnc !== "ONGOING") {
+    if (!endStoryMutation.isPending && isStreamingComplete && stateMachineLength && strandStep >= stateMachineLength && noStoryFound && (!llmError || llmError === "")) {
       callEndStory()
     }
   }, [isStreamingComplete, accessToken, stateMachineLength, languageToUse, noStoryFound, storageFlow, sentences])
@@ -1339,7 +1327,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * Prevents background scrolling when modals or loaders are active
    */
   useEffect(() => {
-    if (isLoading || endStoryMutation.isPending || isModalOpen || acceptedTnc === "ONGOING") {
+    if (isLoading || endStoryMutation.isPending || isModalOpen) {
       document.body.style.overflowY = "hidden"
     } else {
       document.body.style.overflowY = "auto"
@@ -1412,10 +1400,10 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * Ensures user sees upload controls after story completion
    */
   useEffect(() => {
-    if (!isLoading && showFileInput && acceptedTnc !== "ONGOING") {
+    if (!isLoading && showFileInput) {
       endPageToScrollRef.current?.scrollIntoView({ behavior: "smooth" })
     }
-  }, [isLoading, showFileInput, acceptedTnc])
+  }, [isLoading, showFileInput])
 
   /**
    * Attach audio recordings to user messages in chat history
@@ -1491,7 +1479,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         shouldPlay = true
       }
     }
-    if (isStreamingComplete && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && acceptedTnc && acceptedTnc !== "ONGOING" && !isIntroMessageLoading) {
+    if (isStreamingComplete && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading) {
       const speakerButtons = document.querySelectorAll(".button-11.button-3")
       const lastSpeakerButton = speakerButtons[speakerButtons.length - 1]
 
@@ -1499,7 +1487,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         lastSpeakerButton.click()
       }
     }
-  }, [isStreamingComplete, showFileInput, showHomepage, endStoryMutation.isPending, isLoading, isPdfDownloading, storyData, chatHistory, isMute, acceptedTnc, isIntroMessageLoading, noStoryFound])
+  }, [isStreamingComplete, showFileInput, showHomepage, endStoryMutation.isPending, isLoading, isPdfDownloading, storyData, chatHistory, isMute, isIntroMessageLoading, noStoryFound])
 
   /**
    * Process TTS requests for unnarrated bot messages
@@ -1509,9 +1497,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
     let unnarratedMessages = sentences.filter(x => !x?.isNarrated)
     let hasUnnarratedMessages = !!unnarratedMessages?.length
     let sourceLanguage = languageToUse
-    if (acceptedTnc === "ONGOING") {
-      return () => {}
-    }
     console.log({
       hasUnnarratedMessages,
     })
@@ -1520,7 +1505,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     }
 
     return () => {}
-  }, [isNextAllowed, sentences, languageToUse, isLoading, endStoryMutation.isPending, acceptedTnc, flowInfo])
+  }, [isNextAllowed, sentences, languageToUse, isLoading, endStoryMutation.isPending, flowInfo])
 
   // ========================================================================
   // SECTION: Editor Management (Execution Order: 10 - When Modal Opens)
@@ -1857,6 +1842,23 @@ const DynamicVoiceChat = ({ type = "" }) => {
     window.history.pushState(null, "", window.location.href)
   }
 
+  async function downloadFileFromUrl(url) {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = url.split("/").pop() || "download"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error("Download failed:", error)
+    }
+  }
+
   const handleDownloadStop = () => {
     setTriggerDownload(false)
     setIsLoading(false)
@@ -1907,7 +1909,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
   }
 
   function handleScrollToView() {
-    if (acceptedTnc === "ONGOING") return
     try {
       document?.querySelector("#last-chat-boundary")?.scrollIntoView({
         behavior: "smooth",
@@ -2213,16 +2214,8 @@ const DynamicVoiceChat = ({ type = "" }) => {
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
-  function handleAcceptTnC() {
-    setAcceptedTnC(true)
-    setShouldFetchIntro(true)
-  }
-
   return (
     <>
-      {acceptedTnc === "ONGOING" && !isLoading && shouldFetchChatSession && <PrivacyPolicyPopup tncText={t(tncText)} onAccept={handleAcceptTnC} />}
-
-      {chatLanguage && acceptedTnc === "ONGOING" && !isLoading && storageFlow && <PrivacyPolicyPopup tncText={t(tncText)} onAccept={handleAcceptTnC} useStaticText={false} />}
       <div className={`div27`}>
         <div className={isMobile ? "div30_a" : "div30"}>
           <MainHeader
@@ -2318,6 +2311,28 @@ const DynamicVoiceChat = ({ type = "" }) => {
                         chatId={chat?.updated_at}
                       />
                     </div>
+                    {chat?.extra_content && chat?.extra_content.download && (chat.extra_content.download.pdf_url || chat.extra_content.download.docx_url) && (
+                      <div style={{ display: "flex", gap: "8px", marginTop: "6px", marginLeft: "44px" }}>
+                        {chat.extra_content.download.pdf_url && (
+                          <button
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url)}
+                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
+                          >
+                            <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>PDF</span>
+                          </button>
+                        )}
+                        {chat.extra_content.download.docx_url && (
+                          <button
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url)}
+                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
+                          >
+                            <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>DOCX</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {!hasStartedListening && chatHistory[chatHistory?.length - 1].source === "user" && i === chatHistory?.length - 1 ? (
                       <div className="div57">
                         <div className="div58">
