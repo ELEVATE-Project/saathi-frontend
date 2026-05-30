@@ -1991,11 +1991,11 @@ const DynamicVoiceChat = ({ type = "" }) => {
     try {
       if (!flowInfo.bot_route) return
 
-      if (id === "intro_msg_id" && isIntroPlayed.current === true) {
-        return
-      }
       if (id === "intro_msg_id") {
-        isIntroPlayed.current = true
+        setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
+        setIsNextAllowed(true)
+        setHasOverRideId(null)
+        return
       }
       let cachedAudioUrl = audioCache[id]
       let audio_result = ""
@@ -2007,7 +2007,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
       let storedRoute = flowInfo.bot_route
 
-      if (!hasOverRideId) {
+      if (!hasOverRideId && id !== "intro_msg_id") {
         handleMessagesForBot(text)
       }
 
@@ -2291,7 +2291,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           {!showHomepage && (
             <ul className="div34">
               {chatHistory &&
-                chatHistory?.map((chat, i) => (
+                chatHistory?.filter(chat => chat.updated_at !== "intro_msg_id")?.map((chat, i) => (
                   <li key={i} className={`div34 div35 label1`}>
                     <div className={`div36 ${chat?.source === "user" && "div37"}`}>
                       <ChatMessage
@@ -2387,7 +2387,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                   )
                 })()}
 
-              {chatHistory?.length > 0 && (
+              {chatHistory?.length > 0 && chatHistory[0]?.updated_at !== "intro_msg_id" && chatHistory[0]?.msg !== introMessage && (
                 <div className="div26">
                   <div className="div36 div12">
                     <ChatMessage
@@ -2645,7 +2645,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                 name="message-box"
                 value={textMessage}
                 autoFocus={false}
-                disabled={hasStartedRecording || isFetchingData || (!isSimpleBot && strandStep >= stateMachineLength)}
+                disabled={hasStartedRecording || isFetchingData || (!isSimpleBot && !!stateMachineLength && strandStep >= stateMachineLength)}
                 ref={textAreaRef}
                 onInput={e => {
                   e.target.style.height = "auto"
