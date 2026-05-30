@@ -1997,6 +1997,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         setHasOverRideId(null)
         return
       }
+      setIsNextAllowed(false)
       let cachedAudioUrl = audioCache[id]
       let audio_result = ""
       let audio
@@ -2645,7 +2646,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                 name="message-box"
                 value={textMessage}
                 autoFocus={false}
-                disabled={hasStartedRecording || isFetchingData || (!isSimpleBot && !!stateMachineLength && strandStep >= stateMachineLength)}
+                disabled={hasStartedRecording || isFetchingData || (!isSimpleBot && strandStep >= stateMachineLength)}
                 ref={textAreaRef}
                 onInput={e => {
                   e.target.style.height = "auto"
