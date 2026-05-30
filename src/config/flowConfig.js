@@ -36,7 +36,6 @@ export const FLOW_CONFIG = {
     completionMessageKey: "ptmCompletionMessage",
     completionCTAKey: "ptmCompletionCTA",
     introHeadingKey: "homepageHeading",
-    introHeadingKey1: "homepageHeading1",
     introLines: ["homepageList", "homepageList1", "homepageList2"],
     uploadPhotoKey: "evidenceStory",
     showCompletionPopup: false,

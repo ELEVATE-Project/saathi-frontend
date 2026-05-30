@@ -950,7 +950,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           console.log("inside navigate happens")
           navigate(-2)
         } else {
-          navigateBack
+          navigateBack()
         }
       } else {
         setLanguage(languageList[0].value)
@@ -2374,15 +2374,15 @@ const DynamicVoiceChat = ({ type = "" }) => {
                       <div className="div10">
                         <h3 className="h3-1">
                           {t(`${prefix}homepageHeading`)}
-                          <br />
-                          {t(`${prefix}homepageHeading1`)}
                         </h3>
+                        <p style={{ textAlign: "center", lineHeight: "1.8" }}>
+                          {t(`${prefix}homepageList`)}
+                          <br />
+                          {t(`${prefix}homepageList1`)}
+                          <br />
+                          {t(`${prefix}homepageList2`)}
+                        </p>
                       </div>
-                      <ul className="div11">
-                        <li>{t(`${prefix}homepageList`)}</li>
-                        <li>{t(`${prefix}homepageList1`)}</li>
-                        <li>{t(`${prefix}homepageList2`)}</li>
-                      </ul>
                     </>
                   )
                 })()}
