@@ -1284,7 +1284,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     if (
       storageFlow &&
       flowInfo?.create_story === "none" &&
-      !isSimpleBot &&
+      isSimpleBot === false &&
       isStreamingComplete &&
       stateMachineLength &&
       strandStep >= stateMachineLength &&
