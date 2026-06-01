@@ -166,7 +166,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     refetchOnReconnect: false,
   })
 
-  const { data: companyBotData, isLoading: isCompanyBotLoading } = useQuery({
+  const { data: companyBotData } = useQuery({
     queryKey: [API_ENDPOINTS.GET_COMPANY_BOT, companySlug, flowInfo?.bot_route, languageToUse, accessToken],
     queryFn: () => getCompanyBotApi({ company_slug: companySlug, route: flowInfo.bot_route, target_language: languageToUse }),
     enabled: !!(languageToUse && shouldFetchIntro && isNewChatOpen && profileToUse && flowInfo?.bot_route),
@@ -191,7 +191,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   const isSimpleBot = useMemo(() => {
     const bots = companyBotData?.results
-    if (!bots || bots.length === 0) return false
+    if (!bots || bots.length === 0) return null
     return bots[0]?.bot_type === "SIMPLE"
   }, [companyBotData])
 
@@ -1284,7 +1284,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     if (
       storageFlow &&
       flowInfo?.create_story === "none" &&
-      !isSimpleBot &&
+      isSimpleBot === false &&
       isStreamingComplete &&
       stateMachineLength &&
       strandStep >= stateMachineLength &&
@@ -2646,7 +2646,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                 name="message-box"
                 value={textMessage}
                 autoFocus={false}
-                disabled={hasStartedRecording || isFetchingData || (!isSimpleBot && strandStep >= stateMachineLength)}
+                disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                 ref={textAreaRef}
                 onInput={e => {
                   e.target.style.height = "auto"
