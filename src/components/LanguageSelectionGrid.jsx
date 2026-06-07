@@ -49,7 +49,7 @@ const LanguageSelectionGrid = ({ usecaseType }) => {
     setChatLanguage(langValue)
     setHasSelectedLanguage(true)
 
-    if (!urlFlow) return
+    if (!urlFlow || urlFlow === "saathi") return
     const route_mapping = {
       [sessionFlowName.ParentPerceptionSurvey]: ROUTES.SHIKSHALOKAM_PPPI_VOICE_CHAT,
       [sessionFlowName.ListeningActivity]: ROUTES.SHIKSHALOKAM_GUEST_LISTENING_CHAT,

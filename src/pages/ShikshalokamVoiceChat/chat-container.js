@@ -19,6 +19,13 @@ function ChatContainer() {
   const navigate = useNavigate()
   const { flow: urlFlow } = useUrlFlow()
 
+  useEffect(() => {
+    console.log("[CHAT CONTAINER MOUNTED]", {
+      pathname: window.location.pathname,
+      search: window.location.search,
+    })
+  }, [])
+
   const [isLoading, setIsLoading] = useState(false)
   const { setFirstName } = useUserStorage().getState()
 

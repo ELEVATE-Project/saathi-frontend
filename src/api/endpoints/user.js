@@ -50,6 +50,43 @@ export const getProfileDetailsApi = async body => {
   }
 }
 
+export const getProfileApi = async profileId => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.GET_PROFILE, {
+      params: {
+        profile_id: profileId,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+
+    return response.data
+  } catch (error) {
+    return error?.response?.data
+  }
+}
+
+export const acceptTncApi = async profileId => {
+  try {
+    const response = await apiClient.patch(
+      API_ENDPOINTS.ACCEPT_TNC,
+      {
+        profile_id: profileId,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    return response.data
+  } catch (error) {
+    return error?.response?.data
+  }
+}
+
 /**
  * Read Elevate profile using access token
  * @param {string} accessToken - The access token for authentication

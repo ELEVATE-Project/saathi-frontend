@@ -60,8 +60,18 @@ import { apiClient } from "../../api/client"
 
 const cookies = new Cookies()
 
-const DynamicVoiceChat = ({ type = "" }) => {
-  const { flow: storageFlow } = useUrlFlow()
+const PROFILE_FLOW = "saathi_profile"
+const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
+
+const DynamicVoiceChat = ({
+  type = "",
+  flowOverride = null,
+  isPopupMode = false,
+  onProfileExtracted,
+}) => {
+  const { flow: urlFlow } = useUrlFlow()
+
+  const storageFlow = flowOverride || urlFlow
 
   // ========== useState Hooks ==========
   const [asrAudio, setAsrAudio] = useState(null)
@@ -149,6 +159,12 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const endPageToScrollRef = useRef(null)
   const isIntroPlayed = useRef(false)
   const pendingExtraContent = useRef(null)
+  const profileCompletedRef = useRef(false)
+  const onProfileExtractedRef = useRef(onProfileExtracted)
+
+  useEffect(() => {
+    onProfileExtractedRef.current = onProfileExtracted
+  }, [onProfileExtracted])
 
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
@@ -166,19 +182,44 @@ const DynamicVoiceChat = ({ type = "" }) => {
     refetchOnReconnect: false,
   })
 
+  const botRoute = useMemo(() => {
+    if (flowOverride === PROFILE_FLOW) {
+      return SAATHI_PROFILE_BOT_ROUTE
+    }
+  
+    return flowInfo?.bot_route
+  }, [flowOverride, flowInfo?.bot_route])
+  
   const { data: companyBotData } = useQuery({
-    queryKey: [API_ENDPOINTS.GET_COMPANY_BOT, companySlug, flowInfo?.bot_route, languageToUse, accessToken],
-    queryFn: () => getCompanyBotApi({ company_slug: companySlug, route: flowInfo.bot_route, target_language: languageToUse }),
-    enabled: !!(languageToUse && shouldFetchIntro && isNewChatOpen && profileToUse && flowInfo?.bot_route),
+    queryKey: [API_ENDPOINTS.GET_COMPANY_BOT, companySlug, botRoute, languageToUse, accessToken],
+    queryFn: () =>
+      getCompanyBotApi({
+        company_slug: companySlug,
+        route: botRoute,
+        target_language: languageToUse,
+      }),
+    enabled: !!(
+      languageToUse &&
+      shouldFetchIntro &&
+      isNewChatOpen &&
+      profileToUse &&
+      botRoute
+    ),
   })
-
+  
   const { data: introMessageData, isLoading: isIntroMessageLoading } = useQuery({
-    queryKey: [API_ENDPOINTS.BOT_VERNACULAR, flowInfo?.bot_route, languageToUse],
-    queryFn: () => getTranslatedIntroMessageApi({
-      language: languageToUse,
-      company_bot__route: flowInfo.bot_route,
-    }),
-    enabled: !!(companyBotData && languageToUse && companyBotData?.results?.length > 0 && flowInfo?.bot_route),
+    queryKey: [API_ENDPOINTS.BOT_VERNACULAR, botRoute, languageToUse],
+    queryFn: () =>
+      getTranslatedIntroMessageApi({
+        language: languageToUse,
+        company_bot__route: botRoute,
+      }),
+    enabled: !!(
+      companyBotData &&
+      languageToUse &&
+      companyBotData?.results?.length > 0 &&
+      botRoute
+    ),
   })
 
   const { data: chatSessionData } = useQuery({
@@ -208,6 +249,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const { stopAllAudio, audioRef } = useAudio()
 
   const onFinalReconnectAttempt = useCallback(() => {
+    if (isPopupMode) return
     function onYesButtonClick() {
       try {
         let chat_history = getChatHistory()
@@ -237,7 +279,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
-  }, [])
+  }, [isPopupMode])
 
   const onWebSocketClose = useCallback(event => {
     console.log("closed", event)
@@ -261,7 +303,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
       taskid: searchParams.get("taskId") || taskId,
       access_token: accessToken,
       route: chatLanguage,
-      bot_route: flowInfo.bot_route,
+      bot_route: botRoute,
       flow_name: storageFlow,
       address: {
         ipCity,
@@ -271,56 +313,92 @@ const DynamicVoiceChat = ({ type = "" }) => {
     })
   }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, ipFetched, flowInfo])
 
-  const onWebSocketMessage = useCallback(event => {
-    const data = JSON.parse(event.data)
-    const message = data["text"]
-    if (message.source === "bot") {
-      setIsStreamingComplete(false)
-      setSentences(prevSentences => {
-        const updatedSentences = structuredClone(prevSentences)
-        const lastSentence = updatedSentences[updatedSentences.length - 1]
 
-        if (lastSentence?.source === "bot") {
-          if (message?.msg) {
-            lastSentence.message += message?.msg
-          }
-        } else {
-          updatedSentences.push({
-            message: message?.msg || "",
-            source: "bot",
-            isNarrated: false,
-            id: Date.now(),
-          })
-          lastBotMessageIndex.current = updatedSentences.length - 1
-        }
-        return updatedSentences
-      })
-      handleScrollToView()
-    } else {
-      setIsStreamingComplete(true)
-    }
-
-    if (message.source === "user") {
-      const chat_history = getChatHistory()
-      const updated_chat_history = chat_history.map(chat => {
-        if (!chat.received && chat.msg === message.msg) {
-          return { ...chat, received: true }
-        }
-        return chat
-      })
-      setChatHistory(updated_chat_history)
-    }
-
-    if (message.finish_reason === "stop" && message.source === "bot") {
-      setStrandStep(message?.step)
-      handleScrollToView()
-      setTalking(0)
-      setIsStreamingComplete(true)
-      if (message?.extra_content) {
-        pendingExtraContent.current = message.extra_content
-      }
-    }
+  
+  const completeProfileExtraction = useCallback(() => {
+    if (profileCompletedRef.current) return
+    profileCompletedRef.current = true
+    pendingExtraContent.current = null
+    setSentences(prev => prev.map(s => ({ ...s, isNarrated: true })))
+    onProfileExtractedRef.current?.()
   }, [])
+
+  const onWebSocketMessage = useCallback(
+    event => {
+      const data = JSON.parse(event.data)
+  
+      if (isPopupMode && data?.profile_extracted === true) {
+        completeProfileExtraction()
+        return
+      }
+  
+      const message = data["text"]
+  
+      if (!message) return
+  
+      if (message.source === "bot") {
+        setIsStreamingComplete(false)
+  
+        setSentences(prevSentences => {
+          const updatedSentences = structuredClone(prevSentences)
+          const lastSentence = updatedSentences[updatedSentences.length - 1]
+  
+          if (lastSentence?.source === "bot") {
+            if (message?.msg) {
+              lastSentence.message += message?.msg
+            }
+          } else {
+            updatedSentences.push({
+              message: message?.msg || "",
+              source: "bot",
+              isNarrated: false,
+              id: Date.now(),
+            })
+  
+            lastBotMessageIndex.current = updatedSentences.length - 1
+          }
+  
+          return updatedSentences
+        })
+  
+        handleScrollToView()
+      } else {
+        setIsStreamingComplete(true)
+      }
+  
+      if (message.source === "user") {
+        const chat_history = getChatHistory()
+  
+        const updated_chat_history = chat_history.map(chat => {
+          if (!chat.received && chat.msg === message.msg) {
+            return { ...chat, received: true }
+          }
+  
+          return chat
+        })
+  
+        setChatHistory(updated_chat_history)
+      }
+  
+      if (message.finish_reason === "stop" && message.source === "bot") {
+        setStrandStep(message?.step)
+        handleScrollToView()
+        setTalking(0)
+        setIsStreamingComplete(true)
+  
+        if (message?.extra_content) {
+          pendingExtraContent.current = message.extra_content
+        }
+        if (
+          isPopupMode &&
+          message?.extra_content?.profile_extracted === true
+        ) {
+          completeProfileExtraction()
+        }
+      }
+    },
+    [isPopupMode, completeProfileExtraction]
+  )
 
   const isShikshalokamPublicType = true
   const shouldShowChatHistoryFeature = true
@@ -344,6 +422,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const {
     sendMessage: sendSocketMessage,
     connect: connectToWebSocket,
+    disconnect: disconnectFromWebSocket,
     isConnected: isSocketConnected,
   } = useChatWebhook(webSocketUrl, {
     onOpen: onWebSocketOpen,
@@ -354,6 +433,13 @@ const DynamicVoiceChat = ({ type = "" }) => {
     autoConnect: false,
     reconnectAttempts: env.WEBSOCKET_RETRY_NUM(),
   })
+  useEffect(() => {
+    return () => {
+      if (isPopupMode) {
+        disconnectFromWebSocket()
+      }
+    }
+  }, [isPopupMode, disconnectFromWebSocket])
 
   // ========================================================================
   // SECTION: Helper Functions (Must be defined before callbacks that use them)
@@ -591,7 +677,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         taskid: searchParams.get("taskId") || taskId,
         access_token: accessToken,
         route: chatLanguage,
-        bot_route: flowInfo.bot_route,
+        bot_route: botRoute,
         flow_name: storageFlow,
         address: {
           ipCity,
@@ -719,6 +805,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
    */
   const handleMessagesForBot = useCallback(
     sentence => {
+      if (isPopupMode && profileCompletedRef.current) return
       if (isRecognizing || hasStartedListening || !shouldSendMessage) return
 
       const chat_history = structuredClone(chatHistory)
@@ -749,7 +836,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         ])
       }
     },
-    [chatHistory]
+    [chatHistory, isPopupMode]
   )
 
   useEffect(() => {
@@ -845,7 +932,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     if (!flowInfo) return
 
     const bots = companyBotData?.results
-    let storedRoute = flowInfo.bot_route
+    let storedRoute = botRoute
 
     if (!bots || bots.length === 0) {
       handleScrollToView()
@@ -940,6 +1027,8 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * Shows guest popup for special flows or navigates to previous page
    */
   useEffect(() => {
+    if (isPopupMode) return
+
     const currentFlow = storageFlow
     const handleBack = () => {
       console.log("History length:", window.history.length)
@@ -975,7 +1064,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     return () => {
       window.removeEventListener("popstate", handleBack)
     }
-  }, [navigate])
+  }, [navigate, isPopupMode])
 
   // ========================================================================
   // SECTION: Initial Configuration (Execution Order: 2 - On Mount & Specific Deps)
@@ -1261,6 +1350,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * * Display Popup for the flows where end story api is not being called
    */
   useEffect(() => {
+    if (isPopupMode) return
 
     let survey_title = "PPsCompletionMessage"
 
@@ -1315,7 +1405,15 @@ const DynamicVoiceChat = ({ type = "" }) => {
         }
       })
     }
-  }, [isStreamingComplete, strandStep, stateMachineLength, storageFlow, chatHistory, flowInfo])
+  }, [
+    isStreamingComplete,
+    strandStep,
+    stateMachineLength,
+    storageFlow,
+    chatHistory,
+    flowInfo,
+    isPopupMode,
+  ])
 
   // ========================================================================
   // SECTION: UI State Management (Execution Order: 7 - Throughout Lifecycle)
@@ -1989,7 +2087,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   const handleAI4BharatTTSRequest = async (text, id, sourceLanguage) => {
     try {
-      if (!flowInfo.bot_route) return
+      if (!botRoute) return
 
       if (id === "intro_msg_id") {
         setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
@@ -2006,7 +2104,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         sourceLanguage = "en"
       }
 
-      let storedRoute = flowInfo.bot_route
+      let storedRoute = botRoute
 
       if (!hasOverRideId && id !== "intro_msg_id") {
         handleMessagesForBot(text)
@@ -2167,7 +2265,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                 transcriptResult = t("asrError")
               }
               setAsrAudio(s3Url)
-              let storedRoute = flowInfo.bot_route
+              let storedRoute = botRoute
               transcriptResult = await ai4BharatASRApi(s3Url, languageToUse, storedRoute)
               if (!transcriptResult || transcriptResult === "") {
                 showNotification({
@@ -2224,7 +2322,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         <div className={isMobile ? "div30_a" : "div30"}>
           <MainHeader
             isMobileFirst={isMobile}
-                        showTheDots={false}displayNewSessionButton={!([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
+                        showTheDots={false}displayNewSessionButton={!isPopupMode && !([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
 
             content={
               <button
@@ -2274,7 +2372,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           <ReportEditor onClose={closeModal} onSave={onEditorSave} disabled={isLoading || isSaving} />
         ))}
       <div className={`${accessToken ? "div72" : ""}`}>
-        {shouldFetchChatSession && (
+        {shouldFetchChatSession && !isPopupMode &&(
           <button
             onClick={() => {
               if (accessToken) {
@@ -2379,9 +2477,13 @@ const DynamicVoiceChat = ({ type = "" }) => {
                         <p style={{ textAlign: "center", lineHeight: "1.8" }}>
                           {t(`${prefix}homepageList`)}
                           <br />
-                          {t(`${prefix}homepageList1`)}
+                          {isPopupMode || storageFlow === "saathi_profile"
+                            ? t("profileHomepageList1")
+                            : t(`${prefix}homepageList1`)}
                           <br />
-                          {t(`${prefix}homepageList2`)}
+                          {isPopupMode || storageFlow === "saathi_profile"
+                            ? t("profileHomepageList2")
+                            : t(`${prefix}homepageList2`)}
                         </p>
                       </div>
                     </>
