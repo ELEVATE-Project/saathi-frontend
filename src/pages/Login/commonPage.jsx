@@ -51,15 +51,6 @@ function CommonHomePage({ usecaseType }) {
     isSaathiHome &&
     !Boolean(accessToken)
 
-    console.log("[CommonHomePage]", {
-      accessToken,
-      showLanding,
-      isLoading,
-      isSaathiHome,
-      usecaseType,
-      windowLocation: window.location.href,
-    })
-
   const ptm_case = sessionFlowName.megaPTM === usecaseType
   const ylc_case = sessionFlowName.YLC === usecaseType
 
@@ -87,16 +78,6 @@ function CommonHomePage({ usecaseType }) {
       !showProfilePopup
     )
 
-    console.log("[RENDER CommonHomePage]", {
-      isTncAccepted,
-      isProfileComplete,
-      showProfilePopup,
-      isSaathiOnboarding,
-      saathiOnboardingDone,
-      pathname: window.location.pathname,
-      search: window.location.search,
-    })
-
   const showTnCPopup =
     isSaathiOnboarding &&
     languageSelected &&
@@ -107,6 +88,25 @@ function CommonHomePage({ usecaseType }) {
     if (zustandProfileId || !profileId) return
     useUserDataLocalStore.getState().setProfileId(profileId)
   }, [zustandProfileId, profileId])
+
+  // Intercept browser back button: SSO users should skip past the SSO redirect page
+  useEffect(() => {
+    if (showLanding) return
+    if (!accessToken) return
+
+    const handleBack = () => {
+      navigate(-2)
+    }
+
+    if (!window.history.state?.isCustom) {
+      window.history.pushState({ isCustom: true }, "", window.location.href)
+    }
+
+    window.addEventListener("popstate", handleBack)
+    return () => {
+      window.removeEventListener("popstate", handleBack)
+    }
+  }, [accessToken, showLanding, navigate])
 
   // Initialize language and flow processing
   useEffect(() => {
@@ -129,15 +129,6 @@ function CommonHomePage({ usecaseType }) {
 
     if (!hasSelectedLanguage || !urlFlow) return
 
-    console.log("[NAV EFFECT 1]", {
-      isTncAccepted,
-      isProfileComplete,
-      showProfilePopup,
-      isSaathiOnboarding,
-      saathiOnboardingDone,
-      pathname: window.location.pathname,
-    })
-
     navigate({
       pathname: ROUTES.COMMON_CHAT,
       search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
@@ -152,8 +143,6 @@ function CommonHomePage({ usecaseType }) {
       return
     }
     if (isSaathiOnboarding && !saathiOnboardingDone) return
-    // Don't process if user hasn't selected a language (and no URL language) or if no flow is specified
-    console.log({ urlLanguage, hasSelectedLanguage, urlFlow })
 
 
     if (ptm_case) {
@@ -182,16 +171,6 @@ function CommonHomePage({ usecaseType }) {
       return
     }
 
-    console.log("[NAV EFFECT 2]", {
-      isTncAccepted,
-      isProfileComplete,
-      showProfilePopup,
-      isSaathiOnboarding,
-      saathiOnboardingDone,
-      pathname: window.location.pathname,
-    })
-
-    
     navigate({
       pathname: ROUTES.COMMON_CHAT,
       search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
@@ -248,7 +227,6 @@ function CommonHomePage({ usecaseType }) {
       }
 
       if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
-        console.log("[TRACE profileCheck] setShowProfilePopup(true) — tnc accepted, profile incomplete", { ts: Date.now() })
         setShowProfilePopup(true)
       }
     })()
@@ -261,26 +239,17 @@ function CommonHomePage({ usecaseType }) {
   const handleAcceptTnC = useCallback(async () => {
     try {
       await acceptTncApi(profileId)
+      setIsTncAccepted(true)
+      useUserDataLocalStore.getState().setAcceptedTnC(true)
+      if (isProfileComplete === false) {
+        setShowProfilePopup(true)
+      }
     } catch (error) {
       console.error(error)
-    }
-
-    setIsTncAccepted(true)
-    console.log("[ACCEPT CLICKED]", {
-      isTncAccepted,
-      isProfileComplete,
-      showProfilePopup,
-    })
-    useUserDataLocalStore.getState().setAcceptedTnC(true)
-
-    if (isProfileComplete === false) {
-      console.log("[TRACE handleAcceptTnC] setShowProfilePopup(true) — profile incomplete", { ts: Date.now() })
-      setShowProfilePopup(true)
     }
   }, [profileId, isProfileComplete])
 
   const handleProfilePopupClose = useCallback(async () => {
-    console.log("[TRACE handleProfilePopupClose] ENTER", { showProfilePopup, ts: Date.now() })
     const {
       setIsOldChatOpen,
       setIsNewChatOpen,
@@ -291,7 +260,7 @@ function CommonHomePage({ usecaseType }) {
       setChatHistory,
     } = useChatDataLocalStore.getState()
 
-    // Mirror resetChat() lines 1968-1978 (without reload)
+    // Mirror resetChat() (without reload)
     setIsOldChatOpen(false)
     setIsNewChatOpen(true)
     setShowHomepage(true)
@@ -300,15 +269,15 @@ function CommonHomePage({ usecaseType }) {
     setStrandStep(null)
     setChatHistory([])
 
-    console.log("[TRACE handleProfilePopupClose] awaiting getSessionDetails", { ts: Date.now() })
-    const session = await getSessionDetails()
-    console.log("[TRACE handleProfilePopupClose] getSessionDetails resolved", { ts: Date.now() })
-    setSessionId(session.sessionid)
-
-    console.log("[TRACE handleProfilePopupClose] calling setShowProfilePopup(false)", { ts: Date.now() })
-    setShowProfilePopup(false)
-    setIsProfileComplete(true)
-    console.log("[TRACE handleProfilePopupClose] EXIT", { ts: Date.now() })
+    try {
+      const session = await getSessionDetails()
+      setSessionId(session.sessionid)
+    } catch (error) {
+      console.error("[handleProfilePopupClose] getSessionDetails failed:", error)
+    } finally {
+      setShowProfilePopup(false)
+      setIsProfileComplete(true)
+    }
   }, [showProfilePopup])
 
   const onFlowContinue = () => {
@@ -316,7 +285,6 @@ function CommonHomePage({ usecaseType }) {
   }
 
   if (showLanding) {
-    console.log("[CommonHomePage] LANDING BRANCH")
     return (
       <div className="container max-w-full md mt-0 mx-auto grid md:grid-cols-2 px-0">
         <div className="px-5 hidden sm:block">
@@ -397,10 +365,6 @@ function CommonHomePage({ usecaseType }) {
     )
   }
 
-  console.log("[CommonHomePage] DEFAULT BRANCH")
-
-  
-  // Updated render conditions
   return (
     <>
       {showTnCPopup && (
@@ -411,11 +375,6 @@ function CommonHomePage({ usecaseType }) {
           isGuestChat={false}
         />
       )}
-
-      {console.log("RENDER CONDITION", {
-        isSaathiOnboarding,
-        showProfilePopup
-      })}
 
       {isSaathiOnboarding && showProfilePopup && (
         <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} />

@@ -10,25 +10,21 @@ function ProfileChatPopup({ isOpen, onClose }) {
   const timerRef = useRef(null)
 
   useEffect(() => {
-    console.log("[TRACE ProfileChatPopup] MOUNTED", { ts: Date.now() })
     return () => {
-      console.log("[TRACE ProfileChatPopup] UNMOUNTED — clearing timer if set", { timerId: timerRef.current, ts: Date.now() })
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
     }
   }, [])
 
   if (!isOpen) return null
 
-  console.log("PROFILE POPUP RENDERED", { isOpen })
-
   const handleProfileExtracted = () => {
     const delay = env.ONBOARDING_REDIRECT_DELAY()
-    console.log("[TRACE handleProfileExtracted] ENTER — starting timer", { delay, ts: Date.now() })
     timerRef.current = setTimeout(() => {
-      console.log("[TRACE handleProfileExtracted] TIMER FIRED — calling onClose", { ts: Date.now() })
       onClose?.()
     }, delay)
-    console.log("[TRACE handleProfileExtracted] timer created, id:", timerRef.current, { ts: Date.now() })
   }
 
   return (

@@ -44,10 +44,10 @@ const protected_routes = []
 
 const unprotected_old_routes = [
 
-  {
+  ...(process.env.NODE_ENV !== 'production' ? [{
     path: "/dev-welcome-preview",
     element: <WelcomePage />,
-  },
+  }] : []),
 
   // mitra chat routes
   { path: ROUTES.MITRA_CHAT, element: <MainPage /> },
