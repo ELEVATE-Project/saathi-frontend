@@ -248,6 +248,7 @@ function CommonHomePage({ usecaseType }) {
       }
 
       if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
+        console.log("[TRACE profileCheck] setShowProfilePopup(true) — tnc accepted, profile incomplete", { ts: Date.now() })
         setShowProfilePopup(true)
       }
     })()
@@ -272,10 +273,12 @@ function CommonHomePage({ usecaseType }) {
     })
     useUserDataLocalStore.getState().setAcceptedTnC(true)
 
+    console.log("[TRACE handleAcceptTnC] setShowProfilePopup(true)", { ts: Date.now() })
     setShowProfilePopup(true)
   }, [profileId])
 
   const handleProfilePopupClose = useCallback(async () => {
+    console.log("[TRACE handleProfilePopupClose] ENTER", { showProfilePopup, ts: Date.now() })
     const {
       setIsOldChatOpen,
       setIsNewChatOpen,
@@ -283,6 +286,7 @@ function CommonHomePage({ usecaseType }) {
       setSessionId,
       setIntroMessage,
       setStrandStep,
+      setChatHistory,
     } = useChatDataLocalStore.getState()
 
     // Mirror resetChat() lines 1968-1978 (without reload)
@@ -292,13 +296,18 @@ function CommonHomePage({ usecaseType }) {
     setIntroMessage(null)
     setSessionId(null)
     setStrandStep(null)
+    setChatHistory([])
 
+    console.log("[TRACE handleProfilePopupClose] awaiting getSessionDetails", { ts: Date.now() })
     const session = await getSessionDetails()
+    console.log("[TRACE handleProfilePopupClose] getSessionDetails resolved", { ts: Date.now() })
     setSessionId(session.sessionid)
 
+    console.log("[TRACE handleProfilePopupClose] calling setShowProfilePopup(false)", { ts: Date.now() })
     setShowProfilePopup(false)
     setIsProfileComplete(true)
-  }, [])
+    console.log("[TRACE handleProfilePopupClose] EXIT", { ts: Date.now() })
+  }, [showProfilePopup])
 
   const onFlowContinue = () => {
     return handleFlowSelection(stopAllAudio)

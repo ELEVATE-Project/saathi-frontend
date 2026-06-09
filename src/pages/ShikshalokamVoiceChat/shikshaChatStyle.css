@@ -1229,3 +1229,198 @@
     padding: 0 10px;
   }
 }
+
+/* ========================================================
+   SAATHI POPUP CHAT HISTORY SIDEBAR
+   ======================================================== */
+
+.saathi-popup-sidebar {
+  width: 195px;
+  min-width: 195px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #f9f9fb;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.saathi-popup-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 10px 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saathi-popup-sidebar-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.saathi-popup-new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #572e91;
+  background: transparent;
+  border: 1px solid #572e91;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.saathi-popup-new-chat-btn:hover {
+  background: #572e91;
+  color: #fff;
+}
+
+.saathi-popup-sidebar-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 16px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.saathi-popup-sidebar-empty svg {
+  opacity: 0.45;
+}
+
+.saathi-popup-sidebar-empty p {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.saathi-popup-sidebar-sessions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.saathi-popup-recents-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  padding: 10px 12px 4px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.saathi-popup-sessions-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.saathi-popup-sessions-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.saathi-popup-sessions-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.saathi-popup-session-item {
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 5px;
+  margin: 1px 6px;
+  transition: background 0.12s;
+}
+
+.saathi-popup-session-item:hover {
+  background: #ede9f5;
+  color: #572e91;
+}
+
+.saathi-popup-session-item--active {
+  background: #572e91;
+  color: #fff;
+  font-weight: 500;
+}
+
+.saathi-popup-session-item--active:hover {
+  background: #4a2580;
+  color: #fff;
+}
+
+/* Mobile sidebar toggle button */
+.saathi-sidebar-toggle {
+  display: none;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* Mobile sidebar overlay backdrop */
+.saathi-sidebar-backdrop {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
+
+/* Mobile: sidebar as overlay, toggle visible */
+@media screen and (max-width: 500px) {
+  .saathi-sidebar-toggle {
+    display: flex;
+  }
+
+  .saathi-sidebar-backdrop {
+    display: block;
+  }
+
+  .saathi-popup-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .saathi-popup-sidebar--open {
+    transform: translateX(0);
+  }
+
+  .saathi-popup-sidebar--closed {
+    transform: translateX(-100%);
+  }
+}

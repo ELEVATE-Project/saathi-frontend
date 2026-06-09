@@ -47,6 +47,8 @@ export const env = {
 
   AUTH_ROUTE: () => getEnv("REACT_APP_AUTH_ROUTE", "/api/shikshalokam/read-elevate-profile/"),
 
+  ONBOARDING_REDIRECT_DELAY: () => parseInt(getEnv("REACT_APP_ONBOARDING_REDIRECT_DELAY", "3000"), 10),
+
   // Generic getter for any environment variable
   get: (key: string, defaultValue: string = "") => getEnv(key, defaultValue),
 }

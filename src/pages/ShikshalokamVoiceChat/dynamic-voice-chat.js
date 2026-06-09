@@ -10,7 +10,7 @@ import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaAp
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
-import { FiDownload } from "react-icons/fi"
+import { FiDownload, FiPlus } from "react-icons/fi"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
@@ -57,6 +57,7 @@ import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 import { apiClient } from "../../api/client"
+import InfiniteScroll from "react-infinite-scroll-component"
 
 const cookies = new Cookies()
 
@@ -72,6 +73,8 @@ const DynamicVoiceChat = ({
   const { flow: urlFlow } = useUrlFlow()
 
   const storageFlow = flowOverride || urlFlow
+  const chatToAddLength = 10
+  const showHistorySidebar = !!(storageFlow && storageFlow !== PROFILE_FLOW)
 
   // ========== useState Hooks ==========
   const [asrAudio, setAsrAudio] = useState(null)
@@ -110,7 +113,10 @@ const DynamicVoiceChat = ({
   const [textMessage, setTextMessage] = useState("")
   const [trigger, setTrigger] = useState(false)
   const [triggerDownload, setTriggerDownload] = useState(false)
-
+  const [chatTitle, setChatTitle] = useState([])
+  const [sessionTitleDetail, setSessionTitleDetail] = useState(null)
+  const [visibleItemCount, setVisibleItemCount] = useState(10)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -161,6 +167,8 @@ const DynamicVoiceChat = ({
   const pendingExtraContent = useRef(null)
   const profileCompletedRef = useRef(false)
   const onProfileExtractedRef = useRef(onProfileExtracted)
+  const pendingNewChatRef = useRef(false)
+  const pendingNewChatTimerRef = useRef(null)
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -220,12 +228,6 @@ const DynamicVoiceChat = ({
       companyBotData?.results?.length > 0 &&
       botRoute
     ),
-  })
-
-  const { data: chatSessionData } = useQuery({
-    queryKey: [API_ENDPOINTS.GET_COMPANY_CHAT, sessionId],
-    queryFn: () => getChatsFromDB(sessionId),
-    enabled: !!sessionId,
   })
 
   const partialUpdateStoryByIdMutation = useMutation({ mutationFn: partialUpdateStoryById })
@@ -291,6 +293,7 @@ const DynamicVoiceChat = ({
 
   const onWebSocketOpen = useCallback(() => {
     const chat_history = getChatHistory()
+    console.log("[DBG onWebSocketOpen] sessionId:", sessionId, "userMsgs:", chat_history.filter(c => c.source === "user").length, { ts: Date.now() })
 
     if (chat_history.filter(chat => chat.source === "user").length < 1) return
     if (!flowInfo) return
@@ -316,18 +319,49 @@ const DynamicVoiceChat = ({
 
   
   const completeProfileExtraction = useCallback(() => {
-    if (profileCompletedRef.current) return
+    console.log("[TRACE completeProfileExtraction] ENTER", { ts: Date.now(), alreadyFired: profileCompletedRef.current })
+    if (profileCompletedRef.current) {
+      console.log("[TRACE completeProfileExtraction] BLOCKED — already fired")
+      return
+    }
     profileCompletedRef.current = true
     pendingExtraContent.current = null
+    console.log("[TRACE completeProfileExtraction] calling setShowHomepage(false) + setIsChatVisible(true)")
+    setShowHomepage(false)
+    setIsChatVisible(true)
+    // Stop TTS from re-playing earlier sentences (audio queue flush).
     setSentences(prev => prev.map(s => ({ ...s, isNarrated: true })))
+    // Write the thank-you bubble directly into chatHistory.
+    // Cannot go through sentences→TTS→handleMessagesForBot: that path requires
+    // isNarrated:false, but handleMessagesForBot also guards on
+    // profileCompletedRef.current which is already true at this point.
+    // getChatHistory / setChatHistory are stable Zustand getState() refs — safe
+    // to call inside a []‑dep callback.
+    const currentHistory = getChatHistory()
+    setChatHistory([
+      ...currentHistory,
+      {
+        msg: "Thank you. I have all the information I need. Redirecting you to Saathi",
+        source: "bot",
+        updated_at: Date.now(),
+        received: true,
+      },
+    ])
+    console.log("[TRACE completeProfileExtraction] calling onProfileExtractedRef.current — ref value:", typeof onProfileExtractedRef.current, { ts: Date.now() })
     onProfileExtractedRef.current?.()
+    console.log("[TRACE completeProfileExtraction] EXIT", { ts: Date.now() })
   }, [])
 
   const onWebSocketMessage = useCallback(
     event => {
       const data = JSON.parse(event.data)
-  
+
+      if (isPopupMode) {
+        console.log("[TRACE WS RAW]", { ts: Date.now(), data })
+      }
+
       if (isPopupMode && data?.profile_extracted === true) {
+        console.log("[TRACE WS PATH-A] profile_extracted=true detected (top-level frame)", { ts: Date.now(), data })
         completeProfileExtraction()
         return
       }
@@ -368,16 +402,26 @@ const DynamicVoiceChat = ({
   
       if (message.source === "user") {
         const chat_history = getChatHistory()
-  
+        console.log("[DBG onWebSocketMessage] USER ECHO received. msg:", message.msg?.slice(0, 40), "historyLen:", chat_history.length, "pendingNewChat:", pendingNewChatRef.current, { ts: Date.now() })
+
         const updated_chat_history = chat_history.map(chat => {
           if (!chat.received && chat.msg === message.msg) {
             return { ...chat, received: true }
           }
-  
+
           return chat
         })
-  
+
         setChatHistory(updated_chat_history)
+
+        if (pendingNewChatRef.current) {
+          pendingNewChatRef.current = false
+          if (pendingNewChatTimerRef.current) {
+            clearTimeout(pendingNewChatTimerRef.current)
+            pendingNewChatTimerRef.current = null
+          }
+          window.location.reload()
+        }
       }
   
       if (message.finish_reason === "stop" && message.source === "bot") {
@@ -393,6 +437,7 @@ const DynamicVoiceChat = ({
           isPopupMode &&
           message?.extra_content?.profile_extracted === true
         ) {
+          console.log("[TRACE WS PATH-B] profile_extracted=true detected (extra_content on bot message)", { ts: Date.now(), message })
           completeProfileExtraction()
         }
       }
@@ -653,6 +698,7 @@ const DynamicVoiceChat = ({
       event.stopPropagation()
     }
 
+    console.log("[DBG handleSendMessage] sessionId:", sessionId, "msg:", textMessage.slice(0, 40), { ts: Date.now() })
     setLlmError("")
     handleOnStopSpeaking()
     setIsChatVisible(true)
@@ -667,7 +713,8 @@ const DynamicVoiceChat = ({
     if (!textMessage.trim()) return
 
     const chat_history = handleMessagesForUser(textMessage)
-    if (chat_history.filter(chat => chat.source === "user").length == 1 || !isSocketConnected) {
+    const userMsgCount = chat_history.filter(chat => chat.source === "user").length
+    if (userMsgCount === 1 || !isSocketConnected) {
       connectToWebSocket()
       sendSocketMessage({
         type: "authenticate",
@@ -684,6 +731,20 @@ const DynamicVoiceChat = ({
           ipState,
           ipZipCode,
         },
+      })
+    }
+    if (userMsgCount === 1 && showHistorySidebar) {
+      const firstMsg = textMessage.trim()
+      setChatTitle(prev => {
+        const found = prev.some(item => item.session === sessionId)
+        if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
+        return [{ session: sessionId, title: firstMsg }, ...prev]
+      })
+      setSessionTitleDetail(prev => {
+        if (!prev) return [{ session: sessionId, title: firstMsg }]
+        const found = prev.some(item => item.session === sessionId)
+        if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
+        return [{ session: sessionId, title: firstMsg }, ...prev]
       })
     }
     sendSocketMessage({
@@ -708,14 +769,20 @@ const DynamicVoiceChat = ({
    */
   const handleCompanyChatCall = useCallback(async () => {
     try {
-      const storedChatHistory = chatHistory
-      if (storedChatHistory.length >= 1) {
+      // Use the Zustand getter so both the initial guard and the pre-write
+      // guard read the live store value, not a stale closure snapshot.
+      // This prevents two concurrent invocations (triggered by both the
+      // [isOldChatOpen,introMessage,chatHistory,sentences] effect and the
+      // [companyBotData,introMessage,flowInfo] effect when introMessage
+      // becomes truthy) from each independently passing the guard and
+      // writing duplicate history.
+      if (getChatHistory().length >= 1) {
         return
       }
 
-
       try {
-        const sortedResult = quickSort(Array.isArray(chatSessionData?.results) ? chatSessionData.results : [], compareById)
+        const freshData = await getChatsFromDB(sessionId)
+        const sortedResult = quickSort(Array.isArray(freshData?.results) ? freshData.results : [], compareById)
         const intro_message = introMessage
 
         // Collect all new sentences and chat history items
@@ -723,7 +790,7 @@ const DynamicVoiceChat = ({
         const newChatHistoryItems = []
 
         // Use Set with IDs for reliable duplicate detection
-        const existingChatIds = new Set(chatHistory.map(msg => msg.updated_at))
+        const existingChatIds = new Set(getChatHistory().map(msg => msg.updated_at))
 
         // Add intro message if it exists and not already in history
         if (intro_message && !existingChatIds.has("intro_msg_id")) {
@@ -763,7 +830,12 @@ const DynamicVoiceChat = ({
 
         if (newChatHistoryItems.length > 0) {
           console.log("filteredItems: ", newChatHistoryItems)
-          setChatHistory([...chatHistory, ...newChatHistoryItems])
+          // Re-read current state before writing; a concurrent invocation
+          // may have already written the history between our guard check
+          // and this point.
+          const currentHistory = getChatHistory()
+          if (currentHistory.length >= 1) return
+          setChatHistory([...currentHistory, ...newChatHistoryItems])
           lastBotMessageIndex.current += newChatHistoryItems.length
         }
       } catch (error) {
@@ -782,7 +854,7 @@ const DynamicVoiceChat = ({
         setIsLoading(false)
       }
     }
-  }, [introMessage, sessionId, chatSessionData])
+  }, [introMessage, sessionId])
 
   /**
    * Handles chat session button clicks from sidebar
@@ -841,18 +913,23 @@ const DynamicVoiceChat = ({
 
   useEffect(() => {
     if (!isFlowInfoError) return
+    if (isPopupMode) return
 
     if (flowInfoError?.response?.status === 404) {
       clearFromStorage()
       navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
     }
-  }, [flowInfoError, isFlowInfoError])
+  }, [flowInfoError, isFlowInfoError, isPopupMode])
 
   useEffect(() => {
+    // Popup mode is a temporary overlay; it must not overwrite the main
+    // chat's persistent flow registration in the shared Zustand store.
+    if (isPopupMode) return
     setStorageFlow(storageFlow)
-  }, [storageFlow])
+  }, [storageFlow, isPopupMode])
 
   useEffect(() => {
+    console.log("[TRACE chatHistory effect] length:", chatHistory.length, "→ setShowHomepage(", chatHistory.length > 1 ? "false" : "true", ")", { ts: Date.now() })
     if (chatHistory.length > 1) {
       setShowHomepage(false)
       setIsOldChatOpen(true)
@@ -954,7 +1031,7 @@ const DynamicVoiceChat = ({
       handleCompanyChatCall()
     }
 
-  }, [companyBotData, introMessage, chatSessionData, flowInfo])
+  }, [companyBotData, introMessage, flowInfo])
 
   // ========================================================================
   // SECTION: Lifecycle & Browser Events (Execution Order: 1 - On Mount)
@@ -1156,13 +1233,17 @@ const DynamicVoiceChat = ({
           setState(data?.profile_address[0]?.state)
           setIsNewChatOpen(true)
         } else {
-          clearFromStorage()
-          navigate(-1)
+          if (!isPopupMode) {
+            clearFromStorage()
+            navigate(-1)
+          }
         }
       } catch (error) {
         console.error(error)
-        clearFromStorage()
-        navigate(-1)
+        if (!isPopupMode) {
+          clearFromStorage()
+          navigate(-1)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -1236,6 +1317,16 @@ const DynamicVoiceChat = ({
       handleChatSessionButtonClick()
     }
   }, [isOldChatOpen, introMessage, chatHistory, sentences])
+
+  /**
+   * Load chat history sidebar sessions when profile and flow are ready
+   */
+  useEffect(() => {
+    console.log("[DBG showChatTitle effect] showHistorySidebar:", showHistorySidebar, "profileToUse:", profileToUse, "storageFlow:", storageFlow)
+    if (showHistorySidebar && profileToUse && storageFlow) {
+      showChatTitle()
+    }
+  }, [profileToUse, storageFlow, showHistorySidebar])
 
   // ========================================================================
   // SECTION: Language & Bot Setup (Execution Order: 5 - When Profile Ready)
@@ -1971,6 +2062,22 @@ const DynamicVoiceChat = ({
     if (e) {
       e.preventDefault()
     }
+
+    // Capture before removeChatHistory() clears state.
+    // m.received === false (strict) means sent via createMessage but not yet echoed by backend.
+    // API-loaded messages have received: undefined and are excluded by strict equality.
+    const hasUnacknowledgedSentMessages = getChatHistory().some(
+      m => m.source === "user" && m.received === false
+    )
+    console.log("[DBG resetChat] ENTER. sessionId:", sessionId, "hasUnacknowledgedSentMessages:", hasUnacknowledgedSentMessages, "historyLen:", getChatHistory().length, { ts: Date.now() })
+
+    // Cancel any previous pending-reload from a rapid double-click on New Chat
+    if (pendingNewChatTimerRef.current) {
+      clearTimeout(pendingNewChatTimerRef.current)
+      pendingNewChatTimerRef.current = null
+    }
+    pendingNewChatRef.current = false
+
     setIsLoading(true)
     removeChatHistory()
     setIsOldChatOpen(false)
@@ -1986,7 +2093,45 @@ const DynamicVoiceChat = ({
     setShowHomepage(true)
     setIsLoading(false)
 
-    window.location.reload()
+    if (!isPopupMode) {
+      if (hasUnacknowledgedSentMessages) {
+        // First message is queued but backend hasn't echoed yet — session may not be
+        // associated with this profile+flow. Defer reload until the echo confirms persistence.
+        console.log("[DBG resetChat] DEFERRED reload. oldSession:", sessionId, "newSession:", session.sessionid, { ts: Date.now() })
+        localStorage.setItem("__dbg_reload", JSON.stringify({
+          oldSessionId: sessionId,
+          newSessionId: session.sessionid,
+          historyLen: getChatHistory().length,
+          flow: storageFlow,
+          profile: profileToUse,
+          path: "deferred",
+          ts: Date.now(),
+        }))
+        pendingNewChatRef.current = true
+        pendingNewChatTimerRef.current = setTimeout(() => {
+          if (pendingNewChatRef.current) {
+            pendingNewChatRef.current = false
+            console.log("[DBG resetChat] TIMER FIRED → reload", { ts: Date.now() })
+            window.location.reload()
+          }
+        }, 5000)
+      } else {
+        console.log("[DBG resetChat] IMMEDIATE reload. oldSession was:", sessionId, "newSession:", session.sessionid, { ts: Date.now() })
+        localStorage.setItem("__dbg_reload", JSON.stringify({
+          oldSessionId: sessionId,
+          newSessionId: session.sessionid,
+          historyLen: getChatHistory().length,
+          flow: storageFlow,
+          profile: profileToUse,
+          path: "immediate",
+          ts: Date.now(),
+        }))
+        window.location.reload()
+      }
+    } else {
+      setSentences([])
+      showChatTitle()
+    }
   }
 
   async function getSessionInfo() {
@@ -2316,9 +2461,147 @@ const DynamicVoiceChat = ({
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
+  async function showChatTitle() {
+    const dbgReload = (() => { try { return JSON.parse(localStorage.getItem("__dbg_reload") || "null") } catch { return null } })()
+    console.log("[DBG showChatTitle] CALLED. profile:", profileToUse, "flow:", storageFlow, "prevReloadInfo:", dbgReload, { ts: Date.now() })
+    try {
+      const currentFlow = storageFlow
+      const TitleAndSession = []
+      const response = await getChatSessionApi({
+        profile: profileToUse,
+        flow: currentFlow,
+      })
+      if (response) {
+        // Use the API's native ordering (most-recently-active first from the
+        // backend). Re-sorting by id here discards that correct recency order.
+        const results = response?.data?.results || []
+        const rawData = response?.data
+        console.log("[DBG showChatTitle] raw response.data shape — count:", rawData?.count, "next:", rawData?.next, "resultsLen:", results.length)
+        if (results.length > 0) {
+          console.log("[DBG showChatTitle] first result raw keys+values:", JSON.stringify(results[0]))
+        }
+        const returnedIds = results.map(s => s.session)
+        const oldId = dbgReload?.oldSessionId
+        const found = oldId ? results.find(s => s.session === oldId) : null
+        console.log("[DBG showChatTitle] getChatSessionApi returned", results.length, "sessions")
+        console.log("[DBG showChatTitle] returnedIds:", returnedIds)
+        console.log("[DBG showChatTitle] oldSessionId:", oldId, "→ found in results:", !!found, "| title:", found?.title ?? "(n/a)")
+        results.forEach(sessionObj => {
+          TitleAndSession.push({
+            session: sessionObj.session,
+            title: sessionObj.title,
+          })
+        })
+        setSessionTitleDetail(TitleAndSession)
+        setChatTitle([...TitleAndSession.slice(0, chatToAddLength)])
+        setVisibleItemCount(chatToAddLength)
+        localStorage.removeItem("__dbg_reload")
+      } else {
+        console.log("[DBG showChatTitle] getChatSessionApi returned falsy response", { ts: Date.now() })
+      }
+    } catch (error) {
+      console.error("[DBG showChatTitle] ERROR:", error)
+    }
+  }
+
+  function fetchMoreData() {
+    setTimeout(() => {
+      if (visibleItemCount < (sessionTitleDetail?.length || 0)) {
+        const newCount = visibleItemCount + chatToAddLength
+        setVisibleItemCount(newCount)
+        setChatTitle(prev => [...prev, ...sessionTitleDetail.slice(prev.length, prev.length + chatToAddLength)])
+      }
+    }, 1000)
+  }
+
+  function handleSessionSelect(selectedSessionId) {
+    if (selectedSessionId === sessionId) return
+    setSessionId(selectedSessionId)
+    setChatHistory([])
+    setSentences([])
+    setIsOldChatOpen(true)
+    setIsNewChatOpen(false)
+    setShowHomepage(false)
+    setLlmError("")
+    setIsSidebarOpen(false)
+  }
+
   return (
-    <>
-      <div className={`div27`}>
+    <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "row", height: isPopupMode ? "100%" : "100dvh", overflow: "hidden", position: "relative" } : undefined}>
+      {/* ===== CHAT HISTORY SIDEBAR (popup mode, non-profile flows) ===== */}
+      {showHistorySidebar && (
+        <>
+          {/* Mobile overlay backdrop */}
+          {isSidebarOpen && (
+            <div
+              className="saathi-sidebar-backdrop"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+          <aside className={`saathi-popup-sidebar${isMobile ? (isSidebarOpen ? " saathi-popup-sidebar--open" : " saathi-popup-sidebar--closed") : ""}`}>
+            {/* Sidebar header */}
+            <div className="saathi-popup-sidebar-header">
+              <span className="saathi-popup-sidebar-title">SAATHI</span>
+              <button
+                className="saathi-popup-new-chat-btn"
+                onClick={async e => {
+                  await resetChat(e)
+                }}
+              >
+                <FiPlus style={{ marginRight: 3 }} /> New chat
+              </button>
+            </div>
+
+            {/* Empty state */}
+            {(!chatTitle || chatTitle.length === 0) ? (
+              <div className="saathi-popup-sidebar-empty">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <p>Your conversations will appear here</p>
+              </div>
+            ) : (
+              <div className="saathi-popup-sidebar-sessions">
+                <p className="saathi-popup-recents-label">Recents</p>
+                <div id="saathiPopupScrollableDiv" className="saathi-popup-sessions-scroll">
+                  <InfiniteScroll
+                    dataLength={visibleItemCount}
+                    next={fetchMoreData}
+                    hasMore={visibleItemCount < (sessionTitleDetail?.length || 0)}
+                    loader={<BiLoader className="loader-rotate-loader loader-icon" style={{ display: "block", margin: "8px auto", fontSize: "1.2rem" }} />}
+                    scrollableTarget="saathiPopupScrollableDiv"
+                  >
+                    {chatTitle.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
+                        onClick={() => handleSessionSelect(item.session)}
+                        title={item.title || "Untitled chat"}
+                      >
+                        {item.title || "Untitled chat"}
+                      </div>
+                    ))}
+                  </InfiniteScroll>
+                </div>
+              </div>
+            )}
+          </aside>
+        </>
+      )}
+
+      {/* ===== MAIN CHAT CONTENT ===== */}
+      <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, overflow: "hidden" } : undefined}>
+        {/* Mobile hamburger to open sidebar */}
+        {showHistorySidebar && isMobile && (
+          <button
+            className="saathi-sidebar-toggle"
+            onClick={() => setIsSidebarOpen(prev => !prev)}
+            aria-label="Toggle chat history"
+          >
+            ☰
+          </button>
+        )}
+        <div className={`div27`} style={(showHistorySidebar || isPopupMode) ? { position: "relative", top: "auto", zIndex: "auto", flexShrink: 0 } : undefined}>
         <div className={isMobile ? "div30_a" : "div30"}>
           <MainHeader
             isMobileFirst={isMobile}
@@ -2371,7 +2654,7 @@ const DynamicVoiceChat = ({
         ) : (
           <ReportEditor onClose={closeModal} onSave={onEditorSave} disabled={isLoading || isSaving} />
         ))}
-      <div className={`${accessToken ? "div72" : ""}`}>
+      <div className={`${accessToken ? "div72" : ""}`} style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
         {shouldFetchChatSession && !isPopupMode &&(
           <button
             onClick={() => {
@@ -2386,7 +2669,7 @@ const DynamicVoiceChat = ({
           </button>
         )}
         <HiddenRecorder />
-        <div className={`${accessToken ? "div33-a" : "div33"} div9`}>
+        <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={(showHistorySidebar || isPopupMode) ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
           {!showHomepage && (
             <ul className="div34">
               {chatHistory &&
@@ -2731,6 +3014,7 @@ const DynamicVoiceChat = ({
         {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
             className="div39 form-1 sm:p-[10px_35px] p-[10px_25px]"
+            style={(showHistorySidebar || isPopupMode) ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (!hasStartedListening && !isFetchingData) {
                 handleSendMessage(event)
@@ -2807,7 +3091,8 @@ const DynamicVoiceChat = ({
           </form>
         )}
       </div>
-    </>
+      </div>
+    </div>
   )
 }
 
