@@ -273,9 +273,11 @@ function CommonHomePage({ usecaseType }) {
     })
     useUserDataLocalStore.getState().setAcceptedTnC(true)
 
-    console.log("[TRACE handleAcceptTnC] setShowProfilePopup(true)", { ts: Date.now() })
-    setShowProfilePopup(true)
-  }, [profileId])
+    if (isProfileComplete === false) {
+      console.log("[TRACE handleAcceptTnC] setShowProfilePopup(true) — profile incomplete", { ts: Date.now() })
+      setShowProfilePopup(true)
+    }
+  }, [profileId, isProfileComplete])
 
   const handleProfilePopupClose = useCallback(async () => {
     console.log("[TRACE handleProfilePopupClose] ENTER", { showProfilePopup, ts: Date.now() })

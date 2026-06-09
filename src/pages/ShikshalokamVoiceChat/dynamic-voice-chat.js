@@ -57,7 +57,6 @@ import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 import { apiClient } from "../../api/client"
-import InfiniteScroll from "react-infinite-scroll-component"
 
 const cookies = new Cookies()
 
@@ -73,7 +72,6 @@ const DynamicVoiceChat = ({
   const { flow: urlFlow } = useUrlFlow()
 
   const storageFlow = flowOverride || urlFlow
-  const chatToAddLength = 10
   const showHistorySidebar = !!(storageFlow && storageFlow !== PROFILE_FLOW)
 
   // ========== useState Hooks ==========
@@ -114,8 +112,6 @@ const DynamicVoiceChat = ({
   const [trigger, setTrigger] = useState(false)
   const [triggerDownload, setTriggerDownload] = useState(false)
   const [chatTitle, setChatTitle] = useState([])
-  const [sessionTitleDetail, setSessionTitleDetail] = useState(null)
-  const [visibleItemCount, setVisibleItemCount] = useState(10)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // ========== useSelector Hooks ==========
@@ -249,6 +245,8 @@ const DynamicVoiceChat = ({
 
   const { showGuestPopup, showConfirmationPopup } = useConfirmationPopup()
   const { stopAllAudio, audioRef } = useAudio()
+  const ttsAbortRef = useRef(null)
+  const ttsDisabledRef = useRef(false)
 
   const onFinalReconnectAttempt = useCallback(() => {
     if (isPopupMode) return
@@ -606,6 +604,10 @@ const DynamicVoiceChat = ({
    */
   const handleOnStopSpeaking = async () => {
     try {
+      if (ttsAbortRef.current) {
+        ttsAbortRef.current.abort()
+        ttsAbortRef.current = null
+      }
       try {
         if (audioRef.current) await audioRef.current.pause()
       } catch (error) {
@@ -735,13 +737,12 @@ const DynamicVoiceChat = ({
     }
     if (userMsgCount === 1 && showHistorySidebar) {
       const firstMsg = textMessage.trim()
+      try {
+        const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
+        stored[sessionId] = firstMsg
+        localStorage.setItem("__session_titles", JSON.stringify(stored))
+      } catch {}
       setChatTitle(prev => {
-        const found = prev.some(item => item.session === sessionId)
-        if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
-        return [{ session: sessionId, title: firstMsg }, ...prev]
-      })
-      setSessionTitleDetail(prev => {
-        if (!prev) return [{ session: sessionId, title: firstMsg }]
         const found = prev.some(item => item.session === sessionId)
         if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
         return [{ session: sessionId, title: firstMsg }, ...prev]
@@ -2031,7 +2032,7 @@ const DynamicVoiceChat = ({
     window.history.pushState(null, "", window.location.href)
   }
 
-  async function downloadFileFromUrl(url) {
+  async function downloadFileFromUrl(url, fileName) {
     try {
       const response = await fetch(url)
       if (!response.ok) {
@@ -2041,7 +2042,7 @@ const DynamicVoiceChat = ({
       const blobUrl = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = blobUrl
-      a.download = url.split("/").pop() || "download"
+      a.download = fileName || url.split("/").pop() || "download"
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -2234,6 +2235,9 @@ const DynamicVoiceChat = ({
     try {
       if (!botRoute) return
 
+      // Skip TTS if autoplay was permanently blocked by the browser
+      if (ttsDisabledRef.current) return
+
       if (id === "intro_msg_id") {
         setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
         setIsNextAllowed(true)
@@ -2266,7 +2270,19 @@ const DynamicVoiceChat = ({
       }
 
       if (!cachedAudioUrl) {
-        audio_result = await getAI4BharatAudioApi(text, sourceLanguage, storedRoute)
+        // Create an AbortController for this request so handleOnStopSpeaking can cancel it
+        const controller = new AbortController()
+        ttsAbortRef.current = controller
+        try {
+          audio_result = await getAI4BharatAudioApi(text, sourceLanguage, storedRoute, controller.signal)
+        } catch (fetchError) {
+          // AbortError means the user sent a message / stopped TTS — exit silently
+          if (fetchError?.name === "AbortError" || fetchError?.code === "ERR_CANCELED") return
+          throw fetchError
+        } finally {
+          // Clear the ref once the request settles (whether success, error, or abort)
+          if (ttsAbortRef.current === controller) ttsAbortRef.current = null
+        }
         if (audio_result?.length) {
           cachedAudioUrl = `data:audio/wav;base64,${audio_result}`
           setAudioCache(prevCache => ({
@@ -2303,6 +2319,10 @@ const DynamicVoiceChat = ({
           await audio.play()
         } catch (error) {
           console.error("Error playing audio:", error)
+          // If the browser blocked autoplay, disable TTS for this session
+          if (error?.name === "NotAllowedError") {
+            ttsDisabledRef.current = true
+          }
           setSentences(prev => {
             let all_sentences = JSON.parse(JSON.stringify([...prev]))
             let index = prev.findIndex(x => x.id === id)
@@ -2486,15 +2506,21 @@ const DynamicVoiceChat = ({
         console.log("[DBG showChatTitle] getChatSessionApi returned", results.length, "sessions")
         console.log("[DBG showChatTitle] returnedIds:", returnedIds)
         console.log("[DBG showChatTitle] oldSessionId:", oldId, "→ found in results:", !!found, "| title:", found?.title ?? "(n/a)")
-        results.forEach(sessionObj => {
-          TitleAndSession.push({
-            session: sessionObj.session,
-            title: sessionObj.title,
+        const sessionTypeFilter = env.CHAT_SESSION_TYPE()
+        let localTitles = {}
+        try { localTitles = JSON.parse(localStorage.getItem("__session_titles") || "{}") } catch {}
+        results
+          .filter(sessionObj => !sessionTypeFilter || sessionObj.session_type === sessionTypeFilter)
+          .sort((a, b) => b.id - a.id)
+          .forEach(sessionObj => {
+            const title = sessionObj.title || localTitles[sessionObj.session] || null
+            if (sessionObj.title && localTitles[sessionObj.session]) {
+              delete localTitles[sessionObj.session]
+            }
+            TitleAndSession.push({ session: sessionObj.session, title })
           })
-        })
-        setSessionTitleDetail(TitleAndSession)
-        setChatTitle([...TitleAndSession.slice(0, chatToAddLength)])
-        setVisibleItemCount(chatToAddLength)
+        try { localStorage.setItem("__session_titles", JSON.stringify(localTitles)) } catch {}
+        setChatTitle(TitleAndSession)
         localStorage.removeItem("__dbg_reload")
       } else {
         console.log("[DBG showChatTitle] getChatSessionApi returned falsy response", { ts: Date.now() })
@@ -2502,16 +2528,6 @@ const DynamicVoiceChat = ({
     } catch (error) {
       console.error("[DBG showChatTitle] ERROR:", error)
     }
-  }
-
-  function fetchMoreData() {
-    setTimeout(() => {
-      if (visibleItemCount < (sessionTitleDetail?.length || 0)) {
-        const newCount = visibleItemCount + chatToAddLength
-        setVisibleItemCount(newCount)
-        setChatTitle(prev => [...prev, ...sessionTitleDetail.slice(prev.length, prev.length + chatToAddLength)])
-      }
-    }, 1000)
   }
 
   function handleSessionSelect(selectedSessionId) {
@@ -2563,25 +2579,17 @@ const DynamicVoiceChat = ({
             ) : (
               <div className="saathi-popup-sidebar-sessions">
                 <p className="saathi-popup-recents-label">Recents</p>
-                <div id="saathiPopupScrollableDiv" className="saathi-popup-sessions-scroll">
-                  <InfiniteScroll
-                    dataLength={visibleItemCount}
-                    next={fetchMoreData}
-                    hasMore={visibleItemCount < (sessionTitleDetail?.length || 0)}
-                    loader={<BiLoader className="loader-rotate-loader loader-icon" style={{ display: "block", margin: "8px auto", fontSize: "1.2rem" }} />}
-                    scrollableTarget="saathiPopupScrollableDiv"
-                  >
-                    {chatTitle.map((item, index) => (
-                      <div
-                        key={index}
-                        className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
-                        onClick={() => handleSessionSelect(item.session)}
-                        title={item.title || "Untitled chat"}
-                      >
-                        {item.title || "Untitled chat"}
-                      </div>
-                    ))}
-                  </InfiniteScroll>
+                <div className="saathi-popup-sessions-scroll">
+                  {chatTitle.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
+                      onClick={() => handleSessionSelect(item.session)}
+                      title={item.title || "Untitled chat"}
+                    >
+                      {item.title || "Untitled chat"}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -2601,32 +2609,17 @@ const DynamicVoiceChat = ({
             ☰
           </button>
         )}
-        <div className={`div27`} style={(showHistorySidebar || isPopupMode) ? { position: "relative", top: "auto", zIndex: "auto", flexShrink: 0 } : undefined}>
-        <div className={isMobile ? "div30_a" : "div30"}>
-          <MainHeader
-            isMobileFirst={isMobile}
-                        showTheDots={false}displayNewSessionButton={!isPopupMode && !([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
-
-            content={
-              <button
-                onClick={async e => {
-                  if (accessToken) {
-                    await resetChat(e)
-                  } else {
-                    showGuestPopup(() => {
-                      setBotName(null)
-                      resetChat()
-                    }, stayOnPage)
-                  }
-                }}
-                className="div32"
-              >
-                <div className="div8">+</div>
-              </button>
-            }
-          />
-        </div>
-      </div>
+        {!showHistorySidebar && !isPopupMode && (
+          <div className={`div27`}>
+            <div className={isMobile ? "div30_a" : "div30"}>
+              <MainHeader
+                isMobileFirst={isMobile}
+                showTheDots={false}
+                displayNewSessionButton={!isPopupMode && !([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
+              />
+            </div>
+          </div>
+        )}
       {(isInitialising || isLoading || (!introMessageData && !introMessage) || endStoryMutation.isPending) && (
         <div className="loader-load-spinner">
           <div className="div67">
@@ -2700,7 +2693,7 @@ const DynamicVoiceChat = ({
                       <div style={{ display: "flex", gap: "8px", marginTop: "6px", marginLeft: "44px" }}>
                         {chat.extra_content.download.pdf_url && (
                           <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url)}
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null)}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
                           >
                             <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
@@ -2709,7 +2702,7 @@ const DynamicVoiceChat = ({
                         )}
                         {chat.extra_content.download.docx_url && (
                           <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url)}
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null)}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
                           >
                             <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />

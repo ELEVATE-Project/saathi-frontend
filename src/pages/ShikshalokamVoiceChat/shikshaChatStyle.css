@@ -903,8 +903,10 @@
 }
 
 .header-3 {
-    padding-top: 0.5rem;
-    padding-bottom: 1rem;
+    padding-top: 12px;
+    padding-bottom: 10px;
+    min-height: 41px;
+    box-sizing: border-box;
 }
 
 .div59 {
@@ -1235,8 +1237,8 @@
    ======================================================== */
 
 .saathi-popup-sidebar {
-  width: 195px;
-  min-width: 195px;
+  width: 260px;
+  min-width: 260px;
   height: 100%;
   display: flex;
   flex-direction: column;
