@@ -10,9 +10,9 @@ import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaAp
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
-import { FiDownload } from "react-icons/fi"
+import { FiDownload, FiPlus } from "react-icons/fi"
 import { FLOW_CONFIG } from "../../config/flowConfig"
-import { getChatSessionApi, getCompanyBotApi } from "api/endpoints/chat"
+import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
 import { getStoryAllMedia, partialUpdateStoryById } from "api/endpoints/story"
 import { getTranslatedIntroMessageApi } from "api/endpoints/ai"
@@ -60,8 +60,19 @@ import { apiClient } from "../../api/client"
 
 const cookies = new Cookies()
 
-const DynamicVoiceChat = ({ type = "" }) => {
-  const { flow: storageFlow } = useUrlFlow()
+const PROFILE_FLOW = "saathi_profile"
+const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
+
+const DynamicVoiceChat = ({
+  type = "",
+  flowOverride = null,
+  isPopupMode = false,
+  onProfileExtracted,
+}) => {
+  const { flow: urlFlow } = useUrlFlow()
+
+  const storageFlow = flowOverride || urlFlow
+  const showHistorySidebar = !!(storageFlow && storageFlow !== PROFILE_FLOW)
 
   // ========== useState Hooks ==========
   const [asrAudio, setAsrAudio] = useState(null)
@@ -100,7 +111,10 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const [textMessage, setTextMessage] = useState("")
   const [trigger, setTrigger] = useState(false)
   const [triggerDownload, setTriggerDownload] = useState(false)
-
+  const [chatTitle, setChatTitle] = useState([])
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
+  const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -149,6 +163,14 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const endPageToScrollRef = useRef(null)
   const isIntroPlayed = useRef(false)
   const pendingExtraContent = useRef(null)
+  const profileCompletedRef = useRef(false)
+  const onProfileExtractedRef = useRef(onProfileExtracted)
+  const pendingNewChatRef = useRef(false)
+  const pendingNewChatTimerRef = useRef(null)
+
+  useEffect(() => {
+    onProfileExtractedRef.current = onProfileExtracted
+  }, [onProfileExtracted])
 
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
@@ -166,25 +188,44 @@ const DynamicVoiceChat = ({ type = "" }) => {
     refetchOnReconnect: false,
   })
 
+  const botRoute = useMemo(() => {
+    if (flowOverride === PROFILE_FLOW) {
+      return SAATHI_PROFILE_BOT_ROUTE
+    }
+  
+    return flowInfo?.bot_route
+  }, [flowOverride, flowInfo?.bot_route])
+  
   const { data: companyBotData } = useQuery({
-    queryKey: [API_ENDPOINTS.GET_COMPANY_BOT, companySlug, flowInfo?.bot_route, languageToUse, accessToken],
-    queryFn: () => getCompanyBotApi({ company_slug: companySlug, route: flowInfo.bot_route, target_language: languageToUse }),
-    enabled: !!(languageToUse && shouldFetchIntro && isNewChatOpen && profileToUse && flowInfo?.bot_route),
+    queryKey: [API_ENDPOINTS.GET_COMPANY_BOT, companySlug, botRoute, languageToUse, accessToken],
+    queryFn: () =>
+      getCompanyBotApi({
+        company_slug: companySlug,
+        route: botRoute,
+        target_language: languageToUse,
+      }),
+    enabled: !!(
+      languageToUse &&
+      shouldFetchIntro &&
+      isNewChatOpen &&
+      profileToUse &&
+      botRoute
+    ),
   })
-
+  
   const { data: introMessageData, isLoading: isIntroMessageLoading } = useQuery({
-    queryKey: [API_ENDPOINTS.BOT_VERNACULAR, flowInfo?.bot_route, languageToUse],
-    queryFn: () => getTranslatedIntroMessageApi({
-      language: languageToUse,
-      company_bot__route: flowInfo.bot_route,
-    }),
-    enabled: !!(companyBotData && languageToUse && companyBotData?.results?.length > 0 && flowInfo?.bot_route),
-  })
-
-  const { data: chatSessionData } = useQuery({
-    queryKey: [API_ENDPOINTS.GET_COMPANY_CHAT, sessionId],
-    queryFn: () => getChatsFromDB(sessionId),
-    enabled: !!sessionId,
+    queryKey: [API_ENDPOINTS.BOT_VERNACULAR, botRoute, languageToUse],
+    queryFn: () =>
+      getTranslatedIntroMessageApi({
+        language: languageToUse,
+        company_bot__route: botRoute,
+      }),
+    enabled: !!(
+      companyBotData &&
+      languageToUse &&
+      companyBotData?.results?.length > 0 &&
+      botRoute
+    ),
   })
 
   const partialUpdateStoryByIdMutation = useMutation({ mutationFn: partialUpdateStoryById })
@@ -206,8 +247,11 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   const { showGuestPopup, showConfirmationPopup } = useConfirmationPopup()
   const { stopAllAudio, audioRef } = useAudio()
+  const ttsAbortRef = useRef(null)
+  const ttsDisabledRef = useRef(false)
 
   const onFinalReconnectAttempt = useCallback(() => {
+    if (isPopupMode) return
     function onYesButtonClick() {
       try {
         let chat_history = getChatHistory()
@@ -237,7 +281,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
-  }, [])
+  }, [isPopupMode])
 
   const onWebSocketClose = useCallback(event => {
     console.log("closed", event)
@@ -249,7 +293,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   const onWebSocketOpen = useCallback(() => {
     const chat_history = getChatHistory()
-
     if (chat_history.filter(chat => chat.source === "user").length < 1) return
     if (!flowInfo) return
 
@@ -261,7 +304,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
       taskid: searchParams.get("taskId") || taskId,
       access_token: accessToken,
       route: chatLanguage,
-      bot_route: flowInfo.bot_route,
+      bot_route: botRoute,
       flow_name: storageFlow,
       address: {
         ipCity,
@@ -271,56 +314,124 @@ const DynamicVoiceChat = ({ type = "" }) => {
     })
   }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, ipFetched, flowInfo])
 
-  const onWebSocketMessage = useCallback(event => {
-    const data = JSON.parse(event.data)
-    const message = data["text"]
-    if (message.source === "bot") {
-      setIsStreamingComplete(false)
-      setSentences(prevSentences => {
-        const updatedSentences = structuredClone(prevSentences)
-        const lastSentence = updatedSentences[updatedSentences.length - 1]
 
-        if (lastSentence?.source === "bot") {
-          if (message?.msg) {
-            lastSentence.message += message?.msg
-          }
-        } else {
-          updatedSentences.push({
-            message: message?.msg || "",
-            source: "bot",
-            isNarrated: false,
-            id: Date.now(),
-          })
-          lastBotMessageIndex.current = updatedSentences.length - 1
-        }
-        return updatedSentences
-      })
-      handleScrollToView()
-    } else {
-      setIsStreamingComplete(true)
-    }
-
-    if (message.source === "user") {
-      const chat_history = getChatHistory()
-      const updated_chat_history = chat_history.map(chat => {
-        if (!chat.received && chat.msg === message.msg) {
-          return { ...chat, received: true }
-        }
-        return chat
-      })
-      setChatHistory(updated_chat_history)
-    }
-
-    if (message.finish_reason === "stop" && message.source === "bot") {
-      setStrandStep(message?.step)
-      handleScrollToView()
-      setTalking(0)
-      setIsStreamingComplete(true)
-      if (message?.extra_content) {
-        pendingExtraContent.current = message.extra_content
-      }
-    }
+  
+  const completeProfileExtraction = useCallback(() => {
+    if (profileCompletedRef.current) return
+    profileCompletedRef.current = true
+    pendingExtraContent.current = null
+    setShowHomepage(false)
+    setIsChatVisible(true)
+    // Stop TTS from re-playing earlier sentences (audio queue flush).
+    setSentences(prev => prev.map(s => ({ ...s, isNarrated: true })))
+    // Write the thank-you bubble directly into chatHistory.
+    // Cannot go through sentences→TTS→handleMessagesForBot: that path requires
+    // isNarrated:false, but handleMessagesForBot also guards on
+    // profileCompletedRef.current which is already true at this point.
+    // getChatHistory / setChatHistory are stable Zustand getState() refs — safe
+    // to call inside a []‑dep callback.
+    const currentHistory = getChatHistory()
+    setChatHistory([
+      ...currentHistory,
+      {
+        msg: "Thank you. I have all the information I need. Redirecting you to Saathi",
+        source: "bot",
+        updated_at: Date.now(),
+        received: true,
+      },
+    ])
+    onProfileExtractedRef.current?.()
   }, [])
+
+  const onWebSocketMessage = useCallback(
+    event => {
+      let data
+      try {
+        data = JSON.parse(event.data)
+      } catch {
+        return
+      }
+
+      if (isPopupMode && data?.profile_extracted === true) {
+        completeProfileExtraction()
+        return
+      }
+  
+      const message = data["text"]
+  
+      if (!message) return
+  
+      if (message.source === "bot") {
+        setIsStreamingComplete(false)
+  
+        setSentences(prevSentences => {
+          const updatedSentences = structuredClone(prevSentences)
+          const lastSentence = updatedSentences[updatedSentences.length - 1]
+  
+          if (lastSentence?.source === "bot") {
+            if (message?.msg) {
+              lastSentence.message += message?.msg
+            }
+          } else {
+            updatedSentences.push({
+              message: message?.msg || "",
+              source: "bot",
+              isNarrated: false,
+              id: Date.now(),
+            })
+  
+            lastBotMessageIndex.current = updatedSentences.length - 1
+          }
+  
+          return updatedSentences
+        })
+  
+        handleScrollToView()
+      } else {
+        setIsStreamingComplete(true)
+      }
+  
+      if (message.source === "user") {
+        const chat_history = getChatHistory()
+        const updated_chat_history = chat_history.map(chat => {
+          if (!chat.received && chat.msg === message.msg) {
+            return { ...chat, received: true }
+          }
+
+          return chat
+        })
+
+        setChatHistory(updated_chat_history)
+
+        if (pendingNewChatRef.current) {
+          pendingNewChatRef.current = false
+          if (pendingNewChatTimerRef.current) {
+            clearTimeout(pendingNewChatTimerRef.current)
+            pendingNewChatTimerRef.current = null
+          }
+          window.location.reload()
+        }
+      }
+  
+      if (message.finish_reason === "stop" && message.source === "bot") {
+        setStrandStep(message?.step)
+        handleScrollToView()
+        setTalking(0)
+        setIsStreamingComplete(true)
+  
+        if (message?.extra_content) {
+          pendingExtraContent.current = message.extra_content
+        }
+        if (
+          isPopupMode &&
+          message?.extra_content?.profile_extracted === true
+        ) {
+          completeProfileExtraction()
+        }
+      }
+    },
+    [isPopupMode, completeProfileExtraction]
+  )
 
   const isShikshalokamPublicType = true
   const shouldShowChatHistoryFeature = true
@@ -344,6 +455,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
   const {
     sendMessage: sendSocketMessage,
     connect: connectToWebSocket,
+    disconnect: disconnectFromWebSocket,
     isConnected: isSocketConnected,
   } = useChatWebhook(webSocketUrl, {
     onOpen: onWebSocketOpen,
@@ -354,6 +466,15 @@ const DynamicVoiceChat = ({ type = "" }) => {
     autoConnect: false,
     reconnectAttempts: env.WEBSOCKET_RETRY_NUM(),
   })
+  useEffect(() => {
+    return () => {
+      if (isPopupMode) {
+        disconnectFromWebSocket()
+      }
+    }
+  }, [isPopupMode, disconnectFromWebSocket])
+
+  useEffect(() => () => clearTimeout(pendingNewChatTimerRef.current), [])
 
   // ========================================================================
   // SECTION: Helper Functions (Must be defined before callbacks that use them)
@@ -475,6 +596,10 @@ const DynamicVoiceChat = ({ type = "" }) => {
    */
   const handleOnStopSpeaking = async () => {
     try {
+      if (ttsAbortRef.current) {
+        ttsAbortRef.current.abort()
+        ttsAbortRef.current = null
+      }
       try {
         if (audioRef.current) await audioRef.current.pause()
       } catch (error) {
@@ -576,12 +701,11 @@ const DynamicVoiceChat = ({ type = "" }) => {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    console.log(textMessage, "textMessage")
-
     if (!textMessage.trim()) return
 
     const chat_history = handleMessagesForUser(textMessage)
-    if (chat_history.filter(chat => chat.source === "user").length == 1 || !isSocketConnected) {
+    const userMsgCount = chat_history.filter(chat => chat.source === "user").length
+    if (userMsgCount === 1 || !isSocketConnected) {
       connectToWebSocket()
       sendSocketMessage({
         type: "authenticate",
@@ -591,13 +715,26 @@ const DynamicVoiceChat = ({ type = "" }) => {
         taskid: searchParams.get("taskId") || taskId,
         access_token: accessToken,
         route: chatLanguage,
-        bot_route: flowInfo.bot_route,
+        bot_route: botRoute,
         flow_name: storageFlow,
         address: {
           ipCity,
           ipState,
           ipZipCode,
         },
+      })
+    }
+    if (userMsgCount === 1 && showHistorySidebar) {
+      const firstMsg = textMessage.trim()
+      try {
+        const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
+        stored[sessionId] = firstMsg
+        localStorage.setItem("__session_titles", JSON.stringify(stored))
+      } catch {}
+      setChatTitle(prev => {
+        const found = prev.some(item => item.session === sessionId)
+        if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
+        return [{ session: sessionId, title: firstMsg }, ...prev]
       })
     }
     sendSocketMessage({
@@ -622,14 +759,20 @@ const DynamicVoiceChat = ({ type = "" }) => {
    */
   const handleCompanyChatCall = useCallback(async () => {
     try {
-      const storedChatHistory = chatHistory
-      if (storedChatHistory.length >= 1) {
+      // Use the Zustand getter so both the initial guard and the pre-write
+      // guard read the live store value, not a stale closure snapshot.
+      // This prevents two concurrent invocations (triggered by both the
+      // [isOldChatOpen,introMessage,chatHistory,sentences] effect and the
+      // [companyBotData,introMessage,flowInfo] effect when introMessage
+      // becomes truthy) from each independently passing the guard and
+      // writing duplicate history.
+      if (getChatHistory().length >= 1) {
         return
       }
 
-
       try {
-        const sortedResult = quickSort(Array.isArray(chatSessionData?.results) ? chatSessionData.results : [], compareById)
+        const freshData = await getChatsFromDB(sessionId)
+        const sortedResult = quickSort(Array.isArray(freshData?.results) ? freshData.results : [], compareById)
         const intro_message = introMessage
 
         // Collect all new sentences and chat history items
@@ -637,7 +780,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         const newChatHistoryItems = []
 
         // Use Set with IDs for reliable duplicate detection
-        const existingChatIds = new Set(chatHistory.map(msg => msg.updated_at))
+        const existingChatIds = new Set(getChatHistory().map(msg => msg.updated_at))
 
         // Add intro message if it exists and not already in history
         if (intro_message && !existingChatIds.has("intro_msg_id")) {
@@ -677,7 +820,12 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
         if (newChatHistoryItems.length > 0) {
           console.log("filteredItems: ", newChatHistoryItems)
-          setChatHistory([...chatHistory, ...newChatHistoryItems])
+          // Re-read current state before writing; a concurrent invocation
+          // may have already written the history between our guard check
+          // and this point.
+          const currentHistory = getChatHistory()
+          if (currentHistory.length >= 1) return
+          setChatHistory([...currentHistory, ...newChatHistoryItems])
           lastBotMessageIndex.current += newChatHistoryItems.length
         }
       } catch (error) {
@@ -696,7 +844,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         setIsLoading(false)
       }
     }
-  }, [introMessage, sessionId, chatSessionData])
+  }, [introMessage, sessionId])
 
   /**
    * Handles chat session button clicks from sidebar
@@ -719,6 +867,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
    */
   const handleMessagesForBot = useCallback(
     sentence => {
+      if (isPopupMode && profileCompletedRef.current) return
       if (isRecognizing || hasStartedListening || !shouldSendMessage) return
 
       const chat_history = structuredClone(chatHistory)
@@ -749,21 +898,25 @@ const DynamicVoiceChat = ({ type = "" }) => {
         ])
       }
     },
-    [chatHistory]
+    [chatHistory, isPopupMode]
   )
 
   useEffect(() => {
     if (!isFlowInfoError) return
+    if (isPopupMode) return
 
     if (flowInfoError?.response?.status === 404) {
       clearFromStorage()
       navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
     }
-  }, [flowInfoError, isFlowInfoError])
+  }, [flowInfoError, isFlowInfoError, isPopupMode])
 
   useEffect(() => {
+    // Popup mode is a temporary overlay; it must not overwrite the main
+    // chat's persistent flow registration in the shared Zustand store.
+    if (isPopupMode) return
     setStorageFlow(storageFlow)
-  }, [storageFlow])
+  }, [storageFlow, isPopupMode])
 
   useEffect(() => {
     if (chatHistory.length > 1) {
@@ -845,7 +998,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     if (!flowInfo) return
 
     const bots = companyBotData?.results
-    let storedRoute = flowInfo.bot_route
+    let storedRoute = botRoute
 
     if (!bots || bots.length === 0) {
       handleScrollToView()
@@ -867,7 +1020,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
       handleCompanyChatCall()
     }
 
-  }, [companyBotData, introMessage, chatSessionData, flowInfo])
+  }, [companyBotData, introMessage, flowInfo])
 
   // ========================================================================
   // SECTION: Lifecycle & Browser Events (Execution Order: 1 - On Mount)
@@ -940,14 +1093,12 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * Shows guest popup for special flows or navigates to previous page
    */
   useEffect(() => {
+    if (isPopupMode) return
+
     const currentFlow = storageFlow
     const handleBack = () => {
-      console.log("History length:", window.history.length)
-      console.log("Can go back 1?", window.history.length > 1)
-      console.log("Can go back 3?", window.history.length > 3)
       if (currentFlow) {
         if (ssoNavigationTriggered && accessToken) {
-          console.log("inside navigate happens")
           navigate(-2)
         } else {
           navigateBack()
@@ -966,7 +1117,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
     }
     // Check if we already pushed a custom state
     if (!window.history.state?.isCustom) {
-      console.log("shouldPushState is true so pushing state now.")
       window.history.pushState({ isCustom: true }, "", window.location.href)
     }
 
@@ -975,7 +1125,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     return () => {
       window.removeEventListener("popstate", handleBack)
     }
-  }, [navigate])
+  }, [navigate, isPopupMode])
 
   // ========================================================================
   // SECTION: Initial Configuration (Execution Order: 2 - On Mount & Specific Deps)
@@ -1067,13 +1217,17 @@ const DynamicVoiceChat = ({ type = "" }) => {
           setState(data?.profile_address[0]?.state)
           setIsNewChatOpen(true)
         } else {
-          clearFromStorage()
-          navigate(-1)
+          if (!isPopupMode) {
+            clearFromStorage()
+            navigate(-1)
+          }
         }
       } catch (error) {
         console.error(error)
-        clearFromStorage()
-        navigate(-1)
+        if (!isPopupMode) {
+          clearFromStorage()
+          navigate(-1)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -1147,6 +1301,15 @@ const DynamicVoiceChat = ({ type = "" }) => {
       handleChatSessionButtonClick()
     }
   }, [isOldChatOpen, introMessage, chatHistory, sentences])
+
+  /**
+   * Load chat history sidebar sessions when profile and flow are ready
+   */
+  useEffect(() => {
+    if (showHistorySidebar && profileToUse && storageFlow) {
+      showChatTitle()
+    }
+  }, [profileToUse, storageFlow, showHistorySidebar])
 
   // ========================================================================
   // SECTION: Language & Bot Setup (Execution Order: 5 - When Profile Ready)
@@ -1261,6 +1424,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
    * * Display Popup for the flows where end story api is not being called
    */
   useEffect(() => {
+    if (isPopupMode) return
 
     let survey_title = "PPsCompletionMessage"
 
@@ -1315,7 +1479,15 @@ const DynamicVoiceChat = ({ type = "" }) => {
         }
       })
     }
-  }, [isStreamingComplete, strandStep, stateMachineLength, storageFlow, chatHistory, flowInfo])
+  }, [
+    isStreamingComplete,
+    strandStep,
+    stateMachineLength,
+    storageFlow,
+    chatHistory,
+    flowInfo,
+    isPopupMode,
+  ])
 
   // ========================================================================
   // SECTION: UI State Management (Execution Order: 7 - Throughout Lifecycle)
@@ -1497,9 +1669,6 @@ const DynamicVoiceChat = ({ type = "" }) => {
     let unnarratedMessages = sentences.filter(x => !x?.isNarrated)
     let hasUnnarratedMessages = !!unnarratedMessages?.length
     let sourceLanguage = languageToUse
-    console.log({
-      hasUnnarratedMessages,
-    })
     if (isNextAllowed && hasUnnarratedMessages && !isLoading && !endStoryMutation.isPending && flowInfo) {
       handleAI4BharatTTSRequest(unnarratedMessages[0].message, unnarratedMessages[0].id, sourceLanguage)
     }
@@ -1842,7 +2011,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
     window.history.pushState(null, "", window.location.href)
   }
 
-  async function downloadFileFromUrl(url) {
+  async function downloadFileFromUrl(url, fileName) {
     try {
       const response = await fetch(url)
       if (!response.ok) {
@@ -1852,7 +2021,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
       const blobUrl = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = blobUrl
-      a.download = url.split("/").pop() || "download"
+      a.download = fileName || url.split("/").pop() || "download"
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -1873,6 +2042,20 @@ const DynamicVoiceChat = ({ type = "" }) => {
     if (e) {
       e.preventDefault()
     }
+
+    // Capture before removeChatHistory() clears state.
+    // m.received === false (strict) means sent via createMessage but not yet echoed by backend.
+    // API-loaded messages have received: undefined and are excluded by strict equality.
+    const hasUnacknowledgedSentMessages = getChatHistory().some(
+      m => m.source === "user" && m.received === false
+    )
+    // Cancel any previous pending-reload from a rapid double-click on New Chat
+    if (pendingNewChatTimerRef.current) {
+      clearTimeout(pendingNewChatTimerRef.current)
+      pendingNewChatTimerRef.current = null
+    }
+    pendingNewChatRef.current = false
+
     setIsLoading(true)
     removeChatHistory()
     setIsOldChatOpen(false)
@@ -1888,7 +2071,24 @@ const DynamicVoiceChat = ({ type = "" }) => {
     setShowHomepage(true)
     setIsLoading(false)
 
-    window.location.reload()
+    if (!isPopupMode) {
+      if (hasUnacknowledgedSentMessages) {
+        // First message is queued but backend hasn't echoed yet — session may not be
+        // associated with this profile+flow. Defer reload until the echo confirms persistence.
+        pendingNewChatRef.current = true
+        pendingNewChatTimerRef.current = setTimeout(() => {
+          if (pendingNewChatRef.current) {
+            pendingNewChatRef.current = false
+            window.location.reload()
+          }
+        }, 5000)
+      } else {
+        window.location.reload()
+      }
+    } else {
+      setSentences([])
+      showChatTitle()
+    }
   }
 
   async function getSessionInfo() {
@@ -1989,7 +2189,10 @@ const DynamicVoiceChat = ({ type = "" }) => {
 
   const handleAI4BharatTTSRequest = async (text, id, sourceLanguage) => {
     try {
-      if (!flowInfo.bot_route) return
+      if (!botRoute) return
+
+      // Skip autoplay TTS if browser blocked it; manual speaker clicks (hasOverRideId) still proceed
+      if (ttsDisabledRef.current && !hasOverRideId) return
 
       if (id === "intro_msg_id") {
         setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
@@ -2006,7 +2209,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         sourceLanguage = "en"
       }
 
-      let storedRoute = flowInfo.bot_route
+      let storedRoute = botRoute
 
       if (!hasOverRideId && id !== "intro_msg_id") {
         handleMessagesForBot(text)
@@ -2023,7 +2226,19 @@ const DynamicVoiceChat = ({ type = "" }) => {
       }
 
       if (!cachedAudioUrl) {
-        audio_result = await getAI4BharatAudioApi(text, sourceLanguage, storedRoute)
+        // Create an AbortController for this request so handleOnStopSpeaking can cancel it
+        const controller = new AbortController()
+        ttsAbortRef.current = controller
+        try {
+          audio_result = await getAI4BharatAudioApi(text, sourceLanguage, storedRoute, controller.signal)
+        } catch (fetchError) {
+          // AbortError means the user sent a message / stopped TTS — exit silently
+          if (fetchError?.name === "AbortError" || fetchError?.code === "ERR_CANCELED") return
+          throw fetchError
+        } finally {
+          // Clear the ref once the request settles (whether success, error, or abort)
+          if (ttsAbortRef.current === controller) ttsAbortRef.current = null
+        }
         if (audio_result?.length) {
           cachedAudioUrl = `data:audio/wav;base64,${audio_result}`
           setAudioCache(prevCache => ({
@@ -2060,6 +2275,10 @@ const DynamicVoiceChat = ({ type = "" }) => {
           await audio.play()
         } catch (error) {
           console.error("Error playing audio:", error)
+          // If the browser blocked autoplay, disable TTS for this session
+          if (error?.name === "NotAllowedError") {
+            ttsDisabledRef.current = true
+          }
           setSentences(prev => {
             let all_sentences = JSON.parse(JSON.stringify([...prev]))
             let index = prev.findIndex(x => x.id === id)
@@ -2167,7 +2386,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                 transcriptResult = t("asrError")
               }
               setAsrAudio(s3Url)
-              let storedRoute = flowInfo.bot_route
+              let storedRoute = botRoute
               transcriptResult = await ai4BharatASRApi(s3Url, languageToUse, storedRoute)
               if (!transcriptResult || transcriptResult === "") {
                 showNotification({
@@ -2218,34 +2437,159 @@ const DynamicVoiceChat = ({ type = "" }) => {
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
-  return (
-    <>
-      <div className={`div27`}>
-        <div className={isMobile ? "div30_a" : "div30"}>
-          <MainHeader
-            isMobileFirst={isMobile}
-                        showTheDots={false}displayNewSessionButton={!([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
+  function processSidebarResults(results) {
+    const sessionTypeFilter = env.CHAT_SESSION_TYPE()
+    let localTitles = {}
+    try { localTitles = JSON.parse(localStorage.getItem("__session_titles") || "{}") } catch {}
+    const items = results
+      .filter(sessionObj => !sessionTypeFilter || sessionObj.session_type === sessionTypeFilter)
+      .sort((a, b) => b.id - a.id)
+      .map(sessionObj => {
+        const title = sessionObj.title || localTitles[sessionObj.session] || null
+        if (sessionObj.title && localTitles[sessionObj.session]) {
+          delete localTitles[sessionObj.session]
+        }
+        return { session: sessionObj.session, title }
+      })
+    try { localStorage.setItem("__session_titles", JSON.stringify(localTitles)) } catch {}
+    return items
+  }
 
-            content={
+  async function showChatTitle() {
+    try {
+      const currentFlow = storageFlow
+      const response = await getChatSessionApi({
+        profile: profileToUse,
+        flow: currentFlow,
+      })
+      if (response) {
+        setChatTitle(processSidebarResults(response?.data?.results || []))
+        setSidebarNextPageUrl(response?.data?.next || null)
+      }
+    } catch (error) {
+      console.error("showChatTitle error:", error)
+    }
+  }
+
+  async function loadMoreSessions() {
+    if (!sidebarNextPageUrl || isLoadingMoreSessions) return
+    setIsLoadingMoreSessions(true)
+    try {
+      const response = await fetchChatSessionPageApi(sidebarNextPageUrl)
+      if (response) {
+        setChatTitle(prev => [...prev, ...processSidebarResults(response?.data?.results || [])])
+        setSidebarNextPageUrl(response?.data?.next || null)
+      }
+    } catch (error) {
+      console.error("loadMoreSessions error:", error)
+    } finally {
+      setIsLoadingMoreSessions(false)
+    }
+  }
+
+  function handleSessionSelect(selectedSessionId) {
+    if (selectedSessionId === sessionId) return
+    setSessionId(selectedSessionId)
+    setChatHistory([])
+    setSentences([])
+    setIsOldChatOpen(true)
+    setIsNewChatOpen(false)
+    setShowHomepage(false)
+    setLlmError("")
+    setIsSidebarOpen(false)
+  }
+
+  return (
+    <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "row", height: isPopupMode ? "100%" : "100dvh", overflow: "hidden", position: "relative" } : undefined}>
+      {/* ===== CHAT HISTORY SIDEBAR (popup mode, non-profile flows) ===== */}
+      {showHistorySidebar && (
+        <>
+          {/* Mobile overlay backdrop */}
+          {isSidebarOpen && (
+            <div
+              className="saathi-sidebar-backdrop"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+          <aside className={`saathi-popup-sidebar${isMobile ? (isSidebarOpen ? " saathi-popup-sidebar--open" : " saathi-popup-sidebar--closed") : ""}`}>
+            {/* Sidebar header */}
+            <div className="saathi-popup-sidebar-header">
+              <span className="saathi-popup-sidebar-title">{t("sidebarTitle")}</span>
               <button
+                className="saathi-popup-new-chat-btn"
                 onClick={async e => {
-                  if (accessToken) {
-                    await resetChat(e)
-                  } else {
-                    showGuestPopup(() => {
-                      setBotName(null)
-                      resetChat()
-                    }, stayOnPage)
-                  }
+                  await resetChat(e)
                 }}
-                className="div32"
               >
-                <div className="div8">+</div>
+                <FiPlus style={{ marginRight: 3 }} /> {t("newChat")}
               </button>
-            }
-          />
-        </div>
-      </div>
+            </div>
+
+            {/* Empty state */}
+            {(!chatTitle || chatTitle.length === 0) ? (
+              <div className="saathi-popup-sidebar-empty">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <p>Your conversations will appear here</p>
+              </div>
+            ) : (
+              <div className="saathi-popup-sidebar-sessions">
+                <p className="saathi-popup-recents-label">Recents</p>
+                <div
+                  className="saathi-popup-sessions-scroll"
+                  onScroll={e => {
+                    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+                    if (scrollHeight - scrollTop - clientHeight < 150) {
+                      loadMoreSessions()
+                    }
+                  }}
+                >
+                  {chatTitle.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
+                      onClick={() => handleSessionSelect(item.session)}
+                      title={item.title || "Untitled chat"}
+                    >
+                      {item.title || "Untitled chat"}
+                    </div>
+                  ))}
+                  {isLoadingMoreSessions && (
+                    <div style={{ textAlign: "center", padding: "8px 0" }}>
+                      <BiLoader className="loader-rotate-loader loader-icon" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </aside>
+        </>
+      )}
+
+      {/* ===== MAIN CHAT CONTENT ===== */}
+      <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, overflow: "hidden" } : undefined}>
+        {/* Mobile hamburger to open sidebar */}
+        {showHistorySidebar && isMobile && (
+          <button
+            className="saathi-sidebar-toggle"
+            onClick={() => setIsSidebarOpen(prev => !prev)}
+            aria-label="Toggle chat history"
+          >
+            ☰
+          </button>
+        )}
+        {!showHistorySidebar && !isPopupMode && (
+          <div className={`div27`}>
+            <div className={isMobile ? "div30_a" : "div30"}>
+              <MainHeader
+                isMobileFirst={isMobile}
+                showTheDots={false}
+                displayNewSessionButton={!isPopupMode && !([sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow))}
+              />
+            </div>
+          </div>
+        )}
       {(isInitialising || isLoading || (!introMessageData && !introMessage) || endStoryMutation.isPending) && (
         <div className="loader-load-spinner">
           <div className="div67">
@@ -2273,13 +2617,13 @@ const DynamicVoiceChat = ({ type = "" }) => {
         ) : (
           <ReportEditor onClose={closeModal} onSave={onEditorSave} disabled={isLoading || isSaving} />
         ))}
-      <div className={`${accessToken ? "div72" : ""}`}>
-        {shouldFetchChatSession && (
+      <div className={`${accessToken ? "div72" : ""}`} style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
+        {shouldFetchChatSession && !isPopupMode &&(
           <button
             onClick={() => {
               if (accessToken) {
                 clearFromStorage()
-                navigate(-1)
+                navigate(-2)
               }
             }}
             className="button-13"
@@ -2288,7 +2632,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
           </button>
         )}
         <HiddenRecorder />
-        <div className={`${accessToken ? "div33-a" : "div33"} div9`}>
+        <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={(showHistorySidebar || isPopupMode) ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
           {!showHomepage && (
             <ul className="div34">
               {chatHistory &&
@@ -2319,7 +2663,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                       <div style={{ display: "flex", gap: "8px", marginTop: "6px", marginLeft: "44px" }}>
                         {chat.extra_content.download.pdf_url && (
                           <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url)}
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null)}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
                           >
                             <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
@@ -2328,7 +2672,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
                         )}
                         {chat.extra_content.download.docx_url && (
                           <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url)}
+                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null)}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
                           >
                             <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
@@ -2379,9 +2723,13 @@ const DynamicVoiceChat = ({ type = "" }) => {
                         <p style={{ textAlign: "center", lineHeight: "1.8" }}>
                           {t(`${prefix}homepageList`)}
                           <br />
-                          {t(`${prefix}homepageList1`)}
+                          {isPopupMode || storageFlow === "saathi_profile"
+                            ? t("profileHomepageList1")
+                            : t(`${prefix}homepageList1`)}
                           <br />
-                          {t(`${prefix}homepageList2`)}
+                          {isPopupMode || storageFlow === "saathi_profile"
+                            ? t("profileHomepageList2")
+                            : t(`${prefix}homepageList2`)}
                         </p>
                       </div>
                     </>
@@ -2629,6 +2977,7 @@ const DynamicVoiceChat = ({ type = "" }) => {
         {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
             className="div39 form-1 sm:p-[10px_35px] p-[10px_25px]"
+            style={(showHistorySidebar || isPopupMode) ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (!hasStartedListening && !isFetchingData) {
                 handleSendMessage(event)
@@ -2705,7 +3054,8 @@ const DynamicVoiceChat = ({ type = "" }) => {
           </form>
         )}
       </div>
-    </>
+      </div>
+    </div>
   )
 }
 

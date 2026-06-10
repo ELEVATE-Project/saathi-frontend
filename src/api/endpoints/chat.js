@@ -44,8 +44,13 @@ export const getChatSessionApi = async data => {
   }
 
   const response = await apiClient.get(API_ENDPOINTS.GET_CHAT_SESSION, {
-    params,
+    params: { ...params, ordering: "-id", limit: 100 },
   })
+  return response
+}
+
+export const fetchChatSessionPageApi = async url => {
+  const response = await apiClient.get(url)
   return response
 }
 

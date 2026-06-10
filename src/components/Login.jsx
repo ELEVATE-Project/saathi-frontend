@@ -11,6 +11,7 @@ import { useLocalStorage } from "react-use"
 import USER_ACTIONS from "../context/user/user-actions"
 import FormData from "./Form/FormData"
 import ROUTES from "../url"
+import { useUserDataLocalStore } from "store"
 import { BiLoader } from "react-icons/bi"
 import "./custom-style.css"
 import "../index.css"
@@ -278,6 +279,9 @@ function Login({ type, variant }) {
         cookies.set("accessToken", response?.access_token, {
           path: "/",
         })
+        useUserDataLocalStore.getState().setAccessToken(
+          response.access_token
+        )
         setLocalUserData(response)
         // temp code (need to remove below later)
         const lang = localStorage.getItem("preferred_route")
@@ -288,7 +292,7 @@ function Login({ type, variant }) {
         }
         // temp code (need to remove above later)
 
-        navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT)
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
       } else {
         navigate("/login")
         window.location.reload()
