@@ -135,5 +135,6 @@
   "landing_heading": "साथी",
   "landing_tagline": "सूक्ष्म सुधार, बड़ा प्रभाव",
   "landing_login_btn": "लॉगिन",
-  "sidebarTitle": "साथी"
+  "sidebarTitle": "साथी",
+  "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी"
 }

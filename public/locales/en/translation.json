@@ -147,5 +147,6 @@
     "landing_heading": "SAATHI",
     "landing_tagline": "Micro Improvement Mega Impact",
     "landing_login_btn": "Login",
-    "sidebarTitle": "SAATHI"
+    "sidebarTitle": "SAATHI",
+    "sidebarEmptyText": "Your past conversations will appear here"
     }
