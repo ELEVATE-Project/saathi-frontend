@@ -286,82 +286,82 @@ function CommonHomePage({ usecaseType }) {
 
   if (showLanding) {
     return (
-      <div className="container max-w-full md mt-0 mx-auto grid md:grid-cols-2 px-0">
-        <div className="px-5 hidden sm:block">
-          <div className="flex">
+      <>
+        {/* Mobile layout */}
+        <div className="sm:hidden flex flex-col" style={{ height: "100dvh" }}>
+          <div className="flex flex-col items-center justify-center px-4" style={{ height: "50dvh" }}>
             <img
               src={t("pageLogo")}
-              className="h-[100px] w-[200px] object-contain aspect-auto align-top object-[center_center] relative ml-0"
+              className="h-[45px] w-[130px] object-contain mb-3"
               alt="shikshalokam_logo"
             />
-          </div>
-
-          <div className="mt-[40px]">
-            <div className="text-center sm:text-md text-xl mb-2 text-slate-700">
+            <div className="text-center text-md text-slate-700 mb-1">
               <b>{t("landing_heading")}</b>
             </div>
-
-            <p className="text-center text-slate-700">
+            <p className="text-center text-slate-700 mb-2">
               {t("landing_tagline")}
             </p>
+            <img
+              src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
+              className="object-contain"
+              style={{ maxHeight: "200px", width: "auto" }}
+              alt=""
+            />
           </div>
-
-          <img
-            src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
-            width="360"
-            height="300"
-            className="center-img custom-login-image"
-            alt=""
-          />
-        </div>
-
-        <div className="w-full px-0">
-          <div className="justify-center w-full flex sm:hidden">
-            <div className="w-full">
-              <div className="justify-center w-full flex sm:hidden items-center p-2">
-                <img
-                  src={t("pageLogo")}
-                  className="h-[50px] w-[140px] object-contain"
-                  alt="shikshalokam_logo"
-                />
-              </div>
+          <div className="bg-slate-50 flex items-center justify-center" style={{ height: "50dvh" }}>
+            <div className="w-64">
+              <button
+                type="button"
+                className="w-full px-5 py-3 text-white rounded-md"
+                style={{ backgroundColor: "#572E91" }}
+                onClick={() => navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)}
+              >
+                {t("landing_login_btn")}
+              </button>
             </div>
           </div>
+        </div>
 
-          <div className="sm:hidden text-center sm:text-sm mb-1 text-md text-slate-700">
-            <b>{t("landing_heading")}</b>
+        {/* Desktop layout */}
+        <div className="hidden sm:grid sm:grid-cols-2" style={{ minHeight: "100dvh" }}>
+          <div className="px-8 flex flex-col items-center justify-center">
+            <div className="w-full mb-6">
+              <img
+                src={t("pageLogo")}
+                className="h-[100px] w-[200px] object-contain"
+                alt="shikshalokam_logo"
+              />
+            </div>
+            <div className="text-center text-xl mb-2 text-slate-700">
+              <b>{t("landing_heading")}</b>
+            </div>
+            <p className="text-center text-slate-700 mb-4">
+              {t("landing_tagline")}
+            </p>
+            <img
+              src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
+              width="360"
+              height="300"
+              className="center-img custom-login-image"
+              alt=""
+            />
           </div>
-
-          <p className="sm:hidden text-center text-slate-700 px-2">
-            {t("landing_tagline")}
-          </p>
-
-          <img
-            src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
-            width="170"
-            height="100"
-            className="center-img custom-login-image sm:hidden"
-            alt=""
-          />
-
-          <div className="bg-slate-50 sm:pt-6 sm:h-[100%] flex flex-col justify-center mt-0 w-full">
-            <div className="p-2 text-center sm:mt-[60px]">
-              <div className="flex flex-col mx-auto w-64">
-                <button
-                  type="button"
-                  className="w-full p-3 mt-6 mb-2 px-5 py-3 text-white rounded-md"
-                  style={{ backgroundColor: "#572E91" }}
-                  onClick={() => navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)}
-                >
-                  {t("landing_login_btn")}
-                </button>
-              </div>
+          <div className="bg-slate-50 flex items-center justify-center">
+            <div className="w-64">
+              <button
+                type="button"
+                className="w-full px-5 py-3 text-white rounded-md"
+                style={{ backgroundColor: "#572E91" }}
+                onClick={() => navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)}
+              >
+                {t("landing_login_btn")}
+              </button>
             </div>
           </div>
         </div>
 
         <LoadingSpinner isVisible={isLoading} />
-      </div>
+      </>
     )
   }
 
