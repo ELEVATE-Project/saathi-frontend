@@ -641,6 +641,17 @@ const DynamicVoiceChat = ({
         msg: isBot ? messageToUse : chat?.message,
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
+        ...(isBot && (chat?.other_params?.pdf_url || chat?.other_params?.docx_url) ? {
+          extra_content: {
+            download: {
+              ...(chat.other_params.pdf_url && { pdf_url: chat.other_params.pdf_url }),
+              ...(chat.other_params.docx_url && { docx_url: chat.other_params.docx_url }),
+              ...(chat.other_params.arguments?.filename && {
+                file_name: chat.other_params.arguments.filename.replace(/\.[^.]+$/, ""),
+              }),
+            },
+          },
+        } : {}),
       },
     }
   }
