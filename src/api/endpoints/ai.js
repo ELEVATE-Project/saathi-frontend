@@ -9,13 +9,13 @@ import { bot_routes } from "../../configure"
  * @param {string} [storedRoute=bot_routes.normal] - Bot route configuration
  * @returns {Promise<string>} The audio data
  */
-export const getAI4BharatAudioApi = async (text, sourceLanguage = "en", storedRoute = bot_routes.normal) => {
+export const getAI4BharatAudioApi = async (text, sourceLanguage = "en", storedRoute = bot_routes.normal, signal = null) => {
   try {
     const response = await apiClient.post(API_ENDPOINTS.TEXT_TO_SPEECH, {
       text: text,
       source_language: sourceLanguage,
       route: storedRoute,
-    })
+    }, signal ? { signal } : undefined)
 
     return response.data.audio
   } catch (error) {

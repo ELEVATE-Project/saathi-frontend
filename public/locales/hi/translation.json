@@ -29,6 +29,8 @@
   "homepageList": "मैं साथी हूं, आपका विद्यालय सुधार सहयोगी।",
   "homepageList1": "आप जिन चुनौतियों का सामना कर रहे हैं, उनके बारे में बताएं या शिक्षा के बारे में मुझसे कुछ भी पूछें —",
   "homepageList2": "मैं इसमें आपकी मदद करूंगा।",
+  "profileHomepageList1": "शुरू करने से पहले, मुझे आपके अनुभव को व्यक्तिगत बनाने में मदद करने के लिए आपसे कुछ जानकारी एकत्र करने की आवश्यकता होगी।",
+  "profileHomepageList2": "क्या हम शुरू कर सकते हैं?",
   "la_homepageHeading": "हम आपकी बात सुनने के लिए यहाँ हैं",
   "la_homepageHeading1": "साथी के साथ!",
   "la_homepageList": "मित्रा के साथ अपना अनुभव और प्रतिक्रिया साझा करें",
@@ -129,6 +131,10 @@
   "shiksha_samvad_homepageList": "मित्रा से बातचीत शुरू करें",
   "shiksha_samvad_homepageList1": "मित्रा के साथ अपने अनुभव और विचार साझा करें।",
   "shiksha_samvad_homepageList2": "अपनी प्रतिक्रियाएँ सबमिट करें",
-  "xylemx_entrepreneurship_development_PPsCompletionMessage": "<div class='text-class'>अपने बारे में और अपने स्टार्टअप के बारे में बताने के लिए आपका बहुत-बहुत धन्यवाद। हम आपको शुभकामनाएं देते हैं। हम आपसे फिर से जुड़ना और आपकी यात्रा में सहयोग करना चाहेंगे।</div>"
-
+  "xylemx_entrepreneurship_development_PPsCompletionMessage": "<div class='text-class'>अपने बारे में और अपने स्टार्टअप के बारे में बताने के लिए आपका बहुत-बहुत धन्यवाद। हम आपको शुभकामनाएं देते हैं। हम आपसे फिर से जुड़ना और आपकी यात्रा में सहयोग करना चाहेंगे।</div>",
+  "landing_heading": "साथी",
+  "landing_tagline": "सूक्ष्म सुधार, बड़ा प्रभाव",
+  "landing_login_btn": "लॉगिन",
+  "sidebarTitle": "साथी",
+  "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी"
 }

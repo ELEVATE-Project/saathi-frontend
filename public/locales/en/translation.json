@@ -29,6 +29,8 @@
     "homepageList": "I'm Saathi, your school improvement companion.",
     "homepageList1": "Share a challenge you're facing or ask me anything about education —",
     "homepageList2": "I'll help you work through it.",
+    "profileHomepageList1": "Before we get started, I'll need to gather some information from you to help personalize your experience.",
+    "profileHomepageList2": "Can we get started?",
     "la_homepageHeading": "We're Here to Help to You",
     "la_homepageHeading1": "with Saathi!",
     "la_homepageList": "Share your experience and feedback with MItra",
@@ -77,7 +79,7 @@
     "onlineNetwork": "You are back online.",
     "languageQuestion": "Select your preferred language",
     "welcome_paragraph1": "MItra is a multilingual, AI-powered, voice-enabled chatbot that empowers education leaders—teachers, school leaders, community members, parents, and youth leaders—to reflect on and share their school improvement journey.",
-    "welcome_heading1": "Saathi",
+    "welcome_heading1": "SAATHI: Micro Improvement Mega Impact",
     "welcome_text": "Welcome",
     "commonPageSelectionText": "What would you like to do today?",
     "loginBtnText": "Login/Signup",
@@ -141,5 +143,10 @@
     "shiksha_samvad_homepageList": "Start chatting with MItra",
     "shiksha_samvad_homepageList1": "Share your experiences and thoughts with MItra",
     "shiksha_samvad_homepageList2": "Submit your responses",
-    "xylemx_entrepreneurship_development_PPsCompletionMessage": "<div class='text-class'>Thank you so much for expressing yourself and sharing about you and your startup. We wish you the best. We would like to connect with you again and support your journey.</div>"
+    "xylemx_entrepreneurship_development_PPsCompletionMessage": "<div class='text-class'>Thank you so much for expressing yourself and sharing about you and your startup. We wish you the best. We would like to connect with you again and support your journey.</div>",
+    "landing_heading": "SAATHI",
+    "landing_tagline": "Micro Improvement Mega Impact",
+    "landing_login_btn": "Login",
+    "sidebarTitle": "SAATHI",
+    "sidebarEmptyText": "Your past conversations will appear here"
     }

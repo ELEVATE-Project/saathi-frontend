@@ -15,6 +15,8 @@ import UnifiedChat from "./pages/UnifiedChat/UnifiedChat"
 import ChatContainer from "./pages/ShikshalokamVoiceChat/chat-container"
 import MainPage from "pages/ai-creation/pages/shikshalokam-mitra/MainPage"
 import ImprovementPlan from "pages/ai-creation/pages/improvement-plan"
+import Shikshalokam from "./pages/shikshalokam"
+import WelcomePage from "./components/Welcome";
 
 const queryClient = new QueryClient()
 
@@ -42,6 +44,11 @@ const protected_routes = []
 
 const unprotected_old_routes = [
 
+  ...(process.env.NODE_ENV !== 'production' ? [{
+    path: "/dev-welcome-preview",
+    element: <WelcomePage />,
+  }] : []),
+
   // mitra chat routes
   { path: ROUTES.MITRA_CHAT, element: <MainPage /> },
   { path: ROUTES.IMPROVEMENT_PLAN, element: <ImprovementPlan /> },
@@ -49,6 +56,8 @@ const unprotected_old_routes = [
   // { path: ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN, element: <Shikshalokam type={"shikshalokam"} variant={"publicBot"} /> },
   // { path: ROUTES.SHIKSHALOKAM_VOICE_CHAT, element: <ShikshalokamVoiceBasedChat type={"shikshalokam"} variant={"publicBot"} /> },
 
+  { path: ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN, element: <Shikshalokam type={"shikshalokam"} variant={"publicBot"} /> },
+// { path: ROUTES.SHIKSHALOKAM_VOICE_CHAT, element: <ShikshalokamVoiceBasedChat type={"shikshalokam"} variant={"publicBot"} /> },
   { path: ROUTES.COMMON_CHAT, element: <ChatContainer /> },
 
   { path: ROUTES.SHIKSHALOKAM_GUEST_VOICE_CHAT, element: <ShikshalokamChat type={sessionFlowName.GuestDiscussion} /> },

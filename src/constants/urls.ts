@@ -10,6 +10,8 @@ export const API_ENDPOINTS = {
   GET_IP_LOCATION: "/api/get-ip-location/",
   GET_LOCATION: "/api/get-location/",
   GET_PRESIGNED_URL: "/api/get-presigned-url/",
+  GET_PROFILE: "/api/get-profile/",
+  ACCEPT_TNC: "/api/accept-tnc/",
   GET_PROFILE_DETAILS: "/api/profile/",
   GET_STORY: "/api/get-story",
   GET_USER_PROFILE: "/api/user_profile",

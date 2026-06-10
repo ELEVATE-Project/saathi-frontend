@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 
 function useCustomMediaQuery(query) {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" ? window.matchMedia(query).matches : false
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const media = window.matchMedia(query);
-      const isMatching = media.matches;
-      
-      setMatches(isMatching);
 
-      const listener = () => setMatches(isMatching);
+      setMatches(media.matches);
+
+      const listener = (e) => setMatches(e.matches);
       media.addEventListener('change', listener);
 
       return () => media.removeEventListener('change', listener);
