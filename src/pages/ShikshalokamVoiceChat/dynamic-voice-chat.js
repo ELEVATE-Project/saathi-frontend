@@ -167,6 +167,7 @@ const DynamicVoiceChat = ({
   const onProfileExtractedRef = useRef(onProfileExtracted)
   const pendingNewChatRef = useRef(false)
   const pendingNewChatTimerRef = useRef(null)
+  const sidebarBottomReachedRef = useRef(false)
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -641,16 +642,8 @@ const DynamicVoiceChat = ({
         msg: isBot ? messageToUse : chat?.message,
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
-        ...(isBot && (chat?.other_params?.pdf_url || chat?.other_params?.docx_url) ? {
-          extra_content: {
-            download: {
-              ...(chat.other_params.pdf_url && { pdf_url: chat.other_params.pdf_url }),
-              ...(chat.other_params.docx_url && { docx_url: chat.other_params.docx_url }),
-              ...(chat.other_params.arguments?.filename && {
-                file_name: chat.other_params.arguments.filename.replace(/\.[^.]+$/, ""),
-              }),
-            },
-          },
+        ...(isBot && chat?.other_params?.extra_content?.download ? {
+          extra_content: chat.other_params.extra_content,
         } : {}),
       },
     }
@@ -735,16 +728,21 @@ const DynamicVoiceChat = ({
         },
       })
     }
-    if (userMsgCount === 1 && showHistorySidebar) {
+    if (showHistorySidebar) {
       const firstMsg = textMessage.trim()
-      try {
-        const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
-        stored[sessionId] = firstMsg
-        localStorage.setItem("__session_titles", JSON.stringify(stored))
-      } catch {}
+      if (userMsgCount === 1) {
+        try {
+          const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
+          stored[sessionId] = firstMsg
+          localStorage.setItem("__session_titles", JSON.stringify(stored))
+        } catch {}
+      }
       setChatTitle(prev => {
-        const found = prev.some(item => item.session === sessionId)
-        if (found) return prev.map(item => item.session === sessionId ? { ...item, title: firstMsg } : item)
+        const idx = prev.findIndex(item => item.session === sessionId)
+        if (idx >= 0) {
+          const updated = userMsgCount === 1 ? { ...prev[idx], title: firstMsg } : prev[idx]
+          return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+        }
         return [{ session: sessionId, title: firstMsg }, ...prev]
       })
     }
@@ -2067,6 +2065,7 @@ const DynamicVoiceChat = ({
     }
     pendingNewChatRef.current = false
 
+    disconnectFromWebSocket()
     setIsLoading(true)
     removeChatHistory()
     setIsOldChatOpen(false)
@@ -2098,7 +2097,13 @@ const DynamicVoiceChat = ({
       }
     } else {
       setSentences([])
-      showChatTitle()
+      const newSessionId = session.sessionid
+      showChatTitle().then(() => {
+        setChatTitle(prev => {
+          if (prev.some(item => item.session === newSessionId)) return prev
+          return [{ session: newSessionId, title: null }, ...prev]
+        })
+      })
     }
   }
 
@@ -2454,7 +2459,7 @@ const DynamicVoiceChat = ({
     try { localTitles = JSON.parse(localStorage.getItem("__session_titles") || "{}") } catch {}
     const items = results
       .filter(sessionObj => !sessionTypeFilter || sessionObj.session_type === sessionTypeFilter)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
       .map(sessionObj => {
         const title = sessionObj.title || localTitles[sessionObj.session] || null
         if (sessionObj.title && localTitles[sessionObj.session]) {
@@ -2483,7 +2488,8 @@ const DynamicVoiceChat = ({
   }
 
   async function loadMoreSessions() {
-    if (!sidebarNextPageUrl || isLoadingMoreSessions) return
+    if (!sidebarNextPageUrl || isLoadingMoreSessions || sidebarBottomReachedRef.current) return
+    sidebarBottomReachedRef.current = true
     setIsLoadingMoreSessions(true)
     try {
       const response = await fetchChatSessionPageApi(sidebarNextPageUrl)
@@ -2500,6 +2506,7 @@ const DynamicVoiceChat = ({
 
   function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    disconnectFromWebSocket()
     setSessionId(selectedSessionId)
     setChatHistory([])
     setSentences([])
@@ -2551,8 +2558,11 @@ const DynamicVoiceChat = ({
                   className="saathi-popup-sessions-scroll"
                   onScroll={e => {
                     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
-                    if (scrollHeight - scrollTop - clientHeight < 150) {
+                    const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+                    if (distanceFromBottom < 150) {
                       loadMoreSessions()
+                    } else {
+                      sidebarBottomReachedRef.current = false
                     }
                   }}
                 >

@@ -25,6 +25,7 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
   const reconnectCount = useRef(1)
   const reconnectTimeout = useRef<null | NodeJS.Timeout>(null)
   const socketQueue = useRef<any[]>([])
+  const intentionalClose = useRef(false)
 
   const [isConnected, setIsConnected] = useState(false)
 
@@ -65,6 +66,12 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
         setIsConnected(false)
         if (onClose) onClose(event)
 
+        // Skip auto-reconnect if this was an intentional disconnect
+        if (intentionalClose.current) {
+          intentionalClose.current = false
+          return
+        }
+
         // Reconnect logic
         if (reconnect && reconnectCount.current < reconnectAttempts) {
           reconnectCount.current = reconnectCount.current + 1
@@ -81,6 +88,8 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
   }, [url, onOpen, onMessage, onError, onClose, reconnect, reconnectInterval, reconnectAttempts])
 
   const disconnect = useCallback(() => {
+    intentionalClose.current = true
+    reconnectCount.current = 0
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current)
     }
