@@ -422,6 +422,15 @@ const DynamicVoiceChat = ({
   
         if (message?.extra_content) {
           pendingExtraContent.current = message.extra_content
+          const currentHistory = getChatHistory()
+          const lastMsg = currentHistory[currentHistory.length - 1]
+          if (lastMsg?.source === "bot" && !lastMsg?.extra_content) {
+            setChatHistory(
+              currentHistory.map((c, i) =>
+                i === currentHistory.length - 1 ? { ...c, extra_content: message.extra_content } : c
+              )
+            )
+          }
         }
         if (
           isPopupMode &&
@@ -642,6 +651,7 @@ const DynamicVoiceChat = ({
         msg: isBot ? messageToUse : chat?.message,
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
+        received: true,
         ...(isBot && chat?.other_params?.extra_content?.download ? {
           extra_content: chat.other_params.extra_content,
         } : {}),
@@ -2711,14 +2721,7 @@ const DynamicVoiceChat = ({
             const lastChat = filteredHistory[filteredHistory.length - 1]
             return lastChat?.source === "user" ? (
               <div className="replying-indicator">
-                <MdAccountCircle className="replying-bot-icon" />
-                <div className="replying-bubble">
-                  <div className="replying-dots">
-                    <span className="replying-dot"></span>
-                    <span className="replying-dot"></span>
-                    <span className="replying-dot"></span>
-                  </div>
-                </div>
+                <span className="replying-text">{t("replyMsg")}</span>
               </div>
             ) : null
           })()}
