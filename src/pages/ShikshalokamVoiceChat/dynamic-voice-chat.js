@@ -56,7 +56,6 @@ import useUrlFlow from "../../hooks/useUrlFlow"
 import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
-import { apiClient } from "../../api/client"
 
 const cookies = new Cookies()
 
@@ -424,10 +423,11 @@ const DynamicVoiceChat = ({
           pendingExtraContent.current = message.extra_content
           const currentHistory = getChatHistory()
           const lastMsg = currentHistory[currentHistory.length - 1]
-          if (lastMsg?.source === "bot" && !lastMsg?.extra_content) {
+          if (lastMsg?.source === "bot") {
+            const mergedExtraContent = { ...lastMsg.extra_content, ...message.extra_content }
             setChatHistory(
               currentHistory.map((c, i) =>
-                i === currentHistory.length - 1 ? { ...c, extra_content: message.extra_content } : c
+                i === currentHistory.length - 1 ? { ...c, extra_content: mergedExtraContent } : c
               )
             )
           }
@@ -666,9 +666,6 @@ const DynamicVoiceChat = ({
     return a.id - b.id
   }
 
-  function compareByIdDesc(a, b) {
-    return b.id - a.id
-  }
 
   /**
    * Quick sort implementation for sorting arrays
@@ -952,12 +949,6 @@ const DynamicVoiceChat = ({
   // ========================================================================
   // const { access_token } =  getStorageSlice(STORE_NAME_CONSTANTS.USER_DATA, 'localStorage').getState();
   const { showFileInput, setShowFileInput } = useChatDataSessionStore.getState()
-  const selectedLabel = {
-    types: [
-      { label: t("guidedReflection"), value: "normal" },
-      { label: t("oneStepReflection"), value: "oneshot" },
-    ],
-  }
   const fileExceedText = t("fileExceedText")
   const fileSizeText = t("fileSizeText")
   let isMobile = useCustomMediaQuery("(max-width: 500px)")
@@ -1056,7 +1047,7 @@ const DynamicVoiceChat = ({
 
     const checkNetworkSpeed = () => {
       if (connection) {
-        const { effectiveType, downlink } = connection
+        const { effectiveType } = connection
         if (effectiveType && (effectiveType === "2g" || effectiveType === "3g") && navigator.onLine) {
           if (toastId) {
             toast.dismiss(toastId)
@@ -1812,7 +1803,7 @@ const DynamicVoiceChat = ({
           setTimeout(() => {
             const blocks = document.querySelectorAll(".ce-block")
 
-            blocks.forEach((block, blockIndex) => {
+            blocks.forEach(block => {
               const headerEl = block.querySelector(".ce-header")
               const paragraphEl = block.querySelector(".ce-paragraph")
 
@@ -1913,11 +1904,11 @@ const DynamicVoiceChat = ({
         data: {
           blocks: parsed_content.length > 0 ? parsed_content : [{ type: "paragraph", data: { text: "" } }],
         },
-        onChange: async (api, event) => {
+        onChange: async (api) => {
           setIsSaving(false)
           const savedData = await api.saver.save()
 
-          const filteredBlocks = savedData.blocks.filter((block, index) => {
+          const filteredBlocks = savedData.blocks.filter((block) => {
             if (block.type === "paragraph") {
               const isEmpty = !block.data.text.trim() || block.data.text === "​" || block.data.text === " "
               return !isEmpty
@@ -2021,13 +2012,9 @@ const DynamicVoiceChat = ({
     }
   }
 
-  function navigateSsoFlow(rerouteURL) {
+  function navigateSsoFlow() {
     console.log("navigating -2")
     navigate(-2)
-  }
-
-  function stayOnPage() {
-    window.history.pushState(null, "", window.location.href)
   }
 
   async function downloadFileFromUrl(url, fileName) {
@@ -2198,11 +2185,6 @@ const DynamicVoiceChat = ({
     }
   }
 
-  async function getCompanyChatApi(currentSession) {
-    const resp = await apiClient.get(`/api/companychat/?session=${currentSession}`)
-    return resp
-  }
-
   const handleOnInputText = e => {
     e.preventDefault()
     setTextMessage(e.target.value)
@@ -2323,7 +2305,7 @@ const DynamicVoiceChat = ({
 
   const isTyping = !!textMessage.trim()
 
-  const handleOnSpeaking = async (text, id, staticMsg, hasClickedOnSpeaker = false) => {
+  const handleOnSpeaking = async (_text, id, staticMsg, _hasClickedOnSpeaker = false) => {
     try {
       try {
         if (!!audioRef.current) await audioRef.current.pause()
@@ -2336,15 +2318,13 @@ const DynamicVoiceChat = ({
       setHasOverRideId(id)
       setIsNextAllowed(true)
       const messageToPlay = staticMsg ? staticMsg : chatHistory.find(message => message.updated_at === id)
-      setSentences(prev => {
-        return [
-          {
-            message: messageToPlay?.msg,
-            isNarrated: false,
-            id: id,
-          },
-        ]
-      })
+      setSentences(() => [
+        {
+          message: messageToPlay?.msg,
+          isNarrated: false,
+          id: id,
+        },
+      ])
     } catch (error) {
       console.error({ error })
     }
@@ -2720,7 +2700,7 @@ const DynamicVoiceChat = ({
             const filteredHistory = chatHistory?.filter(chat => chat.updated_at !== "intro_msg_id") ?? []
             const lastChat = filteredHistory[filteredHistory.length - 1]
             return lastChat?.source === "user" ? (
-              <div className="replying-indicator">
+              <div className="replying-indicator" role="status" aria-live="polite">
                 <span className="replying-text">{t("replyMsg")}</span>
               </div>
             ) : null
@@ -2847,7 +2827,7 @@ const DynamicVoiceChat = ({
                               setIsLoading(false)
                             })
                         }}
-                        onClick={e => {
+                        onClick={() => {
                           if (files?.length >= 10) {
                             setFileErrorText(fileExceedText)
                           } else {
