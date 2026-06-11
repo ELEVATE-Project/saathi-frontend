@@ -2702,19 +2702,26 @@ const DynamicVoiceChat = ({
                         )}
                       </div>
                     )}
-                    {!hasStartedListening && chatHistory[chatHistory?.length - 1].source === "user" && i === chatHistory?.length - 1 ? (
-                      <div className="div57">
-                        <div className="div58">
-                          <div>{t("replyMsg")}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      ""
-                    )}
                   </li>
                 ))}
             </ul>
           )}
+          {!showHomepage && (() => {
+            const filteredHistory = chatHistory?.filter(chat => chat.updated_at !== "intro_msg_id") ?? []
+            const lastChat = filteredHistory[filteredHistory.length - 1]
+            return lastChat?.source === "user" ? (
+              <div className="replying-indicator">
+                <MdAccountCircle className="replying-bot-icon" />
+                <div className="replying-bubble">
+                  <div className="replying-dots">
+                    <span className="replying-dot"></span>
+                    <span className="replying-dot"></span>
+                    <span className="replying-dot"></span>
+                  </div>
+                </div>
+              </div>
+            ) : null
+          })()}
           {showHomepage && (
             <>
               {storageFlow &&
