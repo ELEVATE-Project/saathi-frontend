@@ -882,6 +882,16 @@
     color: #9ca3af;
 }
 
+.replying-indicator {
+    padding: 4px 0 8px 12px;
+}
+
+.replying-text {
+    font-size: 1.1rem;
+    color: #9CA3AF;
+    font-weight: 400;
+}
+
 
 .clickable-button {
     width: 100%;
