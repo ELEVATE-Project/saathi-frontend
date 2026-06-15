@@ -6,6 +6,7 @@ import { sessionFlowName } from "../../constants/session"
 import { URL_PARAMS } from "../../constants/urls"
 import { useAudio } from "../../hooks/useAudio"
 import { useEffect, useMemo, useState, useCallback } from "react"
+import env from "../../utils/env"
 import { useFlow } from "../../hooks/useFlow"
 import { useLanguage } from "../../hooks/useLanguage"
 import { useSearchParams, useNavigate } from "react-router-dom"
@@ -280,6 +281,27 @@ function CommonHomePage({ usecaseType }) {
     }
   }, [showProfilePopup])
 
+  const handleLoginRedirect = useCallback(() => {
+    const loginRedirectUrl = env.LOGIN_REDIRECT_URL()
+
+    // If no LOGIN_REDIRECT_URL configured, fall back to the internal login page
+    if (!loginRedirectUrl) {
+      navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
+      return
+    }
+
+    // Step 1: Construct the target app URL — {SAATHI_FE_URL}{REDIRECT_URL_PATH}?flow={FLOW_NAME}
+    const targetUrl = new URL(env.REDIRECT_URL_PATH(), env.SAATHI_FE_URL())
+    targetUrl.searchParams.set("flow", env.FLOW_NAME())
+
+    // Step 2: Append URL-encoded target URL as redirectUrl param to LOGIN_REDIRECT_URL
+    const finalLoginUrl = new URL(loginRedirectUrl)
+    finalLoginUrl.searchParams.set("redirectUrl", targetUrl.toString())
+
+    // Step 3: Redirect the user
+    window.location.href = finalLoginUrl.toString()
+  }, [navigate])
+
   const onFlowContinue = () => {
     return handleFlowSelection(stopAllAudio)
   }
@@ -314,7 +336,7 @@ function CommonHomePage({ usecaseType }) {
                 type="button"
                 className="w-full px-5 py-3 text-white rounded-md"
                 style={{ backgroundColor: "#572E91" }}
-                onClick={() => navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)}
+                onClick={handleLoginRedirect}
               >
                 {t("landing_login_btn")}
               </button>
@@ -352,7 +374,7 @@ function CommonHomePage({ usecaseType }) {
                 type="button"
                 className="w-full px-5 py-3 text-white rounded-md"
                 style={{ backgroundColor: "#572E91" }}
-                onClick={() => navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)}
+                onClick={handleLoginRedirect}
               >
                 {t("landing_login_btn")}
               </button>

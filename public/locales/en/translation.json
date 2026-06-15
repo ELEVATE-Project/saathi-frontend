@@ -25,6 +25,7 @@
     "storyLoader": "Creating your story, this may take a moment. Please wait...",
     "reportLoader": "Creating your report, this may take a moment. Please wait...",
     "downloadLoader": "Downloading please wait...",
+    "downloadFileError": "Couldn't download your file. Please try again.",
     "homepageHeading": "Welcome!",
     "homepageList": "I'm Saathi, your school improvement companion.",
     "homepageList1": "Share a challenge you're facing or ask me anything about education —",
