@@ -291,19 +291,15 @@ function CommonHomePage({ usecaseType }) {
     }
 
     // Step 1: Construct the target app URL — {SAATHI_FE_URL}{REDIRECT_URL_PATH}?flow={FLOW_NAME}
-    const saathiFEUrl = env.SAATHI_FE_URL()
-    const redirectUrlPath = env.REDIRECT_URL_PATH()
-    const flowName = env.FLOW_NAME()
-    const targetUrl = `${saathiFEUrl}${redirectUrlPath}?flow=${flowName}`
+    const targetUrl = new URL(env.REDIRECT_URL_PATH(), env.SAATHI_FE_URL())
+    targetUrl.searchParams.set("flow", env.FLOW_NAME())
 
-    // Step 2: URL-encode the target app URL
-    const encodedTargetUrl = encodeURIComponent(targetUrl)
+    // Step 2: Append URL-encoded target URL as redirectUrl param to LOGIN_REDIRECT_URL
+    const finalLoginUrl = new URL(loginRedirectUrl)
+    finalLoginUrl.searchParams.set("redirectUrl", targetUrl.toString())
 
-    // Step 3: Append as redirectUrl param to LOGIN_REDIRECT_URL
-    const finalLoginUrl = `${loginRedirectUrl}?redirectUrl=${encodedTargetUrl}`
-
-    // Step 4: Redirect the user
-    window.location.href = finalLoginUrl
+    // Step 3: Redirect the user
+    window.location.href = finalLoginUrl.toString()
   }, [navigate])
 
   const onFlowContinue = () => {
