@@ -51,6 +51,12 @@ export const env = {
 
   CHAT_SESSION_TYPE: () => getEnv("REACT_APP_CHAT_SESSION_TYPE", "saathi"),
 
+  // Login redirect configuration
+  SAATHI_FE_URL: () => getEnv("REACT_APP_SAATHI_FE_URL", ""),
+  LOGIN_REDIRECT_URL: () => getEnv("REACT_APP_LOGIN_REDIRECT_URL", ""),
+  REDIRECT_URL_PATH: () => getEnv("REACT_APP_REDIRECT_URL_PATH", ""),
+  FLOW_NAME: () => getEnv("REACT_APP_FLOW_NAME", ""),
+
   // Generic getter for any environment variable
   get: (key: string, defaultValue: string = "") => getEnv(key, defaultValue),
 }
