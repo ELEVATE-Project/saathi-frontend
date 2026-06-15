@@ -1313,6 +1313,18 @@ const DynamicVoiceChat = ({
     }
   }, [isOldChatOpen, introMessage, chatHistory, sentences])
 
+  const hasScrolledToBottomRef = useRef(false)
+  useEffect(() => {
+    hasScrolledToBottomRef.current = false
+  }, [sessionId])
+  useEffect(() => {
+    if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
+      hasScrolledToBottomRef.current = true
+      const scrollTimer = setTimeout(() => handleScrollToView(), 100)
+      return () => clearTimeout(scrollTimer)
+    }
+  }, [isOldChatOpen, chatHistory])
+
   /**
    * Load chat history sidebar sessions when profile and flow are ready
    */
@@ -1575,7 +1587,7 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     lastBotMessageIndex.current = chatHistory?.length - 1
-    if (!showFileInput) handleScrollToView()
+    if (!showFileInput && !(isOldChatOpen && !hasScrolledToBottomRef.current)) handleScrollToView()
   }, [chatHistory])
 
   /**
