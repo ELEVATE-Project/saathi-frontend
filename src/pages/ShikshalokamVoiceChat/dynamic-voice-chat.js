@@ -110,6 +110,7 @@ const DynamicVoiceChat = ({
   const [textMessage, setTextMessage] = useState("")
   const [trigger, setTrigger] = useState(false)
   const [triggerDownload, setTriggerDownload] = useState(false)
+  const [downloadFileErrors, setDownloadFileErrors] = useState({})
   const [chatTitle, setChatTitle] = useState([])
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
@@ -2017,7 +2018,7 @@ const DynamicVoiceChat = ({
     navigate(-2)
   }
 
-  async function downloadFileFromUrl(url, fileName) {
+  async function downloadFileFromUrl(url, fileName, onError) {
     try {
       const response = await fetch(url)
       if (!response.ok) {
@@ -2034,6 +2035,7 @@ const DynamicVoiceChat = ({
       window.URL.revokeObjectURL(blobUrl)
     } catch (error) {
       console.error("Download failed:", error)
+      onError?.()
     }
   }
 
@@ -2670,28 +2672,47 @@ const DynamicVoiceChat = ({
                         chatId={chat?.updated_at}
                       />
                     </div>
-                    {chat?.extra_content && chat?.extra_content.download && (chat.extra_content.download.pdf_url || chat.extra_content.download.docx_url) && (
-                      <div style={{ display: "flex", gap: "8px", marginTop: "6px", marginLeft: "44px" }}>
-                        {chat.extra_content.download.pdf_url && (
-                          <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.pdf_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null)}
-                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
-                          >
-                            <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>PDF</span>
-                          </button>
-                        )}
-                        {chat.extra_content.download.docx_url && (
-                          <button
-                            onClick={() => downloadFileFromUrl(chat.extra_content.download.docx_url, chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null)}
-                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
-                          >
-                            <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>DOCX</span>
-                          </button>
+                    {chat?.extra_content?.download && (chat.extra_content.download.pdf_url || chat.extra_content.download.docx_url) ? (
+                      <div style={{ marginTop: "6px", marginLeft: "44px" }}>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          {chat.extra_content.download.pdf_url && (
+                            <button
+                              onClick={() => {
+                                setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
+                                downloadFileFromUrl(
+                                  chat.extra_content.download.pdf_url,
+                                  chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null,
+                                  () => setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                )
+                              }}
+                              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
+                            >
+                              <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
+                              <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>PDF</span>
+                            </button>
+                          )}
+                          {chat.extra_content.download.docx_url && (
+                            <button
+                              onClick={() => {
+                                setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
+                                downloadFileFromUrl(
+                                  chat.extra_content.download.docx_url,
+                                  chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null,
+                                  () => setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                )
+                              }}
+                              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
+                            >
+                              <FiDownload style={{ fontSize: "22px", color: "#2563EB" }} />
+                              <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b3939" }}>DOCX</span>
+                            </button>
+                          )}
+                        </div>
+                        {downloadFileErrors[chat.updated_at] && (
+                          <p style={{ fontSize: "13px", color: "#dc2626", marginTop: "6px" }}>{t("downloadFileError")}</p>
                         )}
                       </div>
-                    )}
+                    ) : null}
                   </li>
                 ))}
             </ul>
