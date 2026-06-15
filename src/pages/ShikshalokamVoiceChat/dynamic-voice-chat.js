@@ -1313,6 +1313,17 @@ const DynamicVoiceChat = ({
     }
   }, [isOldChatOpen, introMessage, chatHistory, sentences])
 
+  const hasScrolledToBottomRef = useRef(false)
+  useEffect(() => {
+    hasScrolledToBottomRef.current = false
+  }, [sessionId])
+  useEffect(() => {
+    if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
+      hasScrolledToBottomRef.current = true
+      setTimeout(() => handleScrollToView(), 100)
+    }
+  }, [isOldChatOpen, chatHistory])
+
   /**
    * Load chat history sidebar sessions when profile and flow are ready
    */
