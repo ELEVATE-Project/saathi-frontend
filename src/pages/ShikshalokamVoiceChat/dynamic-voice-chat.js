@@ -1320,7 +1320,8 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
       hasScrolledToBottomRef.current = true
-      setTimeout(() => handleScrollToView(), 100)
+      const scrollTimer = setTimeout(() => handleScrollToView(), 100)
+      return () => clearTimeout(scrollTimer)
     }
   }, [isOldChatOpen, chatHistory])
 
@@ -1586,7 +1587,7 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     lastBotMessageIndex.current = chatHistory?.length - 1
-    if (!showFileInput) handleScrollToView()
+    if (!showFileInput && !(isOldChatOpen && !hasScrolledToBottomRef.current)) handleScrollToView()
   }, [chatHistory])
 
   /**
