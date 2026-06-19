@@ -2,11 +2,10 @@ import axios, { AxiosInstance } from "axios"
 import env from "utils/env"
 
 type TAPIConfig = {
-  headers?: {
-    Authorization?: string
-  }
+  headers?: Record<string, string | undefined>
   params?: Record<string, string>
   signal?: AbortSignal
+  withCredentials?: boolean
 }
 
 class ApiClient {
