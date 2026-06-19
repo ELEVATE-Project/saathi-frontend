@@ -70,7 +70,7 @@ function CommonHomePage({ usecaseType }) {
   )
 
   useEffect(() => {
-    if (!isAuthChecking) return
+    if (!isSaathiHome || env.AUTH_METHOD() !== "cookie") return
 
     readElevateProfileApi().then(data => {
       const profile = data?.profile_details
