@@ -84,7 +84,11 @@ function ChatContainer() {
   }
 
   async function initialSetup() {
-    if (accessToken) return
+    if (accessToken) {
+      const session = await getSessionDetails()
+      setSessionId(session.sessionid)
+      return
+    }
 
     try {
       const customEmail = deviceId + "@shikshalokam.org"
