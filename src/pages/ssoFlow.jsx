@@ -43,8 +43,7 @@ function SsoFlow() {
         window.location.reload();
       }
       try {
-        const data = await readElevateProfileApi(accessToken);
-        // const data = await readElevateProfileApi();
+        const data = await readElevateProfileApi();
         if (data) {
           const profile_details = data?.profile_details
           if (profile_details) {

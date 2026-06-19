@@ -92,14 +92,10 @@ export const acceptTncApi = async profileId => {
  * @param {string} accessToken - The access token for authentication
  * @returns {Promise<Object>} The Elevate profile data
  */
-export const readElevateProfileApi = async accessToken => {
+export const readElevateProfileApi = async () => {
   try {
     const authUrl = env.AUTH_ROUTE();
     const response = await apiClient.get(authUrl, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-auth-token": accessToken
-      },
       withCredentials: true,
     });
     return response?.data;
