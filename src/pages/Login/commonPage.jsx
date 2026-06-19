@@ -84,6 +84,7 @@ function CommonHomePage({ usecaseType }) {
         setAccessToken(true)
         setProfileId(profile.profileid)
       }
+    }).finally(() => {
       setIsAuthChecking(false)
     })
   }, [])
