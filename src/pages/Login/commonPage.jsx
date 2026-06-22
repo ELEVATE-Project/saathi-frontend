@@ -22,7 +22,7 @@ import { useUserDataLocalStore, useChatDataLocalStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
-import { getProfileApi, acceptTncApi, readElevateProfileApi } from "api/endpoints/user"
+import { getProfileApi, acceptTncApi } from "api/endpoints/user"
 import { getSessionDetails } from "../../services/api.service"
 
 function CommonHomePage({ usecaseType }) {
@@ -65,29 +65,6 @@ function CommonHomePage({ usecaseType }) {
   const [isProfileComplete, setIsProfileComplete] = useState(null)
   const [showProfilePopup, setShowProfilePopup] = useState(false)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
-  const [isAuthChecking, setIsAuthChecking] = useState(
-    isSaathiHome && !accessToken && env.AUTH_METHOD() === "cookie"
-  )
-
-  useEffect(() => {
-    if (!isSaathiHome || env.AUTH_METHOD() !== "cookie") return
-
-    readElevateProfileApi().then(data => {
-      const profile = data?.profile_details
-      if (profile) {
-        const { setFirstName, setCompanyName, setState, setAcceptedTnC, setAccessToken, setProfileId } =
-          useUserDataLocalStore.getState()
-        setFirstName(profile.first_name)
-        setCompanyName(profile.company)
-        setState(profile.state)
-        setAcceptedTnC(typeof profile.has_accepted_tnc === "string" ? profile.has_accepted_tnc : "ONGOING")
-        setAccessToken(true)
-        setProfileId(profile.profileid)
-      }
-    }).finally(() => {
-      setIsAuthChecking(false)
-    })
-  }, [])
 
   const languageSelected = hasSelectedLanguage || !!urlLanguage
   const isSaathiOnboarding =
@@ -328,8 +305,6 @@ function CommonHomePage({ usecaseType }) {
   const onFlowContinue = () => {
     return handleFlowSelection(stopAllAudio)
   }
-
-  if (isAuthChecking) return <LoadingSpinner isVisible={true} />
 
   if (showLanding) {
     return (

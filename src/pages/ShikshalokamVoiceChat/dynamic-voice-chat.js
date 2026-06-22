@@ -1099,10 +1099,6 @@ const DynamicVoiceChat = ({
     }
   }, [])
 
-  function stayOnPage() {
-    window.history.pushState(null, "", window.location.href)
-  }
-
   /**
    * Browser back button handling - intercepts browser navigation
    * Shows guest popup for special flows or navigates to previous page
@@ -1116,7 +1112,7 @@ const DynamicVoiceChat = ({
         if (ssoNavigationTriggered && accessToken) {
           navigate(-2)
         } else {
-          showGuestPopup(navigateBack, stayOnPage)
+          navigateBack()
         }
       } else {
         setLanguage(languageList[0].value)
