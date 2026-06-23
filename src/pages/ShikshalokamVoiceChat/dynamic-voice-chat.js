@@ -2514,6 +2514,7 @@ const DynamicVoiceChat = ({
 
   function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    stopAllAudio()
     disconnectFromWebSocket()
     setSessionId(selectedSessionId)
     setChatHistory([])
