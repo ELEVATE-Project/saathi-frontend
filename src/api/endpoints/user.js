@@ -96,10 +96,8 @@ export const acceptTncApi = async profileId => {
  * @returns {Promise<Object>} The Elevate profile data
  */
 export const readElevateProfileApi = async accessToken => {
-  console.log("[readElevateProfileApi] called with token:", accessToken)
   try {
     const authUrl = env.AUTH_ROUTE()
-    console.log("[readElevateProfileApi] calling:", authUrl)
     const response = await apiClient.get(authUrl, {
       headers: {
         "Content-Type": "application/json",
@@ -116,14 +114,11 @@ export const readElevateProfileApi = async accessToken => {
         confirmButtonText: i18n.t("confirmChanges"),
         allowOutsideClick: false,
       })
-      console.log("[readElevateProfileApi] Swal result:", result)
       if (result.isConfirmed) {
-        console.log("This is from OK")
         const flowName = env.FLOW_NAME()
         const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
         window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
       }
-      return null
     }
     throw error
   }

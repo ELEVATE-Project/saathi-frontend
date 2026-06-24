@@ -1,7 +1,7 @@
 {
   "confirmChanges": "हाँ",
   "popUpChanges": "<div class='text-class'>\n    आप कुछ समय से निष्क्रिय हैं।  \n    क्या आप जारी रखना चाहते हैं?\n</div>",
-  "guestPopUpChanges": "<div class='text-class'>\n   क्या आप वाकई इस बातचीत को छोड़ना चाहते हैं?\n    आपकी सारी प्रगति खो जाएगी\n</div>",
+  "guestPopUpChanges": "<div class='text-class'>\n   क्या आप वाकई इस बातचीत को छोड़ना चाहते हैं?\n</div>",
   "comfirmButton": "हाँ",
   "denyButton": "नहीं",
   "doLater": "मैं इसे बाद में करूंगा",
@@ -138,5 +138,6 @@
   "landing_login_btn": "लॉगिन",
   "sidebarTitle": "साथी",
   "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी",
-  "sessionExpiredMessage": "सत्र समाप्त हो गया। कृपया जारी रखने के लिए फिर से लॉग इन करें।"
+  "sessionExpiredMessage": "सत्र समाप्त हो गया। कृपया जारी रखने के लिए फिर से लॉग इन करें।",
+  "profileOnboardingCompleteMessage": "धन्यवाद। मुझे ज़रूरी सारी जानकारी मिल गई है। आपको साथी पर रीडायरेक्ट किया जा रहा है।"
 }
