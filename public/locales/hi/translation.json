@@ -137,5 +137,6 @@
   "landing_tagline": "सूक्ष्म सुधार, बड़ा प्रभाव",
   "landing_login_btn": "लॉगिन",
   "sidebarTitle": "साथी",
-  "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी"
+  "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी",
+  "sessionExpiredMessage": "सत्र समाप्त हो गया। कृपया जारी रखने के लिए फिर से लॉग इन करें।"
 }
