@@ -335,14 +335,14 @@ const DynamicVoiceChat = ({
     setChatHistory([
       ...currentHistory,
       {
-        msg: "Thank you. I have all the information I need. Redirecting you to Saathi",
+        msg: t("profileOnboardingCompleteMessage"),
         source: "bot",
         updated_at: Date.now(),
         received: true,
       },
     ])
     onProfileExtractedRef.current?.()
-  }, [])
+  }, [t])
 
   const onWebSocketMessage = useCallback(
     event => {
@@ -1258,6 +1258,32 @@ const DynamicVoiceChat = ({
   }, [accessToken, profileToUse])
 
   /**
+   * Initialize popup mode: generate session and open new chat
+   * Runs when popup renders with an already-known profile (chat-container bypassed)
+   */
+  useEffect(() => {
+    if (!isPopupMode) return
+    if (!accessToken || !profileToUse) return
+
+    ;(async () => {
+      try {
+        setIsLoading(true)
+        if (!sessionId) {
+          const session = await getSessionDetails()
+          setSessionId(session.sessionid)
+        }
+        setIsNewChatOpen(true)
+        setShouldFetchIntro(true)
+        setIsStreamingComplete(true)
+      } catch (error) {
+        console.error("[DynamicVoiceChat popup] session init failed:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    })()
+  }, [isPopupMode, accessToken, profileToUse])
+
+  /**
    * Fetch chat session for Reflection flow based on projectId
    * Retrieves existing session for project-based reflections
    */
@@ -2006,9 +2032,14 @@ const DynamicVoiceChat = ({
   }
 
   const navigateBack = () => {
-    console.log("[navigateBack] accessToken:", useUserDataLocalStore.getState().access_token)
     stopAllAudio()
-    navigate(-1)
+    navigate(
+      {
+        pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
+        search: new URLSearchParams({ flow: env.FLOW_NAME() }).toString(),
+      },
+      { replace: true }
+    )
   }
 
   function navigateSsoFlow() {

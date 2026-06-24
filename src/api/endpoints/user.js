@@ -96,10 +96,8 @@ export const acceptTncApi = async profileId => {
  * @returns {Promise<Object>} The Elevate profile data
  */
 export const readElevateProfileApi = async accessToken => {
-  console.log("[readElevateProfileApi] called with token:", accessToken)
   try {
     const authUrl = env.AUTH_ROUTE()
-    console.log("[readElevateProfileApi] calling:", authUrl)
     const response = await apiClient.get(authUrl, {
       headers: {
         "Content-Type": "application/json",

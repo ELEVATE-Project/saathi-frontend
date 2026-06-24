@@ -93,17 +93,18 @@ function CommonHomePage({ usecaseType }) {
     if (!isSaathiHome || !accessToken) return
 
     const storedToken = accessToken
-    console.log("[CommonHomePage] accessToken on load:", useUserDataLocalStore.getState().access_token)
     ;(async () => {
       try {
         const data = await readElevateProfileApi(storedToken)
         if (data) {
           clearFromStorage()
+          const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
           store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
-          store.setProfileId(data.profile_details?.profileid)
-        } else {
-          // 401 — popup shown and redirect handled in readElevateProfileApi
+          store.setProfileId(profile?.profileid)
+          store.setFirstName(profile?.first_name)
+          store.setCompanyName(profile?.company)
+          store.setState(profile?.state)
         }
       } catch (error) {
         console.error("[CommonHomePage] Token validation failed:", error)
