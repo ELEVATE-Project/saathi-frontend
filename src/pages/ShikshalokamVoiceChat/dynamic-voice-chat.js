@@ -4,8 +4,8 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createMessage } from "../interview-voice"
 import { createUserProfileApi } from "api/endpoints/user"
+import { createMessage } from "../interview-voice"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
 import { FaCircle } from "react-icons/fa6"
@@ -1123,16 +1123,18 @@ const DynamicVoiceChat = ({
         setChatLanguage(languageList[0].value)
         stopAllAudio()
         if (accessToken) {
-          clearFromStorage()
-          navigateSsoFlow(ssoRerouteURL)
+          navigate({
+            pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
+            search: new URLSearchParams({ flow: env.FLOW_NAME() }).toString(),
+          }, { replace: true })
         } else {
           navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
         }
       }
     }
-    // Check if we already pushed a custom state
+    // Mark the current entry without adding to the stack
     if (!window.history.state?.isCustom) {
-      window.history.pushState({ isCustom: true }, "", window.location.href)
+      window.history.replaceState({ isCustom: true }, "", window.location.href)
     }
 
     window.addEventListener("popstate", handleBack)
@@ -1249,7 +1251,7 @@ const DynamicVoiceChat = ({
     }
 
     if (!profileToUse && accessToken) {
-      createUserProfile()
+      // createUserProfile()
       setShouldFetchIntro(true)
       setIsStreamingComplete(true)
     }
@@ -2004,29 +2006,9 @@ const DynamicVoiceChat = ({
   }
 
   const navigateBack = () => {
-    let rerouteUrl = previousUrl
-    const currentFlow = storageFlow
+    console.log("[navigateBack] accessToken:", useUserDataLocalStore.getState().access_token)
     stopAllAudio()
-    if (accessToken) {
-      console.log("clearing storage")
-      clearFromStorage()
-      navigateSsoFlow(ssoRerouteURL)
-      return
-    }
-    console.log("clearing storage")
-    clearFromStorage()
-    setLanguage(LANGUAGE_ENUMS.ENGLISH)
-    setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
-    setHasSelectedLanguage(false)
-    if (rerouteUrl && rerouteUrl !== null && rerouteUrl !== undefined && rerouteUrl !== "") {
-      window.location.href = rerouteUrl
-    } else {
-      navigate({
-        pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
-        search: currentFlow ? new URLSearchParams({ flow: currentFlow }).toString() : ''   
-      })
-      window.location.reload()
-    }
+    navigate(-1)
   }
 
   function navigateSsoFlow() {

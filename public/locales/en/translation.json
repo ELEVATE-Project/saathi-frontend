@@ -149,5 +149,6 @@
     "landing_tagline": "Micro Improvement Mega Impact",
     "landing_login_btn": "Login",
     "sidebarTitle": "SAATHI",
-    "sidebarEmptyText": "Your past conversations will appear here"
+    "sidebarEmptyText": "Your past conversations will appear here",
+    "sessionExpiredMessage": "Session expired. Please log in again to continue."
     }

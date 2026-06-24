@@ -1,6 +1,9 @@
 import { API_ENDPOINTS } from "constants/urls"
 import { apiClient } from "../client"
 import env from "utils/env"
+import Swal from "sweetalert2"
+import i18n from "i18next"
+import ROUTES from "url"
 
 /**
  * Creates a new user profile
@@ -93,17 +96,35 @@ export const acceptTncApi = async profileId => {
  * @returns {Promise<Object>} The Elevate profile data
  */
 export const readElevateProfileApi = async accessToken => {
+  console.log("[readElevateProfileApi] called with token:", accessToken)
   try {
-    const authUrl = env.AUTH_ROUTE();
+    const authUrl = env.AUTH_ROUTE()
+    console.log("[readElevateProfileApi] calling:", authUrl)
     const response = await apiClient.get(authUrl, {
       headers: {
         "Content-Type": "application/json",
-        "x-auth-token": accessToken
+        "x-auth-token": accessToken,
       },
       withCredentials: true,
-    });
-    return response?.data;
+    })
+    return response?.data
   } catch (error) {
-    return error?.response?.data
+    console.log("[readElevateProfileApi] error status:", error?.response?.status, "response:", error?.response)
+    if (error?.response?.status === 401) {
+      const result = await Swal.fire({
+        text: i18n.t("sessionExpiredMessage"),
+        confirmButtonText: i18n.t("confirmChanges"),
+        allowOutsideClick: false,
+      })
+      console.log("[readElevateProfileApi] Swal result:", result)
+      if (result.isConfirmed) {
+        console.log("This is from OK")
+        const flowName = env.FLOW_NAME()
+        const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      }
+      return null
+    }
+    throw error
   }
 }

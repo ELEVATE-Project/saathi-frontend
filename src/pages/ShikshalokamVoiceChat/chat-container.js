@@ -130,7 +130,11 @@ function ChatContainer() {
   }
 
   const setFinalLanguage = async () => {
-    if (accessToken) return
+    if (accessToken) {
+      const session = await getSessionDetails()
+      setSessionId(session.sessionid)
+      return
+    }
 
     await initialSetup()
     const storedLanguage = chatLanguage || languageList[0].value
@@ -169,7 +173,7 @@ function ChatContainer() {
 
   return (
     <>
-      {companyName && !isLoading && <DynamicVoiceChat />}
+      {(companyName || accessToken) && !isLoading && <DynamicVoiceChat />}
       {(isLoading || !ipFetched) && (
         <div className="loader-load-spinner">
           <div className="div67">
