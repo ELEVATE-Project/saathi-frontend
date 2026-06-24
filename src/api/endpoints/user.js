@@ -114,14 +114,11 @@ export const readElevateProfileApi = async accessToken => {
         confirmButtonText: i18n.t("confirmChanges"),
         allowOutsideClick: false,
       })
-      console.log("[readElevateProfileApi] Swal result:", result)
       if (result.isConfirmed) {
-        console.log("This is from OK")
         const flowName = env.FLOW_NAME()
         const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
         window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
       }
-      return null
     }
     throw error
   }
