@@ -3,7 +3,7 @@ import { apiClient } from "../client"
 import env from "utils/env"
 import Swal from "sweetalert2"
 import i18n from "i18next"
-import ROUTES from "url"
+import ROUTES from "../../url"
 
 /**
  * Creates a new user profile
@@ -107,7 +107,7 @@ export const readElevateProfileApi = async accessToken => {
     })
     return response?.data
   } catch (error) {
-    console.log("[readElevateProfileApi] error status:", error?.response?.status, "response:", error?.response)
+    console.log("[readElevateProfileApi] error status:", error?.response?.status)
     if (error?.response?.status === 401) {
       const result = await Swal.fire({
         text: i18n.t("sessionExpiredMessage"),

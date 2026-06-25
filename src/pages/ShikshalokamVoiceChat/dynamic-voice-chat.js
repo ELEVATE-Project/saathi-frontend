@@ -1132,7 +1132,7 @@ const DynamicVoiceChat = ({
         }
       }
     }
-    // Mark the current entry without adding to the stack
+
     if (!window.history.state?.isCustom) {
       window.history.replaceState({ isCustom: true }, "", window.location.href)
     }

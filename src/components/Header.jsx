@@ -43,7 +43,7 @@ const Header = ({
     <>
       <div className="justify-center w-full flex sm:hidden">
         <div className="w-full">
-          <div className={`${languageButtonSelect && ![null, ""].includes(languageButtonSelect) ? "justify-between" : "justify-center"} w-full flex sm:hidden items-center p-2`}>
+          <div className="justify-center w-full flex sm:hidden items-center p-2">
             <img src={t("pageLogo")} className={`h-[50px] object-contain ${chatLanguage === "en" ? "w-[140px]" : "w-[100px]"}`} alt="shikshalokam_logo" />
             {/* <LanguageSelector
               className="w-[140px] flex justify-end p-2"

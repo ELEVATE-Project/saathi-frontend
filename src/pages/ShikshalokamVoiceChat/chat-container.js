@@ -131,8 +131,12 @@ function ChatContainer() {
 
   const setFinalLanguage = async () => {
     if (accessToken) {
-      const session = await getSessionDetails()
-      setSessionId(session.sessionid)
+      try {const session = await getSessionDetails()
+      setSessionId(session.sessionid)}
+      catch (error) {
+        console.log("[ChatContainer] authenticated session bootstrap failed:", error)
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
+      }
       return
     }
 
