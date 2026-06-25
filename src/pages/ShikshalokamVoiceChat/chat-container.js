@@ -130,7 +130,15 @@ function ChatContainer() {
   }
 
   const setFinalLanguage = async () => {
-    if (accessToken) return
+    if (accessToken) {
+      try {const session = await getSessionDetails()
+      setSessionId(session.sessionid)}
+      catch (error) {
+        console.log("[ChatContainer] authenticated session bootstrap failed:", error)
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
+      }
+      return
+    }
 
     await initialSetup()
     const storedLanguage = chatLanguage || languageList[0].value
@@ -169,7 +177,7 @@ function ChatContainer() {
 
   return (
     <>
-      {companyName && !isLoading && <DynamicVoiceChat />}
+      {(companyName || accessToken) && !isLoading && <DynamicVoiceChat />}
       {(isLoading || !ipFetched) && (
         <div className="loader-load-spinner">
           <div className="div67">

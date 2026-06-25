@@ -1,7 +1,7 @@
 {
   "confirmChanges": "ಹೌದು",
   "popUpChanges": "<div class='text-class'>\n    ನೀವು ಸ್ವಲ್ಪ ಸಮಯದಿಂದ ನಿಷ್ಕ್ರಿಯರಾಗಿದ್ದೀರಿ.\n    ನೀವು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ?\n</div>",
-  "guestPopUpChanges": "<div class='text-class'>\n   ನೀವು ಈ ಸಂಭಾಷಣೆಯನ್ನು ತ್ಯಜಿಸಲು ಖಚಿತವಾಗಿ ಬಯಸುತ್ತೀರಾ?\n    ನಿಮ್ಮ ಎಲ್ಲಾ ಪ್ರಗತಿ ಕಳೆದುಹೋಗುತ್ತದೆ\n</div>",
+  "guestPopUpChanges": "<div class='text-class'>\n   ನೀವು ಈ ಸಂಭಾಷಣೆಯನ್ನು ತ್ಯಜಿಸಲು ಖಚಿತವಾಗಿ ಬಯಸುತ್ತೀರಾ?\n</div>",
   "comfirmButton": "ಹೌದು",
   "denyButton": "ಇಲ್ಲ",
   "doLater": "ನಾನು ಅದನ್ನು ನಂತರ ಮಾಡುತ್ತೇನೆ.",
@@ -118,5 +118,7 @@
   "landing_tagline": "ಮೈಕ್ರೋ ಇಂಪ್ರೂವ್ಮೆಂಟ್ ಮೆಗಾ ಇಂಪ್ಯಾಕ್ಟ್",
   "landing_login_btn": "ಲಾಗಿನ್",
   "sidebarTitle": "ಸಾಥಿ",
-  "sidebarEmptyText": "ನಿಮ್ಮ ಹಿಂದಿನ ಸಂಭಾಷಣೆಗಳು ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ"
+  "sidebarEmptyText": "ನಿಮ್ಮ ಹಿಂದಿನ ಸಂಭಾಷಣೆಗಳು ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ",
+  "sessionExpiredMessage": "ಅವಧಿ ಮುಗಿದಿದೆ. ಮುಂದುವರಿಯಲು ದಯವಿಟ್ಟು ಮತ್ತೆ ಲಾಗಿನ್ ಮಾಡಿ.",
+  "profileOnboardingCompleteMessage": "ಧನ್ಯವಾದಗಳು. ನನಗೆ ಬೇಕಾದ ಎಲ್ಲಾ ಮಾಹಿತಿ ನನ್ನಲ್ಲಿದೆ. ನಿಮ್ಮನ್ನು ಸಾಥಿಗೆ ಮರುನಿರ್ದೇಶಿಸುತ್ತಿದ್ದೇನೆ."
 }

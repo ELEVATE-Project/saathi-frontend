@@ -22,7 +22,8 @@ import { useUserDataLocalStore, useChatDataLocalStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
-import { getProfileApi, acceptTncApi } from "api/endpoints/user"
+import { getProfileApi, acceptTncApi, readElevateProfileApi } from "api/endpoints/user"
+import { clearFromStorage } from "../../services/storage_service"
 import { getSessionDetails } from "../../services/api.service"
 
 function CommonHomePage({ usecaseType }) {
@@ -48,9 +49,12 @@ function CommonHomePage({ usecaseType }) {
 
   const isSaathiHome = !usecaseType
 
+  const [isTokenValidating, setIsTokenValidating] = useState(() => isSaathiHome && !!accessToken)
+
   const showLanding =
     isSaathiHome &&
-    !Boolean(accessToken)
+    !Boolean(accessToken) &&
+    !isTokenValidating
 
   const ptm_case = sessionFlowName.megaPTM === usecaseType
   const ylc_case = sessionFlowName.YLC === usecaseType
@@ -84,6 +88,31 @@ function CommonHomePage({ usecaseType }) {
     languageSelected &&
     isTncAccepted === false &&
     !isProfileLoading
+
+  useEffect(() => {
+    if (!isSaathiHome || !accessToken) return
+
+    const storedToken = accessToken
+    ;(async () => {
+      try {
+        const data = await readElevateProfileApi(storedToken)
+        if (data) {
+          clearFromStorage()
+          const profile = data.profile_details
+          const store = useUserDataLocalStore.getState()
+          store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
+          store.setProfileId(profile?.profileid)
+          store.setFirstName(profile?.first_name)
+          store.setCompanyName(profile?.company)
+          store.setState(profile?.state)
+        }
+      } catch (error) {
+        console.error("[CommonHomePage] Token validation failed:", error)
+      } finally {
+        setIsTokenValidating(false)
+      }
+    })()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (zustandProfileId || !profileId) return
@@ -125,6 +154,7 @@ function CommonHomePage({ usecaseType }) {
   }, [urlFlow])
 
   useEffect(() => {
+    if (isTokenValidating) return
     if (showLanding) return
     if (isSaathiOnboarding && !saathiOnboardingDone) return
 
@@ -134,10 +164,11 @@ function CommonHomePage({ usecaseType }) {
       pathname: ROUTES.COMMON_CHAT,
       search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
     })
-  }, [urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
+  }, [isTokenValidating, urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
 
   // Process language selection
   useEffect(() => {
+    if (isTokenValidating) return
     if (showLanding) return
     if (!urlLanguage && !hasSelectedLanguage) {
       setIsLoading(false)
@@ -176,7 +207,7 @@ function CommonHomePage({ usecaseType }) {
       pathname: ROUTES.COMMON_CHAT,
       search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
     })
-  }, [chatLanguage, urlLanguage, urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
+  }, [isTokenValidating, chatLanguage, urlLanguage, urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
 
   useEffect(() => {
     handleLanguageChange(chatLanguage, audioRef, stopAllAudio, setStopAudioTriggered)
