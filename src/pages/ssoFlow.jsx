@@ -39,8 +39,21 @@ function SsoFlow() {
       if (env.AUTH_METHOD() === "url" && (!accessToken || accessToken === "")) {
         const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
         navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true });
+        return
       }
-      const data = await readElevateProfileApi(accessToken);
+
+     let data
+     try {
+        data = await readElevateProfileApi(accessToken)
+      } 
+      catch (error) {
+        console.error("[SsoFlow] readElevateProfileApi failed:", error)
+        clearFromStorage()
+        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+        return
+     }
+
       if (data) {
         const profile_details = data?.profile_details
         if (profile_details) {
@@ -50,6 +63,7 @@ function SsoFlow() {
               clearFromStorage();
               const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
               navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+              return
             }
           }
 
@@ -93,10 +107,12 @@ function SsoFlow() {
           const navigationPath = queryString ? `${ROUTES.SHIKSHALOKAM_HOME_PAGE}?${queryString}` : ROUTES.SHIKSHALOKAM_HOME_PAGE
           navigate(navigationPath, { replace: true })
         } else {
+          clearFromStorage()
           const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
           navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
         }
       } else {
+        clearFromStorage()
         const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
         navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
       }
