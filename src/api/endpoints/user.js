@@ -120,6 +120,8 @@ export const readElevateProfileApi = async accessToken => {
         window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
       }
     }
-    throw error
+    else {
+      throw error
+    }
   }
 }
