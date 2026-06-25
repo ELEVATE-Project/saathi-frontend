@@ -35,76 +35,71 @@ function SsoFlow() {
       if (rerouteRaw.startsWith('"') && rerouteRaw.endsWith('"')) {
         rerouteRaw = rerouteRaw.slice(1, -1)
       }
-      console.log(rerouteRaw, URL_PARAMS.RE_ROUTE_URL)
-      // const rerouteUrl = decodeURIComponent(rerouteRaw)
 
       if (env.AUTH_METHOD() === "url" && (!accessToken || accessToken === "")) {
-        navigate(-1);
+        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true });
         window.location.reload();
       }
-      try {
-        const data = await readElevateProfileApi(accessToken);
-        // const data = await readElevateProfileApi();
-        if (data) {
-          const profile_details = data?.profile_details
-          if (profile_details) {
-            if (projectId) {
-              const statusRes = await updateReflectionStatusApi(projectId, "started", sessionFlowName.SsoFlow, accessToken)
-              if (statusRes?.status !== 200) {
-                clearFromStorage();
-                navigate(-1)
-              }
+      const data = await readElevateProfileApi(accessToken);
+      if (data) {
+        const profile_details = data?.profile_details
+        if (profile_details) {
+          if (projectId) {
+            const statusRes = await updateReflectionStatusApi(projectId, "started", sessionFlowName.SsoFlow, accessToken)
+            if (statusRes?.status !== 200) {
+              clearFromStorage();
+              const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
+              navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
             }
-
-            clearFromStorage()
-            setLanguage(LANGUAGE_ENUMS.ENGLISH)
-            setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
-            if (sessionId && sessionId !== "" && sessionId !== "null") {
-              setSessionId(sessionId)
-            } else {
-              let session = await getSessionDetailsApi()
-              setSessionId(session.sessionid)
-            }
-            if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
-              setHasSelectedLanguage(true)
-              setChatLanguage(languagePassed)
-              setLanguage(languagePassed)
-            } else if (profile_details.route) {
-              setChatLanguage(profile_details.route)
-              setLanguage(profile_details.route)
-            }
-
-            setSsoRerouteURL(rerouteRaw)
-            setFirstName(profile_details.first_name)
-            setCompanyName(profile_details.company)
-            setState(profile_details.state)
-            setFlow(flow_type)
-            const hasAcc = profile_details.has_accepted_tnc;
-            setAcceptedTnC(typeof hasAcc === "string" ? hasAcc : "ONGOING")
-            setAccessToken(env.AUTH_METHOD() === "url" ? accessToken : true)
-            setProfileId(profile_details.profileid)
-            setIsNewChatOpen(true)
-            setProjectId(projectId)
-            setTaskId(taskId)
-
-            const params = new URLSearchParams()
-            if (flow_type) params.append("flow", flow_type)
-            if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
-              params.append("language", languagePassed)
-            }
-            const queryString = params.toString()
-            const navigationPath = queryString ? `${ROUTES.SHIKSHALOKAM_HOME_PAGE}?${queryString}` : ROUTES.SHIKSHALOKAM_HOME_PAGE
-            navigate(navigationPath, { replace: true })
-            // window.location.replace("/mohini" + ROUTES.SHIKSHALOKAM_HOME_PAGE)
-          } else {
-            navigate(-1)
           }
+
+          clearFromStorage()
+          setLanguage(LANGUAGE_ENUMS.ENGLISH)
+          setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+          if (sessionId && sessionId !== "" && sessionId !== "null") {
+            setSessionId(sessionId)
+          } else {
+            let session = await getSessionDetailsApi()
+            setSessionId(session.sessionid)
+          }
+          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
+            setHasSelectedLanguage(true)
+            setChatLanguage(languagePassed)
+            setLanguage(languagePassed)
+          } else if (profile_details.route) {
+            setChatLanguage(profile_details.route)
+            setLanguage(profile_details.route)
+          }
+
+          setSsoRerouteURL(rerouteRaw)
+          setFirstName(profile_details.first_name)
+          setCompanyName(profile_details.company)
+          setState(profile_details.state)
+          setFlow(flow_type)
+          const hasAcc = profile_details.has_accepted_tnc;
+          setAcceptedTnC(typeof hasAcc === "string" ? hasAcc : "ONGOING")
+          setAccessToken(env.AUTH_METHOD() === "url" ? accessToken : true)
+          setProfileId(profile_details.profileid)
+          setIsNewChatOpen(true)
+          setProjectId(projectId)
+          setTaskId(taskId)
+
+          const params = new URLSearchParams()
+          if (flow_type) params.append("flow", flow_type)
+          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
+            params.append("language", languagePassed)
+          }
+          const queryString = params.toString()
+          const navigationPath = queryString ? `${ROUTES.SHIKSHALOKAM_HOME_PAGE}?${queryString}` : ROUTES.SHIKSHALOKAM_HOME_PAGE
+          navigate(navigationPath, { replace: true })
         } else {
-          navigate(-1)
+          const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
+          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
         }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        navigate(-1)
+      } else {
+        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
       }
     }
 
