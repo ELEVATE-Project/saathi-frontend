@@ -39,7 +39,6 @@ function SsoFlow() {
       if (env.AUTH_METHOD() === "url" && (!accessToken || accessToken === "")) {
         const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
         navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true });
-        window.location.reload();
       }
       const data = await readElevateProfileApi(accessToken);
       if (data) {
