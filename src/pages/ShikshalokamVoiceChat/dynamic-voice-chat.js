@@ -3047,19 +3047,11 @@ const DynamicVoiceChat = ({
             }}
             autoComplete="off"
           >
-            {isTyping && !hasStartedListening && !isFetchingData ? (
-              <div className="button-container">
-                <button type="submit" disabled={hasStartedRecording || isFetchingData} className="button-6 sm:mr-[1.3rem] mr-[0.8rem]">
-                  <MdSend />
-                </button>
-              </div>
-            ) : (
-              <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
-                <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
-                  {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
-                </button>
-              </div>
-            )}
+            <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
+              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
+                {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
+              </button>
+            </div>
             {hasStartedRecording && (
               <div className="flex items-center space-x-1 text-red-600 text-sm font-medium pointer-events-none sm:mr-[0.5rem] mr-[0.3rem]">
                 <FaCircle className="text-red-500 animate-pulse text-xs" />
@@ -3113,6 +3105,13 @@ const DynamicVoiceChat = ({
                 }}
               />
             </div>
+            {isTyping && !hasStartedListening && !isFetchingData && (
+              <div className="button-container">
+                <button type="submit" disabled={hasStartedRecording || isFetchingData} className="button-6 sm:ml-[1.3rem] ml-[0.8rem]">
+                  <MdSend />
+                </button>
+              </div>
+            )}
           </form>
         )}
       </div>
