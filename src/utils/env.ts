@@ -57,6 +57,9 @@ export const env = {
   REDIRECT_URL_PATH: () => getEnv("REACT_APP_REDIRECT_URL_PATH", ""),
   FLOW_NAME: () => getEnv("REACT_APP_FLOW_NAME", ""),
 
+  // WebSocket error source identifier
+  WS_ERROR_SOURCE: () => getEnv("REACT_APP_WS_ERROR_SOURCE", "system"),
+
   // Generic getter for any environment variable
   get: (key: string, defaultValue: string = "") => getEnv(key, defaultValue),
 }

@@ -250,9 +250,27 @@ const DynamicVoiceChat = ({
   const { stopAllAudio, audioRef } = useAudio()
   const ttsAbortRef = useRef(null)
   const ttsDisabledRef = useRef(false)
+  const wsSystemErrorRef = useRef(false)
 
-  const onFinalReconnectAttempt = useCallback(() => {
+  const onFinalReconnectAttempt = useCallback(async () => {
     if (isPopupMode) return
+
+    if (wsSystemErrorRef.current) {
+      wsSystemErrorRef.current = false
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      const result = await Swal.fire({
+        text: t("sessionExpiredMessage"),
+        confirmButtonText: t("confirmChanges"),
+        allowOutsideClick: false,
+      })
+      if (result.isConfirmed) {
+        clearFromStorage()
+        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      }
+      return
+    }
+
     function onYesButtonClick() {
       try {
         let chat_history = getChatHistory()
@@ -282,7 +300,7 @@ const DynamicVoiceChat = ({
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
-  }, [isPopupMode])
+  }, [isPopupMode, t])
 
   const onWebSocketClose = useCallback(event => {
     console.log("closed", event)
@@ -350,6 +368,11 @@ const DynamicVoiceChat = ({
       try {
         data = JSON.parse(event.data)
       } catch {
+        return
+      }
+
+      if (data?.error === true && data?.source === env.WS_ERROR_SOURCE()) {
+        wsSystemErrorRef.current = true
         return
       }
 
@@ -441,7 +464,7 @@ const DynamicVoiceChat = ({
         }
       }
     },
-    [isPopupMode, completeProfileExtraction]
+    [isPopupMode, completeProfileExtraction, t]
   )
 
   const isShikshalokamPublicType = true
@@ -3047,6 +3070,17 @@ const DynamicVoiceChat = ({
             }}
             autoComplete="off"
           >
+            <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
+              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
+                {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
+              </button>
+            </div>
+            {hasStartedRecording && (
+              <div className="flex items-center space-x-1 text-red-600 text-sm font-medium pointer-events-none sm:mr-[0.5rem] mr-[0.3rem]">
+                <FaCircle className="text-red-500 animate-pulse text-xs" />
+                <span>{formatTime(seconds)}</span>
+              </div>
+            )}
             <div className="textarea-wrapper relative">
               <textarea
                 id="textBoxID"
@@ -3093,23 +3127,11 @@ const DynamicVoiceChat = ({
                   }
                 }}
               />
-              {hasStartedRecording && (
-                <div className="absolute bottom-3 right-3 flex items-center space-x-1 text-red-600 text-sm font-medium pointer-events-none">
-                  <FaCircle className="text-red-500 animate-pulse text-xs" />
-                  <span>{formatTime(seconds)}</span>
-                </div>
-              )}
             </div>
-            {isTyping && !hasStartedListening && !isFetchingData ? (
+            {isTyping && !hasStartedListening && !isFetchingData && (
               <div className="button-container">
                 <button type="submit" disabled={hasStartedRecording || isFetchingData} className="button-6 sm:ml-[1.3rem] ml-[0.8rem]">
                   <MdSend />
-                </button>
-              </div>
-            ) : (
-              <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
-                <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:ml-[1.3rem] ml-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
-                  {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
                 </button>
               </div>
             )}

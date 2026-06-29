@@ -138,6 +138,6 @@
   "landing_login_btn": "लॉगिन",
   "sidebarTitle": "साथी",
   "sidebarEmptyText": "आपकी पिछली बातचीत यहाँ दिखाई देंगी",
-  "sessionExpiredMessage": "सत्र समाप्त हो गया। कृपया जारी रखने के लिए फिर से लॉग इन करें।",
+  "sessionExpiredMessage": "आपका सेशन समाप्त हो गया है। कृपया दोबारा लॉग इन करें।",
   "profileOnboardingCompleteMessage": "धन्यवाद। मुझे ज़रूरी सारी जानकारी मिल गई है। आपको साथी पर रीडायरेक्ट किया जा रहा है।"
 }
