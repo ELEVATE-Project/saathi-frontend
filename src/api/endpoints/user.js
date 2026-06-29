@@ -4,6 +4,7 @@ import env from "utils/env"
 import Swal from "sweetalert2"
 import i18n from "i18next"
 import ROUTES from "../../url"
+import { clearFromStorage } from "../../services/storage_service"
 
 /**
  * Creates a new user profile
@@ -117,6 +118,7 @@ export const readElevateProfileApi = async accessToken => {
       if (result.isConfirmed) {
         const flowName = env.FLOW_NAME()
         const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+        clearFromStorage()
         window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
       }
     }

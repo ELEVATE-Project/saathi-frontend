@@ -250,9 +250,27 @@ const DynamicVoiceChat = ({
   const { stopAllAudio, audioRef } = useAudio()
   const ttsAbortRef = useRef(null)
   const ttsDisabledRef = useRef(false)
+  const wsSystemErrorRef = useRef(false)
 
-  const onFinalReconnectAttempt = useCallback(() => {
+  const onFinalReconnectAttempt = useCallback(async () => {
     if (isPopupMode) return
+
+    if (wsSystemErrorRef.current) {
+      wsSystemErrorRef.current = false
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      const result = await Swal.fire({
+        text: t("sessionExpiredMessage"),
+        confirmButtonText: t("confirmChanges"),
+        allowOutsideClick: false,
+      })
+      if (result.isConfirmed) {
+        clearFromStorage()
+        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      }
+      return
+    }
+
     function onYesButtonClick() {
       try {
         let chat_history = getChatHistory()
@@ -282,7 +300,7 @@ const DynamicVoiceChat = ({
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
-  }, [isPopupMode])
+  }, [isPopupMode, t])
 
   const onWebSocketClose = useCallback(event => {
     console.log("closed", event)
@@ -350,6 +368,11 @@ const DynamicVoiceChat = ({
       try {
         data = JSON.parse(event.data)
       } catch {
+        return
+      }
+
+      if (data?.error === true && data?.source === env.WS_ERROR_SOURCE()) {
+        wsSystemErrorRef.current = true
         return
       }
 
@@ -441,7 +464,7 @@ const DynamicVoiceChat = ({
         }
       }
     },
-    [isPopupMode, completeProfileExtraction]
+    [isPopupMode, completeProfileExtraction, t]
   )
 
   const isShikshalokamPublicType = true
