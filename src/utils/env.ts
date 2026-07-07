@@ -28,6 +28,7 @@ export const env = {
 
   // Retry Configuration
   WEBSOCKET_RETRY_NUM: () => parseInt(getEnv("REACT_APP_WEBSOCKET_RETRY_NUM", "2"), 10),
+  WEBSOCKET_RECONNECT_INTERVAL: () => parseInt(getEnv("REACT_APP_WEBSOCKET_RECONNECT_INTERVAL", "3000"), 10),
   S3_UPLOAD_RETRY_NUM: () => parseInt(getEnv("REACT_APP_S3_UPLOAD_RETRY_NUM", "3"), 10),
 
   // Profile IDs
@@ -59,6 +60,10 @@ export const env = {
 
   // WebSocket error source identifier
   WS_ERROR_SOURCE: () => getEnv("REACT_APP_WS_ERROR_SOURCE", "system"),
+
+  // WebSocket idle timeout identifiers
+  WS_IDLE_TIMEOUT_SOURCE: () => getEnv("REACT_APP_WS_IDLE_TIMEOUT_SOURCE", "system"),
+  WS_IDLE_TIMEOUT_EVENT: () => getEnv("REACT_APP_WS_IDLE_TIMEOUT_EVENT", "idle_timeout"),
 
   // Generic getter for any environment variable
   get: (key: string, defaultValue: string = "") => getEnv(key, defaultValue),
