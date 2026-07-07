@@ -249,11 +249,13 @@ const DynamicVoiceChat = ({
 
   const navigate = useNavigate()
 
-  const { showGuestPopup, showConfirmationPopup } = useConfirmationPopup()
+  const { showConfirmationPopup } = useConfirmationPopup()
   const { stopAllAudio, audioRef } = useAudio()
   const ttsAbortRef = useRef(null)
   const ttsDisabledRef = useRef(false)
   const wsSystemErrorRef = useRef(false)
+  const resetReconnectCountRef = useRef(() => {})
+  const markIntentionalCloseRef = useRef(() => {})
 
   const onFinalReconnectAttempt = useCallback(async () => {
     if (isPopupMode) return
@@ -286,20 +288,20 @@ const DynamicVoiceChat = ({
           setShowHomepage(true)
         }
 
+        resetReconnectCountRef.current()
         window.location.reload()
       } catch (error) {
         console.error("Error cleaning chat history before reload:", error)
+        resetReconnectCountRef.current()
         window.location.reload()
       }
     }
 
     function onNoButtonClick() {
-      if (accessToken) {
-        clearFromStorage()
-        navigate(-1)
-      } else {
-        resetChat()
-      }
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      clearFromStorage()
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
@@ -376,6 +378,12 @@ const DynamicVoiceChat = ({
 
       if (data?.error === true && data?.source === env.WS_ERROR_SOURCE()) {
         wsSystemErrorRef.current = true
+        return
+      }
+
+      if (data?.event === env.WS_IDLE_TIMEOUT_EVENT() && data?.source === env.WS_IDLE_TIMEOUT_SOURCE()) {
+        markIntentionalCloseRef.current()
+        onFinalReconnectAttempt()
         return
       }
 
@@ -467,7 +475,7 @@ const DynamicVoiceChat = ({
         }
       }
     },
-    [isPopupMode, completeProfileExtraction, t]
+    [isPopupMode, completeProfileExtraction, t, onFinalReconnectAttempt]
   )
 
   const isShikshalokamPublicType = true
@@ -494,6 +502,8 @@ const DynamicVoiceChat = ({
     connect: connectToWebSocket,
     disconnect: disconnectFromWebSocket,
     isConnected: isSocketConnected,
+    resetReconnectCount,
+    markIntentionalClose,
   } = useChatWebhook(webSocketUrl, {
     onOpen: onWebSocketOpen,
     onMessage: onWebSocketMessage,
@@ -501,8 +511,10 @@ const DynamicVoiceChat = ({
     onError: onWebSocketError,
     onFinalReconnectAttempt,
     autoConnect: false,
-    reconnectAttempts: env.WEBSOCKET_RETRY_NUM(),
   })
+
+  resetReconnectCountRef.current = resetReconnectCount
+  markIntentionalCloseRef.current = markIntentionalClose
   useEffect(() => {
     return () => {
       if (isPopupMode) {
@@ -1128,10 +1140,6 @@ const DynamicVoiceChat = ({
     }
   }, [])
 
-  function stayOnPage() {
-    window.history.pushState(null, "", window.location.href)
-  }
-
   /**
    * Browser back button handling - intercepts browser navigation
    * Shows guest popup for special flows or navigates to previous page
@@ -1145,7 +1153,7 @@ const DynamicVoiceChat = ({
         if (ssoNavigationTriggered && accessToken) {
           navigate(-2)
         } else {
-          showGuestPopup(navigateBack, stayOnPage)
+          navigateBack()
         }
       } else {
         setLanguage(languageList[0].value)
