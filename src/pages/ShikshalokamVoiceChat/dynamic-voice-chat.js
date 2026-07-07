@@ -256,6 +256,7 @@ const DynamicVoiceChat = ({
   const wsSystemErrorRef = useRef(false)
   const resetReconnectCountRef = useRef(() => {})
   const markIntentionalCloseRef = useRef(() => {})
+  const resetIntentionalCloseRef = useRef(() => {})
 
   const onFinalReconnectAttempt = useCallback(async () => {
     if (isPopupMode) return
@@ -383,6 +384,7 @@ const DynamicVoiceChat = ({
 
       if (data?.event === env.WS_IDLE_TIMEOUT_EVENT() && data?.source === env.WS_IDLE_TIMEOUT_SOURCE()) {
         markIntentionalCloseRef.current()
+        setTimeout(() => resetIntentionalCloseRef.current(), 500)
         onFinalReconnectAttempt()
         return
       }
@@ -504,6 +506,7 @@ const DynamicVoiceChat = ({
     isConnected: isSocketConnected,
     resetReconnectCount,
     markIntentionalClose,
+    resetIntentionalClose,
   } = useChatWebhook(webSocketUrl, {
     onOpen: onWebSocketOpen,
     onMessage: onWebSocketMessage,
@@ -515,6 +518,7 @@ const DynamicVoiceChat = ({
 
   resetReconnectCountRef.current = resetReconnectCount
   markIntentionalCloseRef.current = markIntentionalClose
+  resetIntentionalCloseRef.current = resetIntentionalClose
   useEffect(() => {
     return () => {
       if (isPopupMode) {
