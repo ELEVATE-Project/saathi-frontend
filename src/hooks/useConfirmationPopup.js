@@ -25,6 +25,7 @@ export const useConfirmationPopup = () => {
       showCancelButton: true,
       confirmButtonText: t("confirmChanges"),
       cancelButtonText: t("denyButton"),
+      allowOutsideClick: false,
     })
 
     if (result.isConfirmed && yesButtonAction) {

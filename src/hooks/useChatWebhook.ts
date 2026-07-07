@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react"
+import { env } from "../utils/env"
 
 type UseChatWebhookOptions = {
   onFinalReconnectAttempt?: () => unknown
@@ -17,10 +18,13 @@ type UseChatWebhookReturn = {
   connect: () => void
   disconnect: () => void
   sendMessage: (message: string | object) => void
+  resetReconnectCount: () => void
+  markIntentionalClose: () => void
+  resetIntentionalClose: () => void
 }
 
 export function useChatWebhook(url: string, options: UseChatWebhookOptions = {}): UseChatWebhookReturn {
-  const { onFinalReconnectAttempt, onOpen, onMessage, onError, onClose, reconnect = true, reconnectInterval = 3000, reconnectAttempts = 5, autoConnect = true } = options
+  const { onFinalReconnectAttempt, onOpen, onMessage, onError, onClose, reconnect = true, reconnectInterval = env.WEBSOCKET_RECONNECT_INTERVAL(), reconnectAttempts = env.WEBSOCKET_RETRY_NUM(), autoConnect = true } = options
   const ws = useRef<null | WebSocket>(null)
   const reconnectCount = useRef(1)
   const reconnectTimeout = useRef<null | NodeJS.Timeout>(null)
@@ -98,6 +102,18 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
     }
   }, [])
 
+  const resetReconnectCount = useCallback(() => {
+    reconnectCount.current = 0
+  }, [])
+
+  const markIntentionalClose = useCallback(() => {
+    intentionalClose.current = true
+  }, [])
+
+  const resetIntentionalClose = useCallback(() => {
+    intentionalClose.current = false
+  }, [])
+
   const sendMessage = useCallback((message: any) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(typeof message === "string" ? message : JSON.stringify(message))
@@ -124,5 +140,8 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
     sendMessage,
     connect,
     disconnect,
+    resetReconnectCount,
+    markIntentionalClose,
+    resetIntentionalClose,
   }
 }

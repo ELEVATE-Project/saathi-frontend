@@ -10,7 +10,7 @@ import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaAp
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
-import { FiDownload, FiPlus } from "react-icons/fi"
+import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
@@ -46,6 +46,7 @@ import PdfDownloader from "../story/upload-content/pdfDownloader"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
+import Popup from "components/Popup"
 import ReportEditor from "components/ReportEditor"
 import ReportEditorAuth from "../../components/ReportEditorAuth"
 import ROUTES from "../../url"
@@ -114,6 +115,7 @@ const DynamicVoiceChat = ({
   const [chatTitle, setChatTitle] = useState([])
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
 
   // ========== useSelector Hooks ==========
@@ -208,9 +210,10 @@ const DynamicVoiceChat = ({
     enabled: !!(
       languageToUse &&
       shouldFetchIntro &&
-      isNewChatOpen &&
+      (isNewChatOpen || isOldChatOpen) &&
       profileToUse &&
-      botRoute
+      botRoute &&
+      sessionId
     ),
   })
   
@@ -246,11 +249,14 @@ const DynamicVoiceChat = ({
 
   const navigate = useNavigate()
 
-  const { showGuestPopup, showConfirmationPopup } = useConfirmationPopup()
+  const { showConfirmationPopup } = useConfirmationPopup()
   const { stopAllAudio, audioRef } = useAudio()
   const ttsAbortRef = useRef(null)
   const ttsDisabledRef = useRef(false)
   const wsSystemErrorRef = useRef(false)
+  const resetReconnectCountRef = useRef(() => {})
+  const markIntentionalCloseRef = useRef(() => {})
+  const resetIntentionalCloseRef = useRef(() => {})
 
   const onFinalReconnectAttempt = useCallback(async () => {
     if (isPopupMode) return
@@ -283,20 +289,20 @@ const DynamicVoiceChat = ({
           setShowHomepage(true)
         }
 
+        resetReconnectCountRef.current()
         window.location.reload()
       } catch (error) {
         console.error("Error cleaning chat history before reload:", error)
+        resetReconnectCountRef.current()
         window.location.reload()
       }
     }
 
     function onNoButtonClick() {
-      if (accessToken) {
-        clearFromStorage()
-        navigate(-1)
-      } else {
-        resetChat()
-      }
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      clearFromStorage()
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
@@ -373,6 +379,13 @@ const DynamicVoiceChat = ({
 
       if (data?.error === true && data?.source === env.WS_ERROR_SOURCE()) {
         wsSystemErrorRef.current = true
+        return
+      }
+
+      if (data?.event === env.WS_IDLE_TIMEOUT_EVENT() && data?.source === env.WS_IDLE_TIMEOUT_SOURCE()) {
+        markIntentionalCloseRef.current()
+        setTimeout(() => resetIntentionalCloseRef.current(), 500)
+        onFinalReconnectAttempt()
         return
       }
 
@@ -464,7 +477,7 @@ const DynamicVoiceChat = ({
         }
       }
     },
-    [isPopupMode, completeProfileExtraction, t]
+    [isPopupMode, completeProfileExtraction, t, onFinalReconnectAttempt]
   )
 
   const isShikshalokamPublicType = true
@@ -491,6 +504,9 @@ const DynamicVoiceChat = ({
     connect: connectToWebSocket,
     disconnect: disconnectFromWebSocket,
     isConnected: isSocketConnected,
+    resetReconnectCount,
+    markIntentionalClose,
+    resetIntentionalClose,
   } = useChatWebhook(webSocketUrl, {
     onOpen: onWebSocketOpen,
     onMessage: onWebSocketMessage,
@@ -498,8 +514,11 @@ const DynamicVoiceChat = ({
     onError: onWebSocketError,
     onFinalReconnectAttempt,
     autoConnect: false,
-    reconnectAttempts: env.WEBSOCKET_RETRY_NUM(),
   })
+
+  resetReconnectCountRef.current = resetReconnectCount
+  markIntentionalCloseRef.current = markIntentionalClose
+  resetIntentionalCloseRef.current = resetIntentionalClose
   useEffect(() => {
     return () => {
       if (isPopupMode) {
@@ -1007,7 +1026,8 @@ const DynamicVoiceChat = ({
       words.splice(1, 0, firstName)
       message = words.join(" ")
     }
-    if (message && !!message?.trim() && chatHistory[chatHistory?.length - 1]?.msg !== message && !sentences.some(msg => msg.message === message)) {
+    const isRestoringOldChat = isOldChatOpen && getChatHistory().length > 0
+    if (!isRestoringOldChat && message && !!message?.trim() && chatHistory[chatHistory?.length - 1]?.msg !== message && !sentences.some(msg => msg.message === message)) {
       setIntroMessage(message)
       setSentences(prev => [
         ...prev,
@@ -1020,6 +1040,8 @@ const DynamicVoiceChat = ({
       setHasOverRideId("intro_msg_id")
       setIsMute(false)
       setIsNextAllowed(true)
+    } else if (isRestoringOldChat && message) {
+      setIntroMessage(message)
     }
 
     setShouldFetchIntro(false)
@@ -1122,10 +1144,6 @@ const DynamicVoiceChat = ({
     }
   }, [])
 
-  function stayOnPage() {
-    window.history.pushState(null, "", window.location.href)
-  }
-
   /**
    * Browser back button handling - intercepts browser navigation
    * Shows guest popup for special flows or navigates to previous page
@@ -1139,7 +1157,7 @@ const DynamicVoiceChat = ({
         if (ssoNavigationTriggered && accessToken) {
           navigate(-2)
         } else {
-          showGuestPopup(navigateBack, stayOnPage)
+          navigateBack()
         }
       } else {
         setLanguage(languageList[0].value)
@@ -1281,7 +1299,9 @@ const DynamicVoiceChat = ({
   }, [accessToken, profileToUse])
 
   /**
-   * Initialize popup mode: generate session and open new chat
+   * Initialize popup mode: generate session and open new chat.
+   * On fresh start: creates a new session and opens new chat.
+   * On reload (existing session + history): restores as old chat without replaying intro.
    * Runs when popup renders with an already-known profile (chat-container bypassed)
    */
   useEffect(() => {
@@ -1291,11 +1311,18 @@ const DynamicVoiceChat = ({
     ;(async () => {
       try {
         setIsLoading(true)
+        const existingHistory = getChatHistory()
         if (!sessionId) {
           const session = await getSessionDetails()
           setSessionId(session.sessionid)
+          setIsNewChatOpen(true)
+        } else if (existingHistory.length > 0) {
+          // Reload mid-onboarding: restore existing conversation
+          setIsOldChatOpen(true)
+          setIsNewChatOpen(false)
+        } else {
+          setIsNewChatOpen(true)
         }
-        setIsNewChatOpen(true)
         setShouldFetchIntro(true)
         setIsStreamingComplete(true)
       } catch (error) {
@@ -2497,6 +2524,18 @@ const DynamicVoiceChat = ({
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
+  function handleLogout() {
+    setShowLogoutConfirm(true)
+  }
+
+  function handleConfirmLogout() {
+    stopAllAudio()
+    const flowName = env.FLOW_NAME()
+    const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+    clearFromStorage()
+    window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+  }
+
   function processSidebarResults(results) {
     const sessionTypeFilter = env.CHAT_SESSION_TYPE()
     let localTitles = {}
@@ -2629,7 +2668,21 @@ const DynamicVoiceChat = ({
                 </div>
               </div>
             )}
+            <div className="saathi-popup-sidebar-logout">
+              <button className="saathi-popup-logout-btn" onClick={handleLogout}>
+                <FiLogOut className="saathi-popup-logout-icon" /> {t("logout")}
+              </button>
+            </div>
           </aside>
+          <Popup
+            isOpen={showLogoutConfirm}
+            togglePopup={() => setShowLogoutConfirm(false)}
+            bodyText={t("logoutConfirmMessage")}
+            confirmButtonText={t("confirmLogout")}
+            discardButtonText={t("cancel")}
+            handleConfirm={handleConfirmLogout}
+            handleDiscard={() => setShowLogoutConfirm(false)}
+          />
         </>
       )}
 
