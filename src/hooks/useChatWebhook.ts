@@ -20,6 +20,7 @@ type UseChatWebhookReturn = {
   sendMessage: (message: string | object) => void
   resetReconnectCount: () => void
   markIntentionalClose: () => void
+  resetIntentionalClose: () => void
 }
 
 export function useChatWebhook(url: string, options: UseChatWebhookOptions = {}): UseChatWebhookReturn {
@@ -109,6 +110,10 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
     intentionalClose.current = true
   }, [])
 
+  const resetIntentionalClose = useCallback(() => {
+    intentionalClose.current = false
+  }, [])
+
   const sendMessage = useCallback((message: any) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(typeof message === "string" ? message : JSON.stringify(message))
@@ -137,5 +142,6 @@ export function useChatWebhook(url: string, options: UseChatWebhookOptions = {})
     disconnect,
     resetReconnectCount,
     markIntentionalClose,
+    resetIntentionalClose,
   }
 }
