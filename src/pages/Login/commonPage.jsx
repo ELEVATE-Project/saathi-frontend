@@ -236,7 +236,7 @@ function CommonHomePage({ usecaseType }) {
     setIsProfileLoading(true)
 
     ;(async () => {
-      const data = await getProfileApi(profileId)
+      const data = await getProfileApi(profileId, accessToken)
       if (cancelled) return
 
       setIsProfileLoading(false)
@@ -266,11 +266,11 @@ function CommonHomePage({ usecaseType }) {
     return () => {
       cancelled = true
     }
-  }, [isSaathiOnboarding, showLanding, profileId, languageSelected, isTncAccepted])
+  }, [isSaathiOnboarding, showLanding, profileId, languageSelected, isTncAccepted, accessToken])
 
   const handleAcceptTnC = useCallback(async () => {
     try {
-      await acceptTncApi(profileId)
+      await acceptTncApi(profileId, accessToken)
       setIsTncAccepted(true)
       useUserDataLocalStore.getState().setAcceptedTnC(true)
       if (isProfileComplete === false) {
@@ -279,7 +279,7 @@ function CommonHomePage({ usecaseType }) {
     } catch (error) {
       console.error(error)
     }
-  }, [profileId, isProfileComplete])
+  }, [profileId, isProfileComplete, accessToken])
 
   const handleProfilePopupClose = useCallback(async () => {
     const {

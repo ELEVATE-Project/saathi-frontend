@@ -54,7 +54,7 @@ export const getProfileDetailsApi = async body => {
   }
 }
 
-export const getProfileApi = async profileId => {
+export const getProfileApi = async (profileId, accessToken) => {
   try {
     const response = await apiClient.get(API_ENDPOINTS.GET_PROFILE, {
       params: {
@@ -62,6 +62,7 @@ export const getProfileApi = async profileId => {
       },
       headers: {
         "Content-Type": "application/json",
+        "x-auth-token": accessToken,
       },
     })
 
@@ -71,7 +72,7 @@ export const getProfileApi = async profileId => {
   }
 }
 
-export const acceptTncApi = async profileId => {
+export const acceptTncApi = async (profileId, accessToken) => {
   try {
     const response = await apiClient.patch(
       API_ENDPOINTS.ACCEPT_TNC,
@@ -81,6 +82,7 @@ export const acceptTncApi = async profileId => {
       {
         headers: {
           "Content-Type": "application/json",
+          "x-auth-token": accessToken,
         },
       }
     )
