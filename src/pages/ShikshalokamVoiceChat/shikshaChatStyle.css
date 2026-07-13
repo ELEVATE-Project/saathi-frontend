@@ -71,6 +71,10 @@
     
   }
 
+html, body {
+    overflow-x: hidden;
+}
+
 
   /* Voice-chat page  */
 
@@ -187,6 +191,7 @@
     background-color: hsl(0deg 0% 95.42%);
     min-height: 100vh;
     height: auto;
+    overflow-x: hidden;
 }
 
 .div10 {
@@ -737,6 +742,7 @@
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
     position: relative;
+    min-width: 0; 
 }
 
 .div42 {
@@ -779,11 +785,13 @@
 .div47 {
     padding-right: 1rem;
     width: 100%;
+    min-width: 0; 
 }
 
 .div48 {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+    min-width: 0; 
 }
 
 .div49 {
@@ -819,6 +827,26 @@
     overflow-wrap: break-word;
     word-break: break-word;
     min-width: 0;
+}
+
+.custom-voice-chat-chats pre {
+    max-width: 100%;
+    overflow-x: hidden;        /* CHANGED from auto — we don't want scroll anymore */
+    white-space: pre-wrap;     /* CHANGED from pre — this is what actually wraps it */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.custom-voice-chat-chats pre code {
+    display: block;            /* CHANGED from inline-block */
+    white-space: pre-wrap;     /* CHANGED from pre */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+    /* min-width: 100% removed — that's what was forcing full intrinsic width */
 }
 
 .div53 {
