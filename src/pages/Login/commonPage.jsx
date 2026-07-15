@@ -91,14 +91,14 @@ function CommonHomePage({ usecaseType }) {
 
   // Record the history length at the very first home page visit, exactly once per
   // browser tab/session. Never overwritten on any subsequent mount.
-  // +1 accounts for the pushState that the [accessToken, showLanding, navigate]
-  // effect (declared below) adds on the same mount cycle — effects run in order,
-  // so this [] effect fires first. The baseline must point to the position AFTER
-  // that push so that logout's stepsBack calculation lands on this home entry,
-  // not one step before it.
+  // Captures window.history.length BEFORE the pushState in the
+  // [accessToken, showLanding, navigate] effect below runs — that pushed entry
+  // is the duplicate home position and must be consumed during logout's backward
+  // travel, not targeted as the landing point. The baseline points to the
+  // original first home entry, so navigate(-stepsBack) always lands there.
   useEffect(() => {
     if (!sessionStorage.getItem("__first_home_history_length")) {
-      sessionStorage.setItem("__first_home_history_length", String(window.history.length + 1))
+      sessionStorage.setItem("__first_home_history_length", String(window.history.length))
     }
   }, [])
 
