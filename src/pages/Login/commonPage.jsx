@@ -89,14 +89,16 @@ function CommonHomePage({ usecaseType }) {
     isTncAccepted === false &&
     !isProfileLoading
 
-  // Record history length at home page visit so logout can navigate back to this
-  // exact history entry. Reset on each new authentication session (i.e. when
-  // accessToken is present) so a fresh login always captures the correct baseline.
+  // Record the history length at the very first home page visit, exactly once per
+  // browser tab/session. Never overwritten on any subsequent mount.
+  // +1 accounts for the pushState that the [accessToken, showLanding, navigate]
+  // effect (declared below) adds on the same mount cycle — effects run in order,
+  // so this [] effect fires first. The baseline must point to the position AFTER
+  // that push so that logout's stepsBack calculation lands on this home entry,
+  // not one step before it.
   useEffect(() => {
-    if (accessToken) {
-      sessionStorage.setItem("__first_home_history_length", String(window.history.length))
-    } else if (!sessionStorage.getItem("__first_home_history_length")) {
-      sessionStorage.setItem("__first_home_history_length", String(window.history.length))
+    if (!sessionStorage.getItem("__first_home_history_length")) {
+      sessionStorage.setItem("__first_home_history_length", String(window.history.length + 1))
     }
   }, [])
 

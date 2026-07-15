@@ -2562,9 +2562,13 @@ const DynamicVoiceChat = ({
       return
     }
 
-    // sessionStorage survives clearFromStorage (which only resets Zustand stores)
+    // sessionStorage survives clearFromStorage (which only resets Zustand stores).
+    // Key is intentionally NOT removed — it must persist so that repeated login/logout
+    // cycles in the same tab always navigate back to the original first-home position.
+    // Deleting it caused window.history.length (which includes forward entries after
+    // backward navigation) to be captured as the new baseline, making stepsBack ≈ 0
+    // on the second logout.
     const firstHomeHistoryLength = parseInt(sessionStorage.getItem("__first_home_history_length"), 10)
-    sessionStorage.removeItem("__first_home_history_length")
     clearFromStorage()
     isLogoutNavigationRef.current = true
     if (Number.isFinite(firstHomeHistoryLength)) {
