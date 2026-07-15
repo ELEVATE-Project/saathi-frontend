@@ -4,7 +4,8 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi } from "api/endpoints/user"
+import { createUserProfileApi, readElevateProfileApi } from "api/endpoints/user"
+import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
@@ -62,6 +63,26 @@ const cookies = new Cookies()
 
 const PROFILE_FLOW = "saathi_profile"
 const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
+
+// Read auth tokens directly from persisted localStorage userData
+// (bypasses Zustand reactive state / hydration timing)
+const getLocalStorageToken = () => {
+  try {
+    const raw = JSON.parse(localStorage.getItem("userData") || "{}")
+    return raw?.state?.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
+const getLocalStorageRefreshToken = () => {
+  try {
+    const raw = JSON.parse(localStorage.getItem("userData") || "{}")
+    return raw?.state?.refresh_token ?? null
+  } catch {
+    return null
+  }
+}
 
 const DynamicVoiceChat = ({
   type = "",
@@ -2530,13 +2551,27 @@ const DynamicVoiceChat = ({
     setShowLogoutConfirm(true)
   }
 
-  function handleConfirmLogout() {
+  async function handleConfirmLogout() {
     stopAllAudio()
+
+    try {
+      await logoutApi(getLocalStorageToken(), getLocalStorageRefreshToken())
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || String(error)
+      showNotification({ message, type: "error" })
+      return
+    }
+
     // sessionStorage survives clearFromStorage (which only resets Zustand stores)
     const firstHomeHistoryLength = parseInt(sessionStorage.getItem("__first_home_history_length"), 10)
+    sessionStorage.removeItem("__first_home_history_length")
     clearFromStorage()
     isLogoutNavigationRef.current = true
-    navigate(-(window.history.length - firstHomeHistoryLength))
+    if (Number.isFinite(firstHomeHistoryLength)) {
+      navigate(-(window.history.length - firstHomeHistoryLength))
+    } else {
+      navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
+    }
   }
 
   function processSidebarResults(results) {

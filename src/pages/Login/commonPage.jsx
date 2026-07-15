@@ -89,10 +89,13 @@ function CommonHomePage({ usecaseType }) {
     isTncAccepted === false &&
     !isProfileLoading
 
-  // Record history length at first home page visit so logout can navigate back
-  // to this exact history entry. Only set once per session.
+  // Record history length at home page visit so logout can navigate back to this
+  // exact history entry. Reset on each new authentication session (i.e. when
+  // accessToken is present) so a fresh login always captures the correct baseline.
   useEffect(() => {
-    if (!sessionStorage.getItem("__first_home_history_length")) {
+    if (accessToken) {
+      sessionStorage.setItem("__first_home_history_length", String(window.history.length))
+    } else if (!sessionStorage.getItem("__first_home_history_length")) {
       sessionStorage.setItem("__first_home_history_length", String(window.history.length))
     }
   }, [])
@@ -101,6 +104,7 @@ function CommonHomePage({ usecaseType }) {
     if (!isSaathiHome || !accessToken) return
 
     const storedToken = accessToken
+    const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
     ;(async () => {
       try {
         const data = await readElevateProfileApi(storedToken)
@@ -109,6 +113,7 @@ function CommonHomePage({ usecaseType }) {
           const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
           store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
+          if (storedRefreshToken) store.setRefreshToken(storedRefreshToken)
           store.setProfileId(profile?.profileid)
           store.setFirstName(profile?.first_name)
           store.setCompanyName(profile?.company)
