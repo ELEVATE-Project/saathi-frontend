@@ -21,11 +21,13 @@ function SsoFlow() {
 
   const { setChatLanguage, setHasSelectedLanguage, setSsoRerouteURL } = useSiteDataLocalStore.getState()
   const { setFlow, setSessionId, setIsNewChatOpen, setProjectId, setTaskId } = useChatDataLocalStore.getState()
-  const { setFirstName, setCompanyName, setState, setAcceptedTnC, setAccessToken, setProfileId } = useUserDataLocalStore.getState()
+  const { setFirstName, setCompanyName, setState, setAcceptedTnC, setAccessToken, setRefreshToken, setProfileId } = useUserDataLocalStore.getState()
 
   useEffect(() => {
     async function fetchProfileDetails() {
       const accessToken = searchParams.get(URL_PARAMS.ACCESS_TOKEN)
+      const refreshToken = searchParams.get(URL_PARAMS.REFRESH_TOKEN)
+      console.log("[SsoFlow] refToken from URL params:", refreshToken)
       const flow_type = searchParams.get(URL_PARAMS.FLOW)
       const projectId = searchParams.get(URL_PARAMS.PROJECT_ID)
       const taskId = searchParams.get(URL_PARAMS.TASK_ID)
@@ -93,6 +95,7 @@ function SsoFlow() {
           const hasAcc = profile_details.has_accepted_tnc;
           setAcceptedTnC(typeof hasAcc === "string" ? hasAcc : "ONGOING")
           setAccessToken(env.AUTH_METHOD() === "url" ? accessToken : true)
+          if (refreshToken) setRefreshToken(refreshToken)
           setProfileId(profile_details.profileid)
           setIsNewChatOpen(true)
           setProjectId(projectId)

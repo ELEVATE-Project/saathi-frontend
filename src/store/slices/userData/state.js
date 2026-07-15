@@ -1,5 +1,6 @@
 export const INITIAL_STATE = (set, get, store) => ({
   access_token: null,
+  refresh_token: null,
   companyName: null,
   device_id: null,
   firstName: "",
@@ -34,6 +35,10 @@ export const INITIAL_STATE = (set, get, store) => ({
   setAccessToken: access_token => set({ access_token }),
 
   getAccessToken: () => get().access_token,
+
+  setRefreshToken: refresh_token => set({ refresh_token }),
+
+  getRefreshToken: () => get().refresh_token,
 
   setUserId: userId => set({ userId }),
 
