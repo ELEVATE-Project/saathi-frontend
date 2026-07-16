@@ -2121,6 +2121,7 @@ const DynamicVoiceChat = ({
 
   const navigateBack = () => {
     stopAllAudio()
+    setHasSelectedLanguage(false)
     navigate(
       {
         pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
