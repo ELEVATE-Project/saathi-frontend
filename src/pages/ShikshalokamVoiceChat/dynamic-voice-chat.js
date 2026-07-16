@@ -138,6 +138,7 @@ const DynamicVoiceChat = ({
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
+  const [isTokenValidated, setIsTokenValidated] = useState(false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -204,6 +205,7 @@ const DynamicVoiceChat = ({
   const validateToken = async () => {
     try {
       await readElevateProfileApi(getLocalStorageToken())
+      setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
       throw error
@@ -1451,10 +1453,10 @@ const DynamicVoiceChat = ({
    * Load chat history sidebar sessions when profile and flow are ready
    */
   useEffect(() => {
-    if (showHistorySidebar && profileToUse && storageFlow) {
+    if (isTokenValidated && showHistorySidebar && profileToUse && storageFlow) {
       showChatTitle()
     }
-  }, [profileToUse, storageFlow, showHistorySidebar])
+  }, [isTokenValidated, profileToUse, storageFlow, showHistorySidebar])
 
   // ========================================================================
   // SECTION: Language & Bot Setup (Execution Order: 5 - When Profile Ready)
