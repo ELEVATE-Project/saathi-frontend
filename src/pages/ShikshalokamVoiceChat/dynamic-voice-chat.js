@@ -197,6 +197,23 @@ const DynamicVoiceChat = ({
     onProfileExtractedRef.current = onProfileExtracted
   }, [onProfileExtracted])
 
+  // ========== token validation ==========
+  // Called on mount (page load/reload), new chat, and chat history switching.
+  // readElevateProfileApi handles 401 internally (redirects to login).
+  // Any other error is re-thrown and shown as a notification to the user.
+  const validateToken = async () => {
+    try {
+      await readElevateProfileApi(getLocalStorageToken())
+    } catch (error) {
+      showNotification({ message: error?.message || String(error), type: "error" })
+      throw error
+    }
+  }
+
+  useEffect(() => {
+    validateToken()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
 
@@ -2153,6 +2170,12 @@ const DynamicVoiceChat = ({
       e.preventDefault()
     }
 
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
+
     // Capture before removeChatHistory() clears state.
     // m.received === false (strict) means sent via createMessage but not yet echoed by backend.
     // API-loaded messages have received: undefined and are excluded by strict equality.
@@ -2629,8 +2652,13 @@ const DynamicVoiceChat = ({
     }
   }
 
-  function handleSessionSelect(selectedSessionId) {
+  async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
     stopAllAudio()
     disconnectFromWebSocket()
     setSessionId(selectedSessionId)
