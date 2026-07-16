@@ -7,7 +7,7 @@ import ROUTES from "../url"
 
 export const useFlow = () => {
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const selectedFlow = useChatStorage()(state => state.flow)
   const [searchParams] = useSearchParams()
   const { setPreviousUrl } = useSiteStorage().getState()
