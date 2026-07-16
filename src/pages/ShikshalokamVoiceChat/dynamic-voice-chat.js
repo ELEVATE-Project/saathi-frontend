@@ -55,7 +55,6 @@ import Swal from "sweetalert2"
 import useCustomMediaQuery from "hooks/useCustomMediaQuery"
 import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useUrlFlow from "../../hooks/useUrlFlow"
-import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 
@@ -64,24 +63,18 @@ const cookies = new Cookies()
 const PROFILE_FLOW = "saathi_profile"
 const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
 
-// Read auth tokens directly from persisted localStorage userData
-// (bypasses Zustand reactive state / hydration timing)
-const getLocalStorageToken = () => {
-  try {
-    const raw = JSON.parse(localStorage.getItem("userData") || "{}")
-    return raw?.state?.access_token ?? null
-  } catch {
-    return null
-  }
-}
+// Cached userData state from localStorage — populated lazily on first access,
+// cleared on logout. Bypasses Zustand hydration timing for auth token reads.
+let _userData = null
 
-const getLocalStorageRefreshToken = () => {
+const getStoredUserData = () => {
+  if (_userData !== null) return _userData
   try {
-    const raw = JSON.parse(localStorage.getItem("userData") || "{}")
-    return raw?.state?.refresh_token ?? null
+    _userData = JSON.parse(localStorage.getItem("userData") || "{}")?.state ?? {}
   } catch {
-    return null
+    _userData = {}
   }
+  return _userData
 }
 
 const DynamicVoiceChat = ({
@@ -142,7 +135,10 @@ const DynamicVoiceChat = ({
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
-  const accessToken = useUserDataLocalStore(state => state.access_token)
+  // Fetch userData once on load; getStoredUserData returns cache on all subsequent calls.
+  // Clear _userData on logout so the next login picks up fresh tokens.
+  const userData = getStoredUserData()
+  const accessToken = userData.access_token ?? null
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
@@ -204,7 +200,7 @@ const DynamicVoiceChat = ({
   // Any other error is re-thrown and shown as a notification to the user.
   const validateToken = async () => {
     try {
-      await readElevateProfileApi(getLocalStorageToken())
+      await readElevateProfileApi(userData.access_token)
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -2580,13 +2576,14 @@ const DynamicVoiceChat = ({
     stopAllAudio()
 
     try {
-      await logoutApi(getLocalStorageToken(), getLocalStorageRefreshToken())
+      await logoutApi(userData.access_token, userData.refresh_token)
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || String(error)
       showNotification({ message, type: "error" })
       return
     }
 
+    _userData = null // invalidate cache so next mount re-fetches fresh tokens from localStorage
     // sessionStorage survives clearFromStorage (which only resets Zustand stores).
     // Key is intentionally NOT removed — it must persist so that repeated login/logout
     // cycles in the same tab always navigate back to the original first-home position.
