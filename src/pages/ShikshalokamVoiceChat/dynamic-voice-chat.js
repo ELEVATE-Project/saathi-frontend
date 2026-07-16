@@ -138,6 +138,7 @@ const DynamicVoiceChat = ({
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
+  const [isTokenValidated, setIsTokenValidated] = useState(false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -196,6 +197,24 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
   }, [onProfileExtracted])
+
+  // ========== token validation ==========
+  // Called on mount (page load/reload), new chat, and chat history switching.
+  // readElevateProfileApi handles 401 internally (redirects to login).
+  // Any other error is re-thrown and shown as a notification to the user.
+  const validateToken = async () => {
+    try {
+      await readElevateProfileApi(getLocalStorageToken())
+      setIsTokenValidated(true)
+    } catch (error) {
+      showNotification({ message: error?.message || String(error), type: "error" })
+      throw error
+    }
+  }
+
+  useEffect(() => {
+    validateToken()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
@@ -1434,10 +1453,10 @@ const DynamicVoiceChat = ({
    * Load chat history sidebar sessions when profile and flow are ready
    */
   useEffect(() => {
-    if (showHistorySidebar && profileToUse && storageFlow) {
+    if (isTokenValidated && showHistorySidebar && profileToUse && storageFlow) {
       showChatTitle()
     }
-  }, [profileToUse, storageFlow, showHistorySidebar])
+  }, [isTokenValidated, profileToUse, storageFlow, showHistorySidebar])
 
   // ========================================================================
   // SECTION: Language & Bot Setup (Execution Order: 5 - When Profile Ready)
@@ -2153,6 +2172,12 @@ const DynamicVoiceChat = ({
       e.preventDefault()
     }
 
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
+
     // Capture before removeChatHistory() clears state.
     // m.received === false (strict) means sent via createMessage but not yet echoed by backend.
     // API-loaded messages have received: undefined and are excluded by strict equality.
@@ -2629,8 +2654,13 @@ const DynamicVoiceChat = ({
     }
   }
 
-  function handleSessionSelect(selectedSessionId) {
+  async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
     stopAllAudio()
     disconnectFromWebSocket()
     setSessionId(selectedSessionId)
