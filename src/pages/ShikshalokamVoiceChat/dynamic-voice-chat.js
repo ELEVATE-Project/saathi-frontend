@@ -4,7 +4,8 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi } from "api/endpoints/user"
+import { createUserProfileApi, readElevateProfileApi } from "api/endpoints/user"
+import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
 import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
@@ -54,7 +55,6 @@ import Swal from "sweetalert2"
 import useCustomMediaQuery from "hooks/useCustomMediaQuery"
 import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useUrlFlow from "../../hooks/useUrlFlow"
-import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 
@@ -62,6 +62,20 @@ const cookies = new Cookies()
 
 const PROFILE_FLOW = "saathi_profile"
 const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
+
+// Cached userData state from localStorage — populated lazily on first access,
+// cleared on logout. Bypasses Zustand hydration timing for auth token reads.
+let _userData = null
+
+const getStoredUserData = () => {
+  if (_userData !== null) return _userData
+  try {
+    _userData = JSON.parse(localStorage.getItem("userData") || "{}")?.state ?? {}
+  } catch {
+    _userData = {}
+  }
+  return _userData
+}
 
 const DynamicVoiceChat = ({
   type = "",
@@ -117,10 +131,14 @@ const DynamicVoiceChat = ({
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
+  const [isTokenValidated, setIsTokenValidated] = useState(false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
-  const accessToken = useUserDataLocalStore(state => state.access_token)
+  // Fetch userData once on load; getStoredUserData returns cache on all subsequent calls.
+  // Clear _userData on logout so the next login picks up fresh tokens.
+  const userData = getStoredUserData()
+  const accessToken = userData.access_token ?? null
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
@@ -170,10 +188,29 @@ const DynamicVoiceChat = ({
   const pendingNewChatRef = useRef(false)
   const pendingNewChatTimerRef = useRef(null)
   const sidebarBottomReachedRef = useRef(false)
+  const isLogoutNavigationRef = useRef(false)
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
   }, [onProfileExtracted])
+
+  // ========== token validation ==========
+  // Called on mount (page load/reload), new chat, and chat history switching.
+  // readElevateProfileApi handles 401 internally (redirects to login).
+  // Any other error is re-thrown and shown as a notification to the user.
+  const validateToken = async () => {
+    try {
+      await readElevateProfileApi(userData.access_token)
+      setIsTokenValidated(true)
+    } catch (error) {
+      showNotification({ message: error?.message || String(error), type: "error" })
+      throw error
+    }
+  }
+
+  useEffect(() => {
+    validateToken()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== react query hooks ==========
   const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
@@ -1153,6 +1190,7 @@ const DynamicVoiceChat = ({
 
     const currentFlow = storageFlow
     const handleBack = () => {
+      if (isLogoutNavigationRef.current) return
       if (currentFlow) {
         if (ssoNavigationTriggered && accessToken) {
           navigate(-2)
@@ -1411,10 +1449,10 @@ const DynamicVoiceChat = ({
    * Load chat history sidebar sessions when profile and flow are ready
    */
   useEffect(() => {
-    if (showHistorySidebar && profileToUse && storageFlow) {
+    if (isTokenValidated && showHistorySidebar && profileToUse && storageFlow) {
       showChatTitle()
     }
-  }, [profileToUse, storageFlow, showHistorySidebar])
+  }, [isTokenValidated, profileToUse, storageFlow, showHistorySidebar])
 
   // ========================================================================
   // SECTION: Language & Bot Setup (Execution Order: 5 - When Profile Ready)
@@ -2130,6 +2168,12 @@ const DynamicVoiceChat = ({
       e.preventDefault()
     }
 
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
+
     // Capture before removeChatHistory() clears state.
     // m.received === false (strict) means sent via createMessage but not yet echoed by backend.
     // API-loaded messages have received: undefined and are excluded by strict equality.
@@ -2528,12 +2572,32 @@ const DynamicVoiceChat = ({
     setShowLogoutConfirm(true)
   }
 
-  function handleConfirmLogout() {
+  async function handleConfirmLogout() {
     stopAllAudio()
-    const flowName = env.FLOW_NAME()
-    const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+
+    try {
+      await logoutApi(userData.access_token, userData.refresh_token)
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || String(error)
+      showNotification({ message, type: "error" })
+      return
+    }
+
+    _userData = null // invalidate cache so next mount re-fetches fresh tokens from localStorage
+    // sessionStorage survives clearFromStorage (which only resets Zustand stores).
+    // Key is intentionally NOT removed — it must persist so that repeated login/logout
+    // cycles in the same tab always navigate back to the original first-home position.
+    // Deleting it caused window.history.length (which includes forward entries after
+    // backward navigation) to be captured as the new baseline, making stepsBack ≈ 0
+    // on the second logout.
+    const firstHomeHistoryLength = parseInt(sessionStorage.getItem("__first_home_history_length"), 10)
     clearFromStorage()
-    window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+    isLogoutNavigationRef.current = true
+    if (Number.isFinite(firstHomeHistoryLength)) {
+      navigate(-(window.history.length - firstHomeHistoryLength))
+    } else {
+      navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
+    }
   }
 
   function processSidebarResults(results) {
@@ -2587,8 +2651,13 @@ const DynamicVoiceChat = ({
     }
   }
 
-  function handleSessionSelect(selectedSessionId) {
+  async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
     stopAllAudio()
     disconnectFromWebSocket()
     setSessionId(selectedSessionId)

@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
 
 export const URL_PARAMS = {
   ACCESS_TOKEN: "accToken",
+  REFRESH_TOKEN: "refToken",
   FLOW: "flow",
   PROJECT_ID: "projectId",
   TASK_ID: "taskId",

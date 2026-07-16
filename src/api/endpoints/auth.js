@@ -1,6 +1,5 @@
 import { apiClient } from "../client"
 import { API_ENDPOINTS } from "constants/urls"
-import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 
 /**
  * Login API endpoint
@@ -14,14 +13,17 @@ export const loginApi = async data => {
   return response.data
 }
 
-export const logoutApi = async () => {
-  const accessToken = useUserDataLocalStore.getState().getAccessToken()
-  const headers = {}
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`
-  }
-
-  const response = await apiClient.post(API_ENDPOINTS.LOGOUT, {}, headers)
+export const logoutApi = async (accessToken, refreshToken) => {
+  const response = await apiClient.post(
+    API_ENDPOINTS.LOGOUT,
+    {},
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-auth-token": accessToken,
+        "X-refresh-token": refreshToken,
+      },
+    }
+  )
   return response.data
 }

@@ -89,10 +89,24 @@ function CommonHomePage({ usecaseType }) {
     isTncAccepted === false &&
     !isProfileLoading
 
+  // Record the history length at the very first home page visit, exactly once per
+  // browser tab/session. Never overwritten on any subsequent mount.
+  // Captures window.history.length BEFORE the pushState in the
+  // [accessToken, showLanding, navigate] effect below runs — that pushed entry
+  // is the duplicate home position and must be consumed during logout's backward
+  // travel, not targeted as the landing point. The baseline points to the
+  // original first home entry, so navigate(-stepsBack) always lands there.
+  useEffect(() => {
+    if (!sessionStorage.getItem("__first_home_history_length")) {
+      sessionStorage.setItem("__first_home_history_length", String(window.history.length))
+    }
+  }, [])
+
   useEffect(() => {
     if (!isSaathiHome || !accessToken) return
 
     const storedToken = accessToken
+    const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
     ;(async () => {
       try {
         const data = await readElevateProfileApi(storedToken)
@@ -101,6 +115,7 @@ function CommonHomePage({ usecaseType }) {
           const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
           store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
+          if (storedRefreshToken) store.setRefreshToken(storedRefreshToken)
           store.setProfileId(profile?.profileid)
           store.setFirstName(profile?.first_name)
           store.setCompanyName(profile?.company)
