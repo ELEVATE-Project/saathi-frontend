@@ -110,17 +110,16 @@ export const readElevateProfileApi = async accessToken => {
   } catch (error) {
     console.log("[readElevateProfileApi] error status:", error?.response?.status)
     if (error?.response?.status === 401) {
-      const result = await Swal.fire({
+      await Swal.fire({
         text: i18n.t("sessionExpiredMessage"),
         confirmButtonText: i18n.t("confirmChanges"),
         allowOutsideClick: false,
+        allowEscapeKey: false,
       })
-      if (result.isConfirmed) {
-        const flowName = env.FLOW_NAME()
-        const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
-        clearFromStorage()
-        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
-      }
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      clearFromStorage()
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
     }
     else {
       throw error
