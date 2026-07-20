@@ -2613,9 +2613,11 @@ const DynamicVoiceChat = ({
     try {
       await logoutApi(userData.access_token, userData.refresh_token)
     } catch (error) {
-      const message = error?.response?.data?.message || error?.message || String(error)
-      showNotification({ message, type: "error" })
-      return
+      if (error?.response?.status !== 401) {
+        const message = error?.response?.data?.message || error?.message || String(error)
+        showNotification({ message, type: "error" })
+        return
+      }
     }
 
     _userData = null // invalidate cache so next mount re-fetches fresh tokens from localStorage

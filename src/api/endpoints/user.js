@@ -5,6 +5,7 @@ import Swal from "sweetalert2"
 import i18n from "i18next"
 import ROUTES from "../../url"
 import { clearFromStorage } from "../../services/storage_service"
+import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
 
 /**
  * Creates a new user profile
@@ -120,6 +121,7 @@ export const readElevateProfileApi = async accessToken => {
       })
       const flowName = env.FLOW_NAME()
       const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      useUserDataLocalStore.getState().setAccessToken(null)
       clearFromStorage()
       window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
     }

@@ -27,7 +27,6 @@ function SsoFlow() {
     async function fetchProfileDetails() {
       const accessToken = searchParams.get(URL_PARAMS.ACCESS_TOKEN)
       const refreshToken = searchParams.get(URL_PARAMS.REFRESH_TOKEN)
-      console.log("[SsoFlow] refToken from URL params:", refreshToken)
       const flow_type = searchParams.get(URL_PARAMS.FLOW)
       const projectId = searchParams.get(URL_PARAMS.PROJECT_ID)
       const taskId = searchParams.get(URL_PARAMS.TASK_ID)
