@@ -122,5 +122,6 @@
   "sessionExpiredMessage": "ನಿಮ್ಮ ಅಧಿವೇಶನದ ಸಮಯ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಲಾಗ್ ಇನ್ ಮಾಡಿ.",
   "profileOnboardingCompleteMessage": "ಧನ್ಯವಾದಗಳು. ನನಗೆ ಬೇಕಾದ ಎಲ್ಲಾ ಮಾಹಿತಿ ನನ್ನಲ್ಲಿದೆ. ನಿಮ್ಮನ್ನು ಸಾಥಿಗೆ ಮರುನಿರ್ದೇಶಿಸುತ್ತಿದ್ದೇನೆ.",
   "logoutConfirmMessage": "ನೀವು ಖಚಿತವಾಗಿ ಲಾಗ್ ಔಟ್ ಮಾಡಲು ಬಯಸುತ್ತೀರಾ?",
-  "confirmLogout": "ಲಾಗ್ ಔಟ್ ದೃಢೀಕರಿಸಿ"
+  "confirmLogout": "ಲಾಗ್ ಔಟ್ ದೃಢೀಕರಿಸಿ",
+  "recents": "Recents"
 }

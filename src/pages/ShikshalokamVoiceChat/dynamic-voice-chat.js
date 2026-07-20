@@ -29,6 +29,7 @@ import { toast } from "react-toastify"
 import { useAudio } from "hooks/useAudio"
 import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useChatDataSessionStore, useSiteDataSessionStore } from "store"
+import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import { useChatStorage, useUserStorage, useSiteStorage } from "hooks/useStorage"
 import { useChatWebhook } from "../../hooks/useChatWebhook"
 import { useConfirmationPopup } from "hooks/useConfirmationPopup"
@@ -76,6 +77,17 @@ const getStoredUserData = () => {
   }
   return _userData
 }
+
+// Keep _userData.access_token in sync with the Zustand store so the cache
+// never goes stale when setAccessToken is called (e.g. on 401).
+useUserDataLocalStore.subscribe(
+  state => state.access_token,
+  access_token => {
+    if (_userData !== null) {
+      _userData.access_token = access_token
+    }
+  }
+)
 
 const DynamicVoiceChat = ({
   type = "",
@@ -135,10 +147,10 @@ const DynamicVoiceChat = ({
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
-  // Fetch userData once on load; getStoredUserData returns cache on all subsequent calls.
+  // Ensures _userData is lazily initialized from localStorage on first render.
   // Clear _userData on logout so the next login picks up fresh tokens.
-  const userData = getStoredUserData()
-  const accessToken = userData.access_token ?? null
+  getStoredUserData()
+  const accessToken = _userData?.access_token ?? null
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
@@ -200,7 +212,9 @@ const DynamicVoiceChat = ({
   // readElevateProfileApi handles 401 internally (redirects to login).
   // Any other error is re-thrown and shown as a notification to the user.
   const validateToken = async () => {
-    if (accessToken === null) {
+    const token = _userData?.access_token ?? null
+    console.log("[validateToken]", token)
+    if (token === null) {
       const flowName = env.FLOW_NAME()
       const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
       clearFromStorage()
@@ -208,7 +222,7 @@ const DynamicVoiceChat = ({
       return
     }
     try {
-      await readElevateProfileApi(accessToken)
+      await readElevateProfileApi(token)
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -2611,7 +2625,7 @@ const DynamicVoiceChat = ({
     stopAllAudio()
 
     try {
-      await logoutApi(userData.access_token, userData.refresh_token)
+      await logoutApi(_userData?.access_token, _userData?.refresh_token)
     } catch (error) {
       if (error?.response?.status !== 401) {
         const message = error?.response?.data?.message || error?.message || String(error)
@@ -2743,7 +2757,7 @@ const DynamicVoiceChat = ({
               </div>
             ) : (
               <div className="saathi-popup-sidebar-sessions">
-                <p className="saathi-popup-recents-label">Recents</p>
+                <p className="saathi-popup-recents-label">{t("recents")}</p>
                 <div
                   className="saathi-popup-sessions-scroll"
                   onScroll={e => {

@@ -141,5 +141,6 @@
   "sessionExpiredMessage": "आपका सेशन समाप्त हो गया है। कृपया दोबारा लॉग इन करें।",
   "profileOnboardingCompleteMessage": "धन्यवाद। मुझे ज़रूरी सारी जानकारी मिल गई है। आपको साथी पर रीडायरेक्ट किया जा रहा है।",
   "logoutConfirmMessage": "क्या आप वाकई लॉग आउट करना चाहते हैं?",
-  "confirmLogout": "लॉग आउट की पुष्टि करें"
+  "confirmLogout": "लॉग आउट की पुष्टि करें",
+  "recents": "Recents"
 }

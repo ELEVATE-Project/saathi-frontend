@@ -153,5 +153,6 @@
     "sessionExpiredMessage": "Your session has timed out. Please log in again.",
     "profileOnboardingCompleteMessage": "Thank you. I have all the information I need. Redirecting you to Saathi",
     "logoutConfirmMessage": "Are you sure you want to log out?",
-    "confirmLogout": "Confirm Logout"
+    "confirmLogout": "Confirm Logout",
+    "recents": "Recents"
     }
