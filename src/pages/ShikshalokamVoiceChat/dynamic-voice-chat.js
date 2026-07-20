@@ -213,7 +213,6 @@ const DynamicVoiceChat = ({
   // Any other error is re-thrown and shown as a notification to the user.
   const validateToken = async () => {
     const token = _userData?.access_token ?? null
-    console.log("[validateToken]", token)
     if (token === null) {
       const flowName = env.FLOW_NAME()
       const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
