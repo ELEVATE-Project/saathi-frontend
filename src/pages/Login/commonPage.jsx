@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
 import { getProfileApi, acceptTncApi, readElevateProfileApi } from "api/endpoints/user"
+import { validateSession } from "../../utils/session"
 import { clearFromStorage } from "../../services/storage_service"
 import { getSessionDetails } from "../../services/api.service"
 
@@ -285,6 +286,7 @@ function CommonHomePage({ usecaseType }) {
 
   const handleAcceptTnC = useCallback(async () => {
     try {
+      await validateSession()
       await acceptTncApi(profileId, accessToken)
       setIsTncAccepted(true)
       useUserDataLocalStore.getState().setAcceptedTnC(true)

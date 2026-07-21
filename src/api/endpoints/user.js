@@ -99,6 +99,8 @@ export const acceptTncApi = async (profileId, accessToken) => {
  * @param {string} accessToken - The access token for authentication
  * @returns {Promise<Object>} The Elevate profile data
  */
+let _sessionInvalidPopupShown = false
+
 export const readElevateProfileApi = async accessToken => {
   try {
     const authUrl = env.AUTH_ROUTE()
@@ -113,6 +115,8 @@ export const readElevateProfileApi = async accessToken => {
   } catch (error) {
     console.log("[readElevateProfileApi] error status:", error?.response?.status)
     if (error?.response?.status === 401) {
+      if (_sessionInvalidPopupShown) return
+      _sessionInvalidPopupShown = true
       await Swal.fire({
         text: i18n.t("sessionExpiredMessage"),
         confirmButtonText: i18n.t("confirmChanges"),

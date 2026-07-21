@@ -4,7 +4,8 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi, readElevateProfileApi } from "api/endpoints/user"
+import { createUserProfileApi } from "api/endpoints/user"
+import { validateSession } from "utils/session"
 import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
@@ -175,10 +176,7 @@ const DynamicVoiceChat = ({
   const strandStep = useChatDataSessionStore(state => state.strandStep)
   const taskId = useChatStorage()(state => state.taskId)
   const userState = useUserStorage()(state => state.state)
-  const ipCity = useUserStorage()(state => state.ipCity)
-  const ipState = useUserStorage()(state => state.ipState)
-  const ipZipCode = useUserStorage()(state => state.ipZipCode)
-  const ipFetched = useUserStorage()(state => state.ipFetched)
+
 
   // chat data actions
   const { setShowHomepage, setBotName, setChatbotClickedOn, setDefaultBotName, setIntroMessage, setIsChatVisible, setIsNewChatOpen, setIsOldChatOpen, setSelectedType, setSessionId, setStateMachineLength } = useChatStorage().getState()
@@ -209,7 +207,7 @@ const DynamicVoiceChat = ({
 
   // ========== token validation ==========
   // Called on mount (page load/reload), new chat, and chat history switching.
-  // readElevateProfileApi handles 401 internally (redirects to login).
+  // validateSession → readElevateProfileApi handles 401 internally (redirects to login).
   // Any other error is re-thrown and shown as a notification to the user.
   const validateToken = async () => {
     const token = _userData?.access_token ?? null
@@ -221,7 +219,7 @@ const DynamicVoiceChat = ({
       return
     }
     try {
-      await readElevateProfileApi(token)
+      await validateSession()
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -389,13 +387,8 @@ const DynamicVoiceChat = ({
       route: chatLanguage,
       bot_route: botRoute,
       flow_name: storageFlow,
-      address: {
-        ipCity,
-        ipState,
-        ipZipCode,
-      },
     })
-  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, ipFetched, flowInfo])
+  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, flowInfo])
 
 
   
@@ -836,11 +829,6 @@ const DynamicVoiceChat = ({
         route: chatLanguage,
         bot_route: botRoute,
         flow_name: storageFlow,
-        address: {
-          ipCity,
-          ipState,
-          ipZipCode,
-        },
       })
     }
     if (showHistorySidebar) {
