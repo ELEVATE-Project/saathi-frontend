@@ -11,6 +11,7 @@ import { useSiteDataSessionStore } from "store"
 import { useTranslation } from "react-i18next"
 import ROUTES from "../url"
 import useUrlFlow from "../hooks/useUrlFlow"
+import { validateSession } from "../utils/session"
 
 const LanguageSelectionGrid = ({ usecaseType }) => {
   const { t } = useTranslation()
@@ -45,7 +46,13 @@ const LanguageSelectionGrid = ({ usecaseType }) => {
     }
   }, [flowLanguagesError, isFlowLanguagesError])
 
-  const handleLanguageClick = langValue => {
+  const handleLanguageClick = async langValue => {
+    try {
+      await validateSession()
+    } catch (error) {
+      console.error("[LanguageSelectionGrid] Session validation failed:", error)
+      return
+    }
     setChatLanguage(langValue)
     setHasSelectedLanguage(true)
 
