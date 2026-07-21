@@ -5,6 +5,7 @@ import Swal from "sweetalert2"
 import i18n from "i18next"
 import ROUTES from "../../url"
 import { clearFromStorage } from "../../services/storage_service"
+import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
 
 /**
  * Creates a new user profile
@@ -98,6 +99,8 @@ export const acceptTncApi = async (profileId, accessToken) => {
  * @param {string} accessToken - The access token for authentication
  * @returns {Promise<Object>} The Elevate profile data
  */
+let _sessionInvalidPopupShown = false
+
 export const readElevateProfileApi = async accessToken => {
   try {
     const authUrl = env.AUTH_ROUTE()
@@ -112,6 +115,8 @@ export const readElevateProfileApi = async accessToken => {
   } catch (error) {
     console.log("[readElevateProfileApi] error status:", error?.response?.status)
     if (error?.response?.status === 401) {
+      if (_sessionInvalidPopupShown) return
+      _sessionInvalidPopupShown = true
       await Swal.fire({
         text: i18n.t("sessionExpiredMessage"),
         confirmButtonText: i18n.t("confirmChanges"),
@@ -120,6 +125,7 @@ export const readElevateProfileApi = async accessToken => {
       })
       const flowName = env.FLOW_NAME()
       const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      useUserDataLocalStore.getState().setAccessToken(null)
       clearFromStorage()
       window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
     }

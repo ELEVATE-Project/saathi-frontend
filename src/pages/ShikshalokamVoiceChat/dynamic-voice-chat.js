@@ -4,7 +4,8 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi, readElevateProfileApi } from "api/endpoints/user"
+import { createUserProfileApi } from "api/endpoints/user"
+import { validateSession } from "utils/session"
 import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
 import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
@@ -29,6 +30,7 @@ import { toast } from "react-toastify"
 import { useAudio } from "hooks/useAudio"
 import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { useChatDataSessionStore, useSiteDataSessionStore } from "store"
+import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import { useChatStorage, useUserStorage, useSiteStorage } from "hooks/useStorage"
 import { useChatWebhook } from "../../hooks/useChatWebhook"
 import { useConfirmationPopup } from "hooks/useConfirmationPopup"
@@ -76,6 +78,17 @@ const getStoredUserData = () => {
   }
   return _userData
 }
+
+// Keep _userData.access_token in sync with the Zustand store so the cache
+// never goes stale when setAccessToken is called (e.g. on 401).
+useUserDataLocalStore.subscribe(
+  state => state.access_token,
+  access_token => {
+    if (_userData !== null) {
+      _userData.access_token = access_token
+    }
+  }
+)
 
 const DynamicVoiceChat = ({
   type = "",
@@ -135,10 +148,10 @@ const DynamicVoiceChat = ({
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
-  // Fetch userData once on load; getStoredUserData returns cache on all subsequent calls.
+  // Ensures _userData is lazily initialized from localStorage on first render.
   // Clear _userData on logout so the next login picks up fresh tokens.
-  const userData = getStoredUserData()
-  const accessToken = userData.access_token ?? null
+  getStoredUserData()
+  const accessToken = _userData?.access_token ?? null
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
@@ -163,10 +176,7 @@ const DynamicVoiceChat = ({
   const strandStep = useChatDataSessionStore(state => state.strandStep)
   const taskId = useChatStorage()(state => state.taskId)
   const userState = useUserStorage()(state => state.state)
-  const ipCity = useUserStorage()(state => state.ipCity)
-  const ipState = useUserStorage()(state => state.ipState)
-  const ipZipCode = useUserStorage()(state => state.ipZipCode)
-  const ipFetched = useUserStorage()(state => state.ipFetched)
+
 
   // chat data actions
   const { setShowHomepage, setBotName, setChatbotClickedOn, setDefaultBotName, setIntroMessage, setIsChatVisible, setIsNewChatOpen, setIsOldChatOpen, setSelectedType, setSessionId, setStateMachineLength } = useChatStorage().getState()
@@ -189,6 +199,7 @@ const DynamicVoiceChat = ({
   const pendingNewChatTimerRef = useRef(null)
   const sidebarBottomReachedRef = useRef(false)
   const isLogoutNavigationRef = useRef(false)
+  const hasStreamedRef = useRef(false)
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -196,11 +207,19 @@ const DynamicVoiceChat = ({
 
   // ========== token validation ==========
   // Called on mount (page load/reload), new chat, and chat history switching.
-  // readElevateProfileApi handles 401 internally (redirects to login).
+  // validateSession → readElevateProfileApi handles 401 internally (redirects to login).
   // Any other error is re-thrown and shown as a notification to the user.
   const validateToken = async () => {
+    const token = _userData?.access_token ?? null
+    if (token === null) {
+      const flowName = env.FLOW_NAME()
+      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
+      clearFromStorage()
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      return
+    }
     try {
-      await readElevateProfileApi(userData.access_token)
+      await validateSession()
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -368,13 +387,8 @@ const DynamicVoiceChat = ({
       route: chatLanguage,
       bot_route: botRoute,
       flow_name: storageFlow,
-      address: {
-        ipCity,
-        ipState,
-        ipZipCode,
-      },
     })
-  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, ipFetched, flowInfo])
+  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
 
 
   
@@ -491,6 +505,7 @@ const DynamicVoiceChat = ({
         setStrandStep(message?.step)
         handleScrollToView()
         setTalking(0)
+        hasStreamedRef.current = true
         setIsStreamingComplete(true)
   
         if (message?.extra_content) {
@@ -777,10 +792,16 @@ const DynamicVoiceChat = ({
    * Sends user message through WebSocket connection
    * Handles message submission, WebSocket connection, and UI updates
    */
-  function handleSendMessage(event) {
+  async function handleSendMessage(event) {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
+    }
+
+    try {
+      await validateToken()
+    } catch {
+      return
     }
 
     setLlmError("")
@@ -808,11 +829,6 @@ const DynamicVoiceChat = ({
         route: chatLanguage,
         bot_route: botRoute,
         flow_name: storageFlow,
-        address: {
-          ipCity,
-          ipState,
-          ipZipCode,
-        },
       })
     }
     if (showHistorySidebar) {
@@ -1794,7 +1810,7 @@ const DynamicVoiceChat = ({
         shouldPlay = true
       }
     }
-    if (isStreamingComplete && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading) {
+    if (isStreamingComplete && hasStreamedRef.current && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading) {
       const speakerButtons = document.querySelectorAll(".button-11.button-3")
       const lastSpeakerButton = speakerButtons[speakerButtons.length - 1]
 
@@ -2313,9 +2329,17 @@ const DynamicVoiceChat = ({
 
   const handleOnInputText = e => {
     e.preventDefault()
-    setTextMessage(e.target.value)
+    const value = e.target.value
 
-    if (e.target.value.trim() === "") {
+    if (textMessage === "") {
+      validateToken().catch(() => {
+        setTextMessage("")
+      })
+    }
+
+    setTextMessage(value)
+
+    if (value.trim() === "") {
       setIsRecognizing(false)
       setHasStartedListening(false)
     }
@@ -2468,7 +2492,13 @@ const DynamicVoiceChat = ({
     return rms < silenceThreshold
   }
 
-  const startRecording = () => {
+  const startRecording = async () => {
+    try {
+      await validateToken()
+    } catch {
+      return
+    }
+
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       handleOnStopSpeaking()
       setTextMessage("")
@@ -2511,6 +2541,11 @@ const DynamicVoiceChat = ({
                 return
               }
 
+              try {
+                await validateToken()
+              } catch {
+                return
+              }
               setIsFetchingData(true)
               let transcriptResult = ""
               let s3Url = await handleS3Upload(audioBlob, `${Date.now()}`, `chatbot/companychat/${sessionId}/`, storyData)
@@ -2577,11 +2612,12 @@ const DynamicVoiceChat = ({
     stopAllAudio()
 
     try {
-      await logoutApi(userData.access_token, userData.refresh_token)
+      await logoutApi(_userData?.access_token, _userData?.refresh_token)
     } catch (error) {
-      const message = error?.response?.data?.message || error?.message || String(error)
-      showNotification({ message, type: "error" })
-      return
+      if (error?.response?.status !== 401) {
+        const message = error?.response?.data?.message || error?.message || String(error)
+        showNotification({ message, type: "error" })
+      }
     }
 
     _userData = null // invalidate cache so next mount re-fetches fresh tokens from localStorage
@@ -2707,7 +2743,7 @@ const DynamicVoiceChat = ({
               </div>
             ) : (
               <div className="saathi-popup-sidebar-sessions">
-                <p className="saathi-popup-recents-label">Recents</p>
+                <p className="saathi-popup-recents-label">{t("recents")}</p>
                 <div
                   className="saathi-popup-sessions-scroll"
                   onScroll={e => {

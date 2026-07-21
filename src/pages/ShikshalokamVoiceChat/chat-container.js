@@ -1,7 +1,7 @@
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { getFlowInfoApi, loginApi } from "../../api/endpoints"
-import { getIpLocation, getProfileDetails, getSessionDetails } from "../../services/api.service"
+import { getSessionDetails } from "../../services/api.service"
 import { languageList } from "./enum"
 import { setLanguage } from "../../i18n"
 import { useChatStorage, useUserStorage } from "../../hooks/useStorage"
@@ -31,20 +31,12 @@ function ChatContainer() {
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const companyName = useUserStorage()(state => state.companyName)
   const deviceId = useUserStorage()(state => state.device_id)
-  const ipCity = useUserStorage()(state => state.ipCity)
-  const ipCountry = useUserStorage()(state => state.ipCountry)
   const ipFetched = useUserStorage()(state => state.ipFetched)
-  const ipState = useUserStorage()(state => state.ipState)
   const sessionId = useChatStorage()(state => state.sessionId)
   const setCompanyName = useUserStorage()(state => state.setCompanyName)
   const setDeviceId = useUserStorage()(state => state.setDeviceId)
-  const setIpCity = useUserStorage()(state => state.setIpCity)
-  const setIpCountry = useUserStorage()(state => state.setIpCountry)
   const setIpFetched = useUserStorage()(state => state.setIpFetched)
-  const setIpState = useUserStorage()(state => state.setIpState)
-  const setIpZipCode = useUserStorage()(state => state.setIpZipCode)
   const setIsNewChatOpen = useChatStorage()(state => state.setIsNewChatOpen)
-  const setProfileId = useUserStorage()(state => state.setProfileId)
   const setSessionId = useChatStorage()(state => state.setSessionId)
   const setUserId = useUserStorage()(state => state.setUserId)
 
@@ -88,24 +80,8 @@ function ChatContainer() {
 
     try {
       const customEmail = deviceId + "@shikshalokam.org"
-      const body = {
-        email: customEmail,
-        company: "shikshalokamstaging",
-        password: "grit@123",
-        latest_flow: urlFlow,
-        other_params: {
-          device_id: deviceId,
-          city: ipCity || "",
-          state: ipState || "",
-          country: ipCountry || "",
-        },
-      }
 
       setIsLoading(true)
-      const res = await getProfileDetails(body)
-
-      setProfileId(res.id)
-
       let session = await getSessionDetails()
       setSessionId(session.sessionid)
 
@@ -152,13 +128,6 @@ function ChatContainer() {
           setIsLoading(true)
           setIsNewChatOpen(true)
 
-          const locationData = await getIpLocation()
-          if (locationData && locationData?.location) {
-            setIpState(locationData?.location?.regionName)
-            setIpCity(locationData?.location?.city)
-            setIpCountry(locationData?.location?.country)
-            setIpZipCode(locationData?.location?.zip)
-          }
           getUserFingerPrint()
           await setFinalLanguage()
 
