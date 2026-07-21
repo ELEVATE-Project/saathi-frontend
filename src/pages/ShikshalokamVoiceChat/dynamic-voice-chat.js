@@ -388,7 +388,7 @@ const DynamicVoiceChat = ({
       bot_route: botRoute,
       flow_name: storageFlow,
     })
-  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, flowInfo])
+  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
 
 
   
@@ -2617,7 +2617,6 @@ const DynamicVoiceChat = ({
       if (error?.response?.status !== 401) {
         const message = error?.response?.data?.message || error?.message || String(error)
         showNotification({ message, type: "error" })
-        return
       }
     }
 
