@@ -1,6 +1,6 @@
 {
     "confirmChanges": "ஆம்",
-    "popUpChanges": "<div class='text-class'>\n    You've been inactive for a while.\n    Do you want to continue?\n</div>",
+    "popUpChanges": "<div class='text-class'>நீங்கள் சிறிது காலமாகச் செயல்படாமல் இருக்கிறீர்கள். தொடர விரும்புகிறீர்களா?</div>",
     "guestPopUpChanges": "<div class='text-class'>\n   Are you sure you want to leave this conversation?\n</div>",
     "comfirmButton": "ஆம்",
     "denyButton": "இல்லை",
