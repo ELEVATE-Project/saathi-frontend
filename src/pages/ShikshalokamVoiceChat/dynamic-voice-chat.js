@@ -377,6 +377,11 @@ const DynamicVoiceChat = ({
     if (chat_history.filter(chat => chat.source === "user").length < 1) return
     if (!flowInfo) return
 
+    // Discard any partially accumulated text from the dropped connection.
+    // Without this, replay chunks from the server would append onto stale text
+    // and produce a corrupted duplicate entry in chatHistory.
+    streamingBotMessageRef.current = null
+
     sendSocketMessage({
       type: "authenticate",
       sessionid: sessionId,
@@ -517,17 +522,24 @@ const DynamicVoiceChat = ({
 
         // Commit the fully streamed bot message to chatHistory immediately, before
         // TTS runs. This decouples UI display from the audio pipeline entirely.
+        // Guard against replay duplicates (iOS reconnect): skip if a bot message
+        // with identical text already exists in recent history.
         if (streamedMsg && !(isPopupMode && message?.extra_content?.profile_extracted === true)) {
-          const botMessage = createMessage({
-            msg: streamedMsg.text,
-            source: "bot",
-            received: true,
-            updated_at: streamedMsg.id,
-          })
-          if (message?.extra_content) {
-            botMessage.extra_content = message.extra_content
+          const currentHistory = getChatHistory()
+          const lastEntry = currentHistory[currentHistory.length - 1]
+          const isReplayDuplicate = lastEntry?.source === "bot" && lastEntry?.msg === streamedMsg.text
+          if (!isReplayDuplicate) {
+            const botMessage = createMessage({
+              msg: streamedMsg.text,
+              source: "bot",
+              received: true,
+              updated_at: streamedMsg.id,
+            })
+            if (message?.extra_content) {
+              botMessage.extra_content = message.extra_content
+            }
+            setChatHistory([...currentHistory, botMessage])
           }
-          setChatHistory([...getChatHistory(), botMessage])
         }
 
         if (isPopupMode && message?.extra_content?.profile_extracted === true) {
