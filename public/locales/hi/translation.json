@@ -46,7 +46,7 @@
   "tncDecline": "अस्वीकार",
   "guidedReflection": "निर्देशित प्रतिबिंब",
   "oneStepReflection": "एक कदम प्रतिबिंब",
-  "logout": "लॉग आउट",
+  "logout": "लोग आउट",
   "chooseAnOption": "एक विकल्प चुनें",
   "cancel": "रद्द करें",
   "uploadedFiles": "अपलोड की गई फ़ाइलें",
@@ -139,6 +139,6 @@
   "sessionExpiredMessage": "आपका सेशन टाइम आउट हो गया है। कृपया फिर से लॉग इन करें।",
   "profileOnboardingCompleteMessage": "धन्यवाद। मुझे सारी जरूरी जानकारी मिल गई है। आपको 'साथी' पर लेकर जा रहा हूँ।",
   "logoutConfirmMessage": "क्या आप वाकई लोग आउट करना चाहते हैं?",
-  "confirmLogout": "लॉग आउट",
+  "confirmLogout": "लोग आउट",
   "recents": "हालिया"
 }
