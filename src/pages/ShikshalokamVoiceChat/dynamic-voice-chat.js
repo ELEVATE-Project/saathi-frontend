@@ -119,6 +119,14 @@ const DynamicVoiceChat = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMute, setIsMute] = useState(true)
+  const [speakerEnabled, setSpeakerEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem('saathi_speaker_enabled')
+      return stored === null ? true : stored === 'true'
+    } catch {
+      return true
+    }
+  })
   const [isNextAllowed, setIsNextAllowed] = useState(true)
   const [isPdfDownloading, setIsPdfDownloading] = useState(false)
   const [isRecognizing, setIsRecognizing] = useState(false)
@@ -1765,6 +1773,13 @@ const DynamicVoiceChat = ({
     }
   }, [isMute])
 
+  // Persist speaker preference to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('saathi_speaker_enabled', String(speakerEnabled))
+    } catch {}
+  }, [speakerEnabled])
+
   /**
    * Auto-play audio for bot messages when streaming completes
    * Automatically triggers TTS playback for new bot responses
@@ -1788,7 +1803,7 @@ const DynamicVoiceChat = ({
         shouldPlay = true
       }
     }
-    if (isStreamingComplete && hasStreamedRef.current && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading) {
+    if (isStreamingComplete && hasStreamedRef.current && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading && speakerEnabled) {
       const speakerButtons = document.querySelectorAll(".button-11.button-3")
       const lastSpeakerButton = speakerButtons[speakerButtons.length - 1]
 
@@ -1796,7 +1811,7 @@ const DynamicVoiceChat = ({
         lastSpeakerButton.click()
       }
     }
-  }, [isStreamingComplete, showFileInput, showHomepage, endStoryMutation.isPending, isLoading, isPdfDownloading, storyData, chatHistory, isMute, isIntroMessageLoading, noStoryFound])
+  }, [isStreamingComplete, showFileInput, showHomepage, endStoryMutation.isPending, isLoading, isPdfDownloading, storyData, chatHistory, isMute, isIntroMessageLoading, noStoryFound, speakerEnabled])
 
   /**
    * Process TTS requests for unnarrated bot messages
@@ -2347,6 +2362,13 @@ const DynamicVoiceChat = ({
 
       let storedRoute = botRoute
 
+      if (!speakerEnabled) {
+        setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
+        setIsNextAllowed(true)
+        setHasOverRideId(null)
+        return
+      }
+
       if (isMute && !hasOverRideId) {
         setSentences(prev => {
           let all_sentences = [...prev]
@@ -2855,6 +2877,7 @@ const DynamicVoiceChat = ({
                         isPlaying={hasOverRideId === chat?.updated_at}
                         isStreamingComplete={isStreamingComplete}
                         setNotMute={setIsMute}
+                        setSpeakerEnabled={setSpeakerEnabled}
                         chatId={chat?.updated_at}
                       />
                     </div>
@@ -2974,6 +2997,7 @@ const DynamicVoiceChat = ({
                       isPlaying={hasOverRideId === chatHistory[0]?.updated_at}
                       isStreamingComplete={isStreamingComplete}
                       setNotMute={setIsMute}
+                      setSpeakerEnabled={setSpeakerEnabled}
                       chatId={chatHistory[0]?.updated_at}
                     />
                   </div>
@@ -3003,6 +3027,7 @@ const DynamicVoiceChat = ({
                     isPlaying={hasOverRideId === "upload-img-id"}
                     isStreamingComplete={isStreamingComplete}
                     setNotMute={setIsMute}
+                    setSpeakerEnabled={setSpeakerEnabled}
                     chatId={"upload-img-id"}
                     isStaticMessage={true}
                   />
@@ -3102,6 +3127,7 @@ const DynamicVoiceChat = ({
                     isPlaying={hasOverRideId === "download-story-id"}
                     isStreamingComplete={isStreamingComplete}
                     setNotMute={setIsMute}
+                    setSpeakerEnabled={setSpeakerEnabled}
                     chatId={"download-story-id"}
                     isStaticMessage={true}
                   />
@@ -3278,7 +3304,7 @@ const DynamicVoiceChat = ({
 
 export default DynamicVoiceChat
 
-function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, chat, staticMessage, chatId }) {
+function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
   let sanitizedContent = DOMPurify.sanitize(message)
   return (
     <div className="div41">
@@ -3289,7 +3315,7 @@ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, han
           </div>
           <div className="div46">
             {userType === "bot" && isPlaying && (
-              <button className={`button-10 button-3`} onClick={handleOnStopSpeaking} disabled={!isStreamingComplete}>
+              <button className={`button-10 button-3`} onClick={() => { setSpeakerEnabled?.(false); handleOnStopSpeaking() }} disabled={!isStreamingComplete}>
                 <HiMiniSpeakerWave />
               </button>
             )}
@@ -3298,6 +3324,7 @@ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, han
               <button
                 className={`button-11 button-3`}
                 onClick={() => {
+                  setSpeakerEnabled?.(true)
                   setNotMute(false)
                   handleOnSpeaking(message, chat?.updated_at, staticMessage, true)
                 }}
