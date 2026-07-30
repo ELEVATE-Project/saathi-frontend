@@ -2362,10 +2362,6 @@ const DynamicVoiceChat = ({
 
       let storedRoute = botRoute
 
-      if (!hasOverRideId && id !== "intro_msg_id") {
-        handleMessagesForBot(text)
-      }
-
       if (!speakerEnabled) {
         setSentences(prev => prev.map(x => ({ ...x, isNarrated: true })))
         setIsNextAllowed(true)
