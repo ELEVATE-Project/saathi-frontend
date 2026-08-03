@@ -631,14 +631,14 @@ html, body {
     font-size: 0.875rem;
     border-radius: 18px;
     width: 99%;
-    min-height: 40px;
+    min-height: 62px;
     max-height: 150px;
     resize: none;
     overflow-x: hidden;
     color: #475569;
     overflow-y: auto;
     box-sizing: border-box;
-    padding: 0 14px;
+    padding: 8px 14px;
     /* scrollbar-color: #44aec8 #f9f9ff; */
 }
 
@@ -1268,8 +1268,8 @@ html, body {
     margin-left: 0 !important;
     margin-right: 0 !important;
     font-size: 0.8rem;
-    min-height: 36px;
-    padding: 0 10px;
+    min-height: 62px;
+    padding: 8px 10px;
   }
 }
 

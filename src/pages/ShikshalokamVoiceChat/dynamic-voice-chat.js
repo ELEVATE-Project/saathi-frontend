@@ -3244,7 +3244,7 @@ const DynamicVoiceChat = ({
               <textarea
                 id="textBoxID"
                 className={`input-2 input-1 ${isFetchingData ? "min-h-[68px] sm:min-h-0 py-0" : ""}`}
-                style={{ alignContent: isFetchingData ? "normal" : "center" }}
+                style={{ alignContent: "normal" }}
                 onChange={handleOnInputText}
                 placeholder={hasStartedRecording ? t("placeholder1") : isFetchingData ? t("placeholder2") : t("placeholder3")}
                 name="message-box"
