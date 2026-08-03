@@ -638,7 +638,7 @@ html, body {
     color: #475569;
     overflow-y: auto;
     box-sizing: border-box;
-    padding: 8px 14px;
+    padding: 0 14px;
     /* scrollbar-color: #44aec8 #f9f9ff; */
 }
 
@@ -1269,7 +1269,7 @@ html, body {
     margin-right: 0 !important;
     font-size: 0.8rem;
     min-height: 62px;
-    padding: 8px 10px;
+    padding: 0 10px;
   }
 }
 
