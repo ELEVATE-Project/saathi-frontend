@@ -631,7 +631,7 @@ html, body {
     font-size: 0.875rem;
     border-radius: 18px;
     width: 99%;
-    min-height: 62px;
+    min-height: 40px;
     max-height: 150px;
     resize: none;
     overflow-x: hidden;
@@ -1268,7 +1268,7 @@ html, body {
     margin-left: 0 !important;
     margin-right: 0 !important;
     font-size: 0.8rem;
-    min-height: 62px;
+    min-height: 40px;
     padding: 0 10px;
   }
 }

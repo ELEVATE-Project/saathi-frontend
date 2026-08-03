@@ -196,6 +196,7 @@ const DynamicVoiceChat = ({
 
   // ========== useRef Hooks ==========
   const textAreaRef = useRef(null)
+  const [textareaRows, setTextareaRows] = useState(1)
   const lastBotMessageIndex = useRef(-1)
   const isInitialLoadRef = useRef(true)
   const endPageToScrollRef = useRef(null)
@@ -212,6 +213,33 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
   }, [onProfileExtracted])
+
+  useEffect(() => {
+    if (!textAreaRef.current) return
+    const placeholder = hasStartedRecording
+      ? t("placeholder1")
+      : isFetchingData
+      ? t("placeholder2")
+      : t("placeholder3")
+    const el = textAreaRef.current
+    const div = document.createElement("div")
+    const style = window.getComputedStyle(el)
+    div.style.position = "absolute"
+    div.style.visibility = "hidden"
+    div.style.whiteSpace = "pre-wrap"
+    div.style.wordBreak = "break-word"
+    div.style.width = el.offsetWidth + "px"
+    div.style.fontSize = style.fontSize
+    div.style.fontFamily = style.fontFamily
+    div.style.lineHeight = style.lineHeight
+    div.style.padding = style.padding
+    div.textContent = placeholder
+    document.body.appendChild(div)
+    const lineHeight = parseFloat(style.lineHeight)
+    const rows = Math.max(1, Math.round(div.offsetHeight / lineHeight))
+    document.body.removeChild(div)
+    setTextareaRows(rows)
+  }, [hasStartedRecording, isFetchingData, t])
 
   // ========== token validation ==========
   // Called on mount (page load/reload), new chat, and chat history switching.
@@ -3246,6 +3274,7 @@ const DynamicVoiceChat = ({
                 className={`input-2 input-1 ${isFetchingData ? "min-h-[68px] sm:min-h-0 py-0" : ""}`}
                 style={{ alignContent: "normal" }}
                 onChange={handleOnInputText}
+                rows={textareaRows}
                 placeholder={hasStartedRecording ? t("placeholder1") : isFetchingData ? t("placeholder2") : t("placeholder3")}
                 name="message-box"
                 value={textMessage}
