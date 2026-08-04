@@ -665,6 +665,10 @@ html, body {
     background: #4192a6;
   }
 
+.input-2.input-long-placeholder {
+    min-height: var(--placeholder-min-height, max(2.8em, 40px));
+}
+
 .input-2:disabled{
     background-color: #e2e8f0;
     color: #64748b;
@@ -1268,7 +1272,7 @@ html, body {
     margin-left: 0 !important;
     margin-right: 0 !important;
     font-size: 0.8rem;
-    min-height: 36px;
+    min-height: 40px;
     padding: 0 10px;
   }
 }
