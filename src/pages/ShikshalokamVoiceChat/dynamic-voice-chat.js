@@ -199,6 +199,7 @@ const DynamicVoiceChat = ({
   const _roRef = useRef(null)
   const _placeholderDepsRef = useRef(null)
   const [placeholderIsMultiLine, setPlaceholderIsMultiLine] = useState(false)
+  const [placeholderHeight, setPlaceholderHeight] = useState(null)
   const lastBotMessageIndex = useRef(-1)
   const isInitialLoadRef = useRef(true)
   const endPageToScrollRef = useRef(null)
@@ -336,7 +337,9 @@ const DynamicVoiceChat = ({
     div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${contentWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
     div.textContent = placeholder
     document.body.appendChild(div)
-    setPlaceholderIsMultiLine(div.offsetHeight > singleLineHeight * 1.5)
+    const measuredHeight = div.offsetHeight
+    setPlaceholderIsMultiLine(measuredHeight > singleLineHeight * 1.5)
+    setPlaceholderHeight(measuredHeight)
     document.body.removeChild(div)
   }, []) // stable — always reads fresh values from _placeholderDepsRef
 
@@ -3297,7 +3300,7 @@ const DynamicVoiceChat = ({
               <textarea
                 id="textBoxID"
                 className={`input-2 input-1 ${placeholderIsMultiLine ? "input-long-placeholder" : ""} ${isFetchingData ? "py-0" : ""}`}
-                style={{ alignContent: placeholderIsMultiLine ? "normal" : "center" }}
+                style={{ alignContent: placeholderIsMultiLine ? "normal" : "center", ...(placeholderIsMultiLine && placeholderHeight ? { "--placeholder-min-height": `${placeholderHeight}px` } : {}) }}
                 onChange={handleOnInputText}
                 placeholder={hasStartedRecording ? t("placeholder1") : isFetchingData ? t("placeholder2") : t("placeholder3")}
                 name="message-box"
