@@ -313,7 +313,7 @@ const DynamicVoiceChat = ({
 
   const _runPlaceholderMeasurement = useCallback(() => {
     const el = textAreaRef.current
-    if (!el || !el.offsetWidth || !_placeholderDepsRef.current) return
+    if (!el || !el.clientWidth || !_placeholderDepsRef.current) return
     const { hasStartedRecording, isFetchingData, t } = _placeholderDepsRef.current
     const placeholder = hasStartedRecording
       ? t("placeholder1")
@@ -331,7 +331,9 @@ const DynamicVoiceChat = ({
     document.body.removeChild(singleLineDiv)
     // measure actual placeholder height with wrapping
     const div = document.createElement("div")
-    div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${el.offsetWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
+    const borderX = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth)
+    const contentWidth = el.clientWidth - borderX
+    div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${contentWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
     div.textContent = placeholder
     document.body.appendChild(div)
     setPlaceholderIsMultiLine(div.offsetHeight > singleLineHeight * 1.5)
