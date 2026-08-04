@@ -196,6 +196,8 @@ const DynamicVoiceChat = ({
 
   // ========== useRef Hooks ==========
   const textAreaRef = useRef(null)
+  const _roRef = useRef(null)
+  const _placeholderDepsRef = useRef(null)
   const [placeholderIsMultiLine, setPlaceholderIsMultiLine] = useState(false)
   const lastBotMessageIndex = useRef(-1)
   const isInitialLoadRef = useRef(true)
@@ -309,34 +311,54 @@ const DynamicVoiceChat = ({
   const [searchParams] = useSearchParams()
   const { t } = useTranslation()
 
+  const _runPlaceholderMeasurement = useCallback(() => {
+    const el = textAreaRef.current
+    if (!el || !el.offsetWidth || !_placeholderDepsRef.current) return
+    const { hasStartedRecording, isFetchingData, t } = _placeholderDepsRef.current
+    const placeholder = hasStartedRecording
+      ? t("placeholder1")
+      : isFetchingData
+      ? t("placeholder2")
+      : t("placeholder3")
+    const style = window.getComputedStyle(el)
+    const fontSize = parseFloat(style.fontSize) || 14
+    // measure single line height using a single character
+    const singleLineDiv = document.createElement("div")
+    singleLineDiv.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};`
+    singleLineDiv.textContent = "A"
+    document.body.appendChild(singleLineDiv)
+    const singleLineHeight = singleLineDiv.offsetHeight || fontSize * 1.4
+    document.body.removeChild(singleLineDiv)
+    // measure actual placeholder height with wrapping
+    const div = document.createElement("div")
+    div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${el.offsetWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
+    div.textContent = placeholder
+    document.body.appendChild(div)
+    setPlaceholderIsMultiLine(div.offsetHeight > singleLineHeight * 1.5)
+    document.body.removeChild(div)
+  }, []) // stable — always reads fresh values from _placeholderDepsRef
+
+  const textAreaCallbackRef = useCallback((el) => {
+    if (_roRef.current) {
+      _roRef.current.disconnect()
+      _roRef.current = null
+    }
+    textAreaRef.current = el
+    if (!el) return
+    const ro = new ResizeObserver(_runPlaceholderMeasurement)
+    ro.observe(el)
+    _roRef.current = ro
+    // initial measurement after mount (RAF so layout is settled)
+    requestAnimationFrame(_runPlaceholderMeasurement)
+  }, [_runPlaceholderMeasurement])
+
+  // Keep _placeholderDepsRef in sync and re-measure when placeholder text changes
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      if (!textAreaRef.current || !textAreaRef.current.offsetWidth) return
-      const el = textAreaRef.current
-      const placeholder = hasStartedRecording
-        ? t("placeholder1")
-        : isFetchingData
-        ? t("placeholder2")
-        : t("placeholder3")
-      const style = window.getComputedStyle(el)
-      const fontSize = parseFloat(style.fontSize) || 14
-      // measure single line height using a single character
-      const singleLineDiv = document.createElement("div")
-      singleLineDiv.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};`
-      singleLineDiv.textContent = "A"
-      document.body.appendChild(singleLineDiv)
-      const singleLineHeight = singleLineDiv.offsetHeight || fontSize * 1.4
-      document.body.removeChild(singleLineDiv)
-      // measure actual placeholder height with wrapping
-      const div = document.createElement("div")
-      div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${el.offsetWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
-      div.textContent = placeholder
-      document.body.appendChild(div)
-      setPlaceholderIsMultiLine(div.offsetHeight > singleLineHeight * 1.5)
-      document.body.removeChild(div)
-    })
+    _placeholderDepsRef.current = { hasStartedRecording, isFetchingData, t }
+    if (!textAreaRef.current) return
+    const raf = requestAnimationFrame(_runPlaceholderMeasurement)
     return () => cancelAnimationFrame(raf)
-  }, [hasStartedRecording, isFetchingData, t])
+  }, [hasStartedRecording, isFetchingData, t, _runPlaceholderMeasurement])
 
   const { recordings, HiddenRecorder } = useVoiceRecord()
 
@@ -3280,7 +3302,7 @@ const DynamicVoiceChat = ({
                 value={textMessage}
                 autoFocus={false}
                 disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
-                ref={textAreaRef}
+                ref={textAreaCallbackRef}
                 onInput={e => {
                   e.target.style.height = "auto"
                   const maxHeight = 150

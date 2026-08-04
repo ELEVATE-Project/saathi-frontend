@@ -666,7 +666,7 @@ html, body {
   }
 
 .input-2.input-long-placeholder {
-    min-height: 2.8em;
+    min-height: max(2.8em, 40px);
 }
 
 .input-2:disabled{
