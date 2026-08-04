@@ -665,6 +665,10 @@ html, body {
     background: #4192a6;
   }
 
+.input-2.input-long-placeholder {
+    min-height: 2.8em;
+}
+
 .input-2:disabled{
     background-color: #e2e8f0;
     color: #64748b;

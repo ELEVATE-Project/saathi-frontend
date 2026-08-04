@@ -196,7 +196,7 @@ const DynamicVoiceChat = ({
 
   // ========== useRef Hooks ==========
   const textAreaRef = useRef(null)
-  const [textareaRows, setTextareaRows] = useState(1)
+  const [placeholderIsMultiLine, setPlaceholderIsMultiLine] = useState(false)
   const lastBotMessageIndex = useRef(-1)
   const isInitialLoadRef = useRef(true)
   const endPageToScrollRef = useRef(null)
@@ -213,33 +213,6 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
   }, [onProfileExtracted])
-
-  useEffect(() => {
-    if (!textAreaRef.current) return
-    const placeholder = hasStartedRecording
-      ? t("placeholder1")
-      : isFetchingData
-      ? t("placeholder2")
-      : t("placeholder3")
-    const el = textAreaRef.current
-    const div = document.createElement("div")
-    const style = window.getComputedStyle(el)
-    div.style.position = "absolute"
-    div.style.visibility = "hidden"
-    div.style.whiteSpace = "pre-wrap"
-    div.style.wordBreak = "break-word"
-    div.style.width = el.offsetWidth + "px"
-    div.style.fontSize = style.fontSize
-    div.style.fontFamily = style.fontFamily
-    div.style.lineHeight = style.lineHeight
-    div.style.padding = style.padding
-    div.textContent = placeholder
-    document.body.appendChild(div)
-    const lineHeight = parseFloat(style.lineHeight)
-    const rows = Math.max(1, Math.round(div.offsetHeight / lineHeight))
-    document.body.removeChild(div)
-    setTextareaRows(rows)
-  }, [hasStartedRecording, isFetchingData, t])
 
   // ========== token validation ==========
   // Called on mount (page load/reload), new chat, and chat history switching.
@@ -336,6 +309,34 @@ const DynamicVoiceChat = ({
   const [searchParams] = useSearchParams()
   const { t } = useTranslation()
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      if (!textAreaRef.current || !textAreaRef.current.offsetWidth) return
+      const el = textAreaRef.current
+      const placeholder = hasStartedRecording
+        ? t("placeholder1")
+        : isFetchingData
+        ? t("placeholder2")
+        : t("placeholder3")
+      const style = window.getComputedStyle(el)
+      const fontSize = parseFloat(style.fontSize) || 14
+      // measure single line height using a single character
+      const singleLineDiv = document.createElement("div")
+      singleLineDiv.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};`
+      singleLineDiv.textContent = "A"
+      document.body.appendChild(singleLineDiv)
+      const singleLineHeight = singleLineDiv.offsetHeight || fontSize * 1.4
+      document.body.removeChild(singleLineDiv)
+      // measure actual placeholder height with wrapping
+      const div = document.createElement("div")
+      div.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;width:${el.offsetWidth}px;font-size:${style.fontSize};font-family:${style.fontFamily};line-height:${style.lineHeight};padding:${style.padding};`
+      div.textContent = placeholder
+      document.body.appendChild(div)
+      setPlaceholderIsMultiLine(div.offsetHeight > singleLineHeight * 1.5)
+      document.body.removeChild(div)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [hasStartedRecording, isFetchingData, t])
 
   const { recordings, HiddenRecorder } = useVoiceRecord()
 
@@ -3271,10 +3272,9 @@ const DynamicVoiceChat = ({
             <div className="textarea-wrapper relative">
               <textarea
                 id="textBoxID"
-                className={`input-2 input-1 ${isFetchingData ? "min-h-[68px] sm:min-h-0 py-0" : ""}`}
-                style={{ alignContent: "normal" }}
+                className={`input-2 input-1 ${placeholderIsMultiLine ? "input-long-placeholder" : ""} ${isFetchingData ? "py-0" : ""}`}
+                style={{ alignContent: placeholderIsMultiLine ? "normal" : "center" }}
                 onChange={handleOnInputText}
-                rows={textareaRows}
                 placeholder={hasStartedRecording ? t("placeholder1") : isFetchingData ? t("placeholder2") : t("placeholder3")}
                 name="message-box"
                 value={textMessage}
