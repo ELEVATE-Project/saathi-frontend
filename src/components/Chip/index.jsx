@@ -36,7 +36,7 @@ const SIZE_CLASSES = {
  */
 const Chip = ({
   label,
-  variant = "primary",
+  variant = "default",
   size = "md",
   disabled = false,
   onClick,

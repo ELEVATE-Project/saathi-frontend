@@ -890,7 +890,7 @@ const DynamicVoiceChat = ({
     try {
       await validateToken()
     } catch {
-      return
+      return false
     }
 
     setLlmError("")
@@ -902,7 +902,7 @@ const DynamicVoiceChat = ({
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    if (!messageToSend.trim()) return
+    if (!messageToSend.trim()) return false
 
     const chat_history = handleMessagesForUser(messageToSend)
     const userMsgCount = chat_history.filter(chat => chat.source === "user").length
@@ -958,6 +958,7 @@ const DynamicVoiceChat = ({
       )
       if (lastBotWithChips) setQuickReplySentForMsgId(lastBotWithChips.updated_at)
     }
+    return true
   }
 
   // ========================================================================
@@ -3343,10 +3344,11 @@ const DynamicVoiceChat = ({
                       key={idx}
                       label={typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)}
                       size="sm"
-                      onClick={() => {
+                      disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                      onClick={async () => {
                         const text = typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)
-                        setQuickReplySentForMsgId(lastBotMsg?.updated_at)
-                        handleSendMessage(null, text)
+                        const sent = await handleSendMessage(null, text)
+                        if (sent) setQuickReplySentForMsgId(lastBotMsg?.updated_at)
                       }}
                     />
                   ))}
