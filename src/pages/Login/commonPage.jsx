@@ -260,30 +260,37 @@ function CommonHomePage({ usecaseType }) {
     setIsProfileLoading(true)
 
     ;(async () => {
-      const data = await getProfileApi(profileId, accessToken)
-      if (cancelled) return
+      try {
+        const data = await getProfileApi(profileId, accessToken)
+        if (cancelled) return
 
-      setIsProfileLoading(false)
+        if (
+          typeof data?.is_tnc_accepted !== "boolean" ||
+          typeof data?.is_profile_complete !== "boolean"
+        ) {
+          setIsTncAccepted(true)
+          setIsProfileComplete(true)
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+          return
+        }
 
-      if (
-        typeof data?.is_tnc_accepted !== "boolean" ||
-        typeof data?.is_profile_complete !== "boolean"
-      ) {
+        setIsTncAccepted(data.is_tnc_accepted)
+        setIsProfileComplete(data.is_profile_complete)
+
+        if (data.is_tnc_accepted !== false) {
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+        }
+
+        if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
+          setShowProfilePopup(true)
+        }
+      } catch (error) {
+        if (cancelled) return
         setIsTncAccepted(true)
         setIsProfileComplete(true)
         useUserDataLocalStore.getState().setAcceptedTnC(true)
-        return
-      }
-
-      setIsTncAccepted(data.is_tnc_accepted)
-      setIsProfileComplete(data.is_profile_complete)
-
-      if (data.is_tnc_accepted !== false) {
-        useUserDataLocalStore.getState().setAcceptedTnC(true)
-      }
-
-      if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
-        setShowProfilePopup(true)
+      } finally {
+        if (!cancelled) setIsProfileLoading(false)
       }
     })()
 
