@@ -63,7 +63,7 @@ function CommonHomePage({ usecaseType }) {
   const navigate = useNavigate()
 
   const [searchParams] = useSearchParams()
-  const { flow: urlFlow } = useUrlFlow()
+  const { flow: urlFlow, setFlow } = useUrlFlow()
   const urlLanguage = useMemo(() => searchParams.get("language"), [searchParams])
 
   const [isTncAccepted, setIsTncAccepted] = useState(null)
@@ -153,6 +153,13 @@ function CommonHomePage({ usecaseType }) {
       window.removeEventListener("popstate", handleBack)
     }
   }, [accessToken, showLanding, navigate])
+
+  // Default to flow=saathi when no flow param is present on the Saathi home page
+  useEffect(() => {
+    if (isSaathiHome && !urlFlow) {
+      setFlow("saathi")
+    }
+  }, [isSaathiHome, urlFlow, setFlow])
 
   // Initialize language and flow processing
   useEffect(() => {
