@@ -50,6 +50,7 @@ import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 import Popup from "components/Popup"
+import Chip from "components/Chip"
 import ReportEditor from "components/ReportEditor"
 import ReportEditorAuth from "../../components/ReportEditorAuth"
 import ROUTES from "../../url"
@@ -59,6 +60,7 @@ import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useUrlFlow from "../../hooks/useUrlFlow"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
+import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
 
 const cookies = new Cookies()
 
@@ -153,6 +155,9 @@ const DynamicVoiceChat = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
   const [isTokenValidated, setIsTokenValidated] = useState(false)
+  // Tracks the updated_at ID of the bot message whose chips have been used.
+  // Once set, the chip bar is hidden until a new bot message with chips arrives.
+  const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -829,7 +834,7 @@ const DynamicVoiceChat = ({
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
         received: true,
-        ...(isBot && chat?.other_params?.extra_content?.download ? {
+        ...(isBot && chat?.other_params?.extra_content != null ? {
           extra_content: chat.other_params.extra_content,
         } : {}),
       },
@@ -874,11 +879,13 @@ const DynamicVoiceChat = ({
    * Sends user message through WebSocket connection
    * Handles message submission, WebSocket connection, and UI updates
    */
-  async function handleSendMessage(event) {
+  async function handleSendMessage(event, overrideText) {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
+    // overrideText is used by quick-reply chips to send directly without touching textMessage
+    const messageToSend = overrideText ?? textMessage
 
     try {
       await validateToken()
@@ -895,9 +902,9 @@ const DynamicVoiceChat = ({
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    if (!textMessage.trim()) return
+    if (!messageToSend.trim()) return
 
-    const chat_history = handleMessagesForUser(textMessage)
+    const chat_history = handleMessagesForUser(messageToSend)
     const userMsgCount = chat_history.filter(chat => chat.source === "user").length
     if (userMsgCount === 1 || !isSocketConnected) {
       connectToWebSocket()
@@ -914,7 +921,7 @@ const DynamicVoiceChat = ({
       })
     }
     if (showHistorySidebar) {
-      const firstMsg = textMessage.trim()
+      const firstMsg = messageToSend.trim()
       if (userMsgCount === 1) {
         try {
           const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
@@ -932,14 +939,25 @@ const DynamicVoiceChat = ({
       })
     }
     sendSocketMessage({
-      text: textMessage,
+      text: messageToSend,
       context: "",
       asr_audio: asrAudio,
     })
 
     setAsrAudio(null)
     handleScrollToView()
-    setTextMessage("")
+    // Only clear the textarea when the message came from it (not from a chip)
+    if (!overrideText) {
+      setTextMessage("")
+      // Dismiss chips by recording the actual bot message ID that had chips.
+      // Using Date.now() would fail to match when the next bot reply has no chips
+      // (lastBotMsg would still point to the old message and chips would reappear).
+      const currentHistory = getChatHistory()
+      const lastBotWithChips = [...currentHistory].reverse().find(
+        chat => chat.source === CHAT_SOURCE.BOT && Array.isArray(chat.extra_content?.quick_reply_chips) && chat.extra_content.quick_reply_chips.length > 0
+      )
+      if (lastBotWithChips) setQuickReplySentForMsgId(lastBotWithChips.updated_at)
+    }
   }
 
   // ========================================================================
@@ -3276,7 +3294,7 @@ const DynamicVoiceChat = ({
 
         {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
-            className="div39 form-1 sm:p-[10px_35px] p-[10px_25px]"
+            className="form-1 flex flex-col"
             style={(showHistorySidebar || isPopupMode) ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (!hasStartedListening && !isFetchingData) {
@@ -3285,6 +3303,58 @@ const DynamicVoiceChat = ({
             }}
             autoComplete="off"
           >
+            {/* Quick reply chips — above the input row, below the chat messages.
+                Two cases:
+                  1. WS connected + streaming done → show chips from last bot msg that has chips
+                  2. WS disconnected (history load/refresh) → show chips only if the very last
+                     message in history IS a bot message with chips (i.e. bot was waiting for reply) */}
+            {(() => {
+              let lastBotMsg
+              const history = chatHistory ?? []
+
+              if (isSocketConnected) {
+                // Live session: show chips once streaming has finished
+                if (!isStreamingComplete) return null
+                lastBotMsg = [...history].reverse().find(
+                  chat => chat.source === CHAT_SOURCE.BOT &&
+                    Array.isArray(chat.extra_content?.quick_reply_chips) &&
+                    chat.extra_content.quick_reply_chips.length > 0
+                )
+              } else {
+                // History load / WS not yet connected:
+                // Only show chips if the last real message in history is a bot msg with chips
+                const filtered = history.filter(c => c.updated_at !== CHAT_SPECIAL_IDS.INTRO_MSG)
+                const lastMsg = filtered[filtered.length - 1]
+                if (
+                  lastMsg?.source === CHAT_SOURCE.BOT &&
+                  Array.isArray(lastMsg?.extra_content?.quick_reply_chips) &&
+                  lastMsg.extra_content.quick_reply_chips.length > 0
+                ) {
+                  lastBotMsg = lastMsg
+                }
+              }
+
+              const chips = lastBotMsg?.extra_content?.quick_reply_chips ?? []
+              if (!chips.length || quickReplySentForMsgId === lastBotMsg?.updated_at) return null
+              return (
+                <div className="flex flex-wrap gap-2 px-6 pb-2 pt-2 border-b border-slate-200">
+                  {chips.map((chip, idx) => (
+                    <Chip
+                      key={idx}
+                      label={typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)}
+                      size="sm"
+                      onClick={() => {
+                        const text = typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)
+                        setQuickReplySentForMsgId(lastBotMsg?.updated_at)
+                        handleSendMessage(null, text)
+                      }}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
+            {/* Input row: mic + timer + textarea + send */}
+            <div className="div39 sm:p-[10px_35px] p-[10px_25px]">
             <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
               <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
                 {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
@@ -3350,6 +3420,7 @@ const DynamicVoiceChat = ({
                 </button>
               </div>
             )}
+            </div>
           </form>
         )}
       </div>
