@@ -249,6 +249,7 @@ function CommonHomePage({ usecaseType }) {
     if (isTncAccepted !== null) return
 
     if (!profileId) {
+      setIsProfileLoading(false)
       setIsTncAccepted(true)
       setIsProfileComplete(true)
       useUserDataLocalStore.getState().setAcceptedTnC(true)
@@ -288,6 +289,7 @@ function CommonHomePage({ usecaseType }) {
 
     return () => {
       cancelled = true
+      setIsProfileLoading(false)
     }
   }, [isSaathiOnboarding, showLanding, profileId, languageSelected, isTncAccepted, accessToken])
 
