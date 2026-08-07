@@ -63,7 +63,7 @@ function CommonHomePage({ usecaseType }) {
   const navigate = useNavigate()
 
   const [searchParams] = useSearchParams()
-  const { flow: urlFlow } = useUrlFlow()
+  const { flow: urlFlow, setFlow } = useUrlFlow()
   const urlLanguage = useMemo(() => searchParams.get("language"), [searchParams])
 
   const [isTncAccepted, setIsTncAccepted] = useState(null)
@@ -154,6 +154,13 @@ function CommonHomePage({ usecaseType }) {
     }
   }, [accessToken, showLanding, navigate])
 
+  // Default to flow=saathi when no flow param is present on the Saathi home page
+  useEffect(() => {
+    if (isSaathiHome && !urlFlow) {
+      setFlow("saathi")
+    }
+  }, [isSaathiHome, urlFlow, setFlow])
+
   // Initialize language and flow processing
   useEffect(() => {
     if (chatLanguage) return
@@ -242,6 +249,7 @@ function CommonHomePage({ usecaseType }) {
     if (isTncAccepted !== null) return
 
     if (!profileId) {
+      setIsProfileLoading(false)
       setIsTncAccepted(true)
       setIsProfileComplete(true)
       useUserDataLocalStore.getState().setAcceptedTnC(true)
@@ -252,35 +260,43 @@ function CommonHomePage({ usecaseType }) {
     setIsProfileLoading(true)
 
     ;(async () => {
-      const data = await getProfileApi(profileId, accessToken)
-      if (cancelled) return
+      try {
+        const data = await getProfileApi(profileId, accessToken)
+        if (cancelled) return
 
-      setIsProfileLoading(false)
+        if (
+          typeof data?.is_tnc_accepted !== "boolean" ||
+          typeof data?.is_profile_complete !== "boolean"
+        ) {
+          setIsTncAccepted(true)
+          setIsProfileComplete(true)
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+          return
+        }
 
-      if (
-        typeof data?.is_tnc_accepted !== "boolean" ||
-        typeof data?.is_profile_complete !== "boolean"
-      ) {
+        setIsTncAccepted(data.is_tnc_accepted)
+        setIsProfileComplete(data.is_profile_complete)
+
+        if (data.is_tnc_accepted !== false) {
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+        }
+
+        if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
+          setShowProfilePopup(true)
+        }
+      } catch (error) {
+        if (cancelled) return
         setIsTncAccepted(true)
         setIsProfileComplete(true)
         useUserDataLocalStore.getState().setAcceptedTnC(true)
-        return
-      }
-
-      setIsTncAccepted(data.is_tnc_accepted)
-      setIsProfileComplete(data.is_profile_complete)
-
-      if (data.is_tnc_accepted !== false) {
-        useUserDataLocalStore.getState().setAcceptedTnC(true)
-      }
-
-      if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
-        setShowProfilePopup(true)
+      } finally {
+        if (!cancelled) setIsProfileLoading(false)
       }
     })()
 
     return () => {
       cancelled = true
+      setIsProfileLoading(false)
     }
   }, [isSaathiOnboarding, showLanding, profileId, languageSelected, isTncAccepted, accessToken])
 
