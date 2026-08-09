@@ -885,7 +885,7 @@ const DynamicVoiceChat = ({
       event.stopPropagation()
     }
     // overrideText is used by quick-reply chips to send directly without touching textMessage
-    const messageToSend = overrideText ?? textMessage
+    const messageToSend = (overrideText ?? textMessage)?.trim() || ""
 
     try {
       await validateToken()
@@ -902,7 +902,7 @@ const DynamicVoiceChat = ({
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    if (!messageToSend.trim()) return false
+    if (!messageToSend) return false
 
     const chat_history = handleMessagesForUser(messageToSend)
     const userMsgCount = chat_history.filter(chat => chat.source === "user").length
@@ -921,7 +921,7 @@ const DynamicVoiceChat = ({
       })
     }
     if (showHistorySidebar) {
-      const firstMsg = messageToSend.trim()
+      const firstMsg = messageToSend
       if (userMsgCount === 1) {
         try {
           const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
@@ -3342,12 +3342,11 @@ const DynamicVoiceChat = ({
                   {chips.map((chip, idx) => (
                     <Chip
                       key={idx}
-                      label={typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)}
+                      label={chip}
                       size="sm"
                       disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
-                        const text = typeof chip === "string" ? chip : chip.label ?? chip.text ?? String(chip)
-                        const sent = await handleSendMessage(null, text)
+                        const sent = await handleSendMessage(null, chip)
                         if (sent) setQuickReplySentForMsgId(lastBotMsg?.updated_at)
                       }}
                     />

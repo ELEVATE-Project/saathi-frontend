@@ -77,7 +77,7 @@ const Chip = ({
       onKeyDown={
         isClickable
           ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (e.key === "Enter") {
                 e.preventDefault()
                 onClick(e)
               }
