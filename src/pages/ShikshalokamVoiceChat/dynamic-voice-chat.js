@@ -217,6 +217,7 @@ const DynamicVoiceChat = ({
   const sidebarBottomReachedRef = useRef(false)
   const isLogoutNavigationRef = useRef(false)
   const hasStreamedRef = useRef(false)
+  const quickReplyLockRef = useRef(new Set())
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -3346,8 +3347,20 @@ const DynamicVoiceChat = ({
                       size="sm"
                       disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
-                        const sent = await handleSendMessage(null, chip)
-                        if (sent) setQuickReplySentForMsgId(lastBotMsg?.updated_at)
+                        const msgId = lastBotMsg?.updated_at ?? "default_quick_reply"
+                        if (quickReplyLockRef.current.has(msgId)) return
+                        quickReplyLockRef.current.add(msgId)
+                        try {
+                          const sent = await handleSendMessage(null, chip)
+                          if (sent) {
+                            setQuickReplySentForMsgId(lastBotMsg?.updated_at)
+                          } else {
+                            quickReplyLockRef.current.delete(msgId)
+                          }
+                        } catch (err) {
+                          quickReplyLockRef.current.delete(msgId)
+                          throw err
+                        }
                       }}
                     />
                   ))}
