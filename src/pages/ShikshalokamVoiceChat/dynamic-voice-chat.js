@@ -244,7 +244,10 @@ const DynamicVoiceChat = ({
       const res = await validateSession()
       const details = res?.profile_details || {}
       if (details) {
-        setProfileApiData(details)
+        const canonicalName = details.name || details.first_name || details.firstName || firstName || ""
+        const normalized = { ...details, name: canonicalName }
+        setProfileApiData(normalized)
+        if (canonicalName) setFirstName(canonicalName)
       }
       setIsTokenValidated(true)
     } catch (error) {
@@ -2690,11 +2693,12 @@ const DynamicVoiceChat = ({
     if (!profileApiData || Object.keys(profileApiData).length === 0) {
       try {
         const res = await validateSession()
-        const details = res?.result || res?.profile_details || res?.data || res || {}
-        if (details && Object.keys(details).length > 0) {
-          setProfileApiData(details)
-          const nameVal = details.name
-          if (nameVal) setFirstName(nameVal)
+        const details = res?.profile_details || {}
+        if (details) {
+          const canonicalName = details.name || details.first_name || details.firstName || firstName || ""
+          const normalized = { ...details, name: canonicalName }
+          setProfileApiData(normalized)
+          if (canonicalName) setFirstName(canonicalName)
         }
       } catch (error) {
         console.error("Error fetching profile via validateSession:", error)
@@ -2733,6 +2737,7 @@ const DynamicVoiceChat = ({
       setProfileApiData(prev => ({
         ...prev,
         ...payload,
+        name: payload.name || prev?.name || prev?.first_name || "",
       }))
 
       showNotification({
@@ -2915,10 +2920,10 @@ const DynamicVoiceChat = ({
             <div className="saathi-popup-sidebar-logout">
               <button className="saathi-popup-user-trigger" onClick={handleOpenProfileModal}>
                 <span className="saathi-popup-user-avatar">
-                  {((profileApiData?.name || "U")[0] || "U").toUpperCase()}
+                  {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
                 </span>
                 <span className="saathi-popup-user-name">
-                  {profileApiData?.name || t("user")}
+                  {profileApiData?.name || firstName || t("user")}
                 </span>
                 <FiLogOut className="saathi-popup-logout-icon" />
               </button>
