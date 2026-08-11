@@ -152,5 +152,15 @@
     "profileOnboardingCompleteMessage": "நன்றி. எனக்குத் தேவையான அனைத்துத் தகவல்களும் கிடைத்துவிட்டன. உங்களை சாத்தி பக்கத்திற்குத் திருப்புகிறேன்",
     "logoutConfirmMessage": "நீங்கள் வெளியேற விரும்புகிறீர்களா?",
     "confirmLogout": "வெளியேறு",
-    "recents": "சமீபத்தியவை"
+    "recents": "சமீபத்தியவை",
+    "profileUpdatedSuccess": "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!",
+    "profileDetails": "சுயவிவர விவரங்கள்",
+    "name": "பெயர்",
+    "roleDesignation": "பங்கு / பதவி",
+    "organisationSchool": "நிறுவனம் / பள்ளி",
+    "location": "இருப்பிடம்",
+    "state": "மாநிலம்",
+    "district": "மாவட்டம்",
+    "save": "சேமி",
+    "user": "பயனர்"
     }

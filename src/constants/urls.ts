@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   GET_PROFILE: "/api/get-profile/",
   ACCEPT_TNC: "/api/accept-tnc/",
   GET_PROFILE_DETAILS: "/api/profile/",
+  UPDATE_USER_PROFILE: "/api/update-profile/",
   GET_STORY: "/api/get-story",
   GET_USER_PROFILE: "/api/user_profile",
   LOGIN: "/api/login/",

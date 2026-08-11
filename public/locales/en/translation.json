@@ -152,5 +152,15 @@
     "profileOnboardingCompleteMessage": "Thank you. I have all the information I need. Redirecting you to Saathi",
     "logoutConfirmMessage": "Are you sure you want to log out?",
     "confirmLogout": "Confirm Logout",
-    "recents": "Recents"
+    "recents": "Recents",
+    "profileUpdatedSuccess": "Profile updated successfully!",
+    "profileDetails": "Profile Details",
+    "name": "Name",
+    "roleDesignation": "Role / Designation",
+    "organisationSchool": "Organisation / School",
+    "location": "Location",
+    "state": "State",
+    "district": "District",
+    "save": "Save",
+    "user": "User"
     }

@@ -134,3 +134,24 @@ export const readElevateProfileApi = async accessToken => {
     }
   }
 }
+
+/**
+ * Updates user profile details via PATCH request
+ * @param {Object} data - Profile payload: { name, role, school_name, district, state }
+ * @param {string} accessToken - Access token for authentication
+ * @returns {Promise<Object>} Updated profile data
+ */
+export const updateUserProfileApi = async (data, accessToken) => {
+  const response = await apiClient.patch(
+    API_ENDPOINTS.UPDATE_USER_PROFILE,
+    data,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-auth-token": accessToken,
+      },
+    }
+  )
+  return response?.data
+}
+

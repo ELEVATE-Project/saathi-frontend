@@ -9,5 +9,6 @@ import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 export const validateSession = async () => {
   const token = useUserDataLocalStore.getState().access_token
   if (!token) return
-  await readElevateProfileApi(token)
+  const data = await readElevateProfileApi(token)
+  return data
 }

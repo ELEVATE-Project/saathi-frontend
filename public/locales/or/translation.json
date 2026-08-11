@@ -148,5 +148,15 @@
     "profileOnboardingCompleteMessage": "ଧନ୍ୟବାଦ। ମୋ ପାଖରେ ବର୍ତମାନ ସମସ୍ତ ଆବଶ୍ୟକ ସୂଚନା ଅଛି। ଆପଣଙ୍କୁ  ସାଥୀ କୁ ପୁନଃନିର୍ଦ୍ଦେଶିତ କରାଯାଉଛି।",
     "logoutConfirmMessage": "ଆପଣ କ’ଣ ନିଶ୍ଚିତ ଯେ ଆପଣ ଲଗ୍ ଆଉଟ୍ କରିବାକୁ ଚାହୁଁଛନ୍ତି?",
     "confirmLogout": "ଲଗ୍ ଆଉଟ୍ ନିଶ୍ଚିତ କରନ୍ତୁ",
-    "recents": "ସାମ୍ପ୍ରତିକ"
+    "recents": "ସାମ୍ପ୍ରତିକ",
+    "profileUpdatedSuccess": "ପ୍ରୋଫାଇଲ୍ ସଫଳତାର ସହିତ ଅପଡେଟ୍ ହୋଇଛି!",
+    "profileDetails": "ପ୍ରୋଫାଇଲ୍ ବିବରଣୀ",
+    "name": "ନାମ",
+    "roleDesignation": "ଭୂମିକା / ପଦବୀ",
+    "organisationSchool": "ସଂସ୍ଥା / ବିଦ୍ୟାଳୟ",
+    "location": "ସ୍ଥାନ",
+    "state": "ରାଜ୍ୟ",
+    "district": "ଜିଲ୍ଲା",
+    "save": "ସଂରକ୍ଷଣ କରନ୍ତୁ",
+    "user": "ବ୍ୟବହାରକାରୀ"
 }

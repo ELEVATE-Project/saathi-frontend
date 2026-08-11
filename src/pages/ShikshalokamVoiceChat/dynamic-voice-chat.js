@@ -4,7 +4,7 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi } from "api/endpoints/user"
+import { createUserProfileApi, updateUserProfileApi } from "api/endpoints/user"
 import { validateSession } from "utils/session"
 import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
@@ -13,6 +13,8 @@ import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMult
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
+import UserProfileModal from "components/UserProfileModal"
+import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG } from "constants/profileForm"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
@@ -153,6 +155,8 @@ const DynamicVoiceChat = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [profileApiData, setProfileApiData] = useState({})
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
   const [isTokenValidated, setIsTokenValidated] = useState(false)
   // Tracks the updated_at ID of the bot message whose chips have been used.
@@ -237,7 +241,11 @@ const DynamicVoiceChat = ({
       return
     }
     try {
-      await validateSession()
+      const res = await validateSession()
+      const details = res?.profile_details || {}
+      if (details) {
+        setProfileApiData(details)
+      }
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -2676,8 +2684,66 @@ const DynamicVoiceChat = ({
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
+  const handleOpenProfileModal = async () => {
+    setShowProfileModal(true)
+    // Reuse profileApiData already fetched during validateToken/validateSession to avoid duplicate API calls
+    if (!profileApiData || Object.keys(profileApiData).length === 0) {
+      try {
+        const res = await validateSession()
+        const details = res?.result || res?.profile_details || res?.data || res || {}
+        if (details && Object.keys(details).length > 0) {
+          setProfileApiData(details)
+          const nameVal = details.name
+          if (nameVal) setFirstName(nameVal)
+        }
+      } catch (error) {
+        console.error("Error fetching profile via validateSession:", error)
+      }
+    }
+  }
+
   function handleLogout() {
     setShowLogoutConfirm(true)
+  }
+
+  async function handleSaveProfile(formValues) {
+    const token = _userData?.access_token || accessToken
+    const payload = {
+      name: formValues.name ?? "",
+      role: formValues.role ?? "",
+      school_name: formValues.school_name ?? "",
+      district: formValues.district ?? "",
+      state: formValues.state ?? "",
+    }
+
+    try {
+      const res = await updateUserProfileApi(payload, token)
+
+      if (payload.name) setFirstName(payload.name)
+      if (payload.state) setState(payload.state)
+
+      if (_userData) {
+        if (payload.name) _userData.name = payload.name
+        if (payload.state) _userData.state = payload.state
+        if (payload.school_name) _userData.school_name = payload.school_name
+        if (payload.district) _userData.district = payload.district
+        if (payload.role) _userData.role = payload.role
+      }
+
+      setProfileApiData(prev => ({
+        ...prev,
+        ...payload,
+      }))
+
+      showNotification({
+        message: res?.message || t("profileUpdatedSuccess"),
+        type: "success",
+      })
+      setShowProfileModal(false)
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Failed to update profile"
+      showNotification({ message, type: "error" })
+    }
   }
 
   async function handleConfirmLogout() {
@@ -2847,8 +2913,12 @@ const DynamicVoiceChat = ({
               </div>
             )}
             <div className="saathi-popup-sidebar-logout">
-              <button className="saathi-popup-logout-btn" onClick={handleLogout}>
-                <FiLogOut className="saathi-popup-logout-icon" /> {t("logout")}
+              <button className="saathi-popup-user-trigger" onClick={handleOpenProfileModal}>
+                <span className="saathi-popup-user-avatar">
+                  {(profileApiData?.first_name || firstName)[0].toUpperCase()}
+                </span>
+                <span className="saathi-popup-user-name">{profileApiData?.first_name || firstName || t("user")}</span>
+                <FiLogOut className="saathi-popup-logout-icon" />
               </button>
             </div>
           </aside>
@@ -2860,6 +2930,22 @@ const DynamicVoiceChat = ({
             discardButtonText={t("cancel")}
             handleConfirm={handleConfirmLogout}
             handleDiscard={() => setShowLogoutConfirm(false)}
+          />
+          <UserProfileModal
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            onLogout={() => { setShowProfileModal(false); handleLogout() }}
+            onSave={handleSaveProfile}
+            userData={{
+              name: profileApiData?.name || "",
+              role: profileApiData?.role || "",
+              school_name: profileApiData?.school_name || "",
+              state: profileApiData?.state || "",
+              district: profileApiData?.district || "",
+            }}
+            schema={PROFILE_FORM_SCHEMA}
+            options={{ languages: languageList }}
+            modalConfig={PROFILE_MODAL_CONFIG}
           />
         </>
       )}

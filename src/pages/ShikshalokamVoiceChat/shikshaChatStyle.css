@@ -1503,3 +1503,45 @@ html, body {
   font-size: 1rem;
   flex-shrink: 0;
 }
+
+.saathi-popup-user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.saathi-popup-user-trigger:hover {
+  background: #f3eef9;
+}
+
+.saathi-popup-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #572e91;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.saathi-popup-user-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
