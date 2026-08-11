@@ -6,7 +6,7 @@ import FormData from "components/Form/FormData"
 
 /** Purple avatar circle showing the first letter of the user's name */
 function AvatarInitial({ name = "", size = 52 }) {
-  const initial = (name || "U")[0].toUpperCase()
+  const initial = ((name || "U")[0] || "U").toUpperCase()
   return (
     <div
       style={{
@@ -63,9 +63,9 @@ function UserProfileModal({
     const init = {}
     fields.forEach(field => {
       if (field.type === "split") {
-        field.fields?.forEach(f => { init[f.dataKey] = userData[f.dataKey] ?? userData[f.id] ?? "" })
+        field.fields?.forEach(f => { init[f.id] = userData[f.id] ?? "" })
       } else {
-        init[field.dataKey] = userData[field.dataKey] ?? userData[field.id] ?? ""
+        init[field.id] = userData[field.id] ?? ""
       }
     })
     setFormValues(init)
@@ -87,7 +87,7 @@ function UserProfileModal({
       return (
         <div key={field.id} className="mb-3 sm:mb-4">
           <div className="label-div">
-            <b className={labelCls}>{t(field.labelKey || field.labelName, field.labelName)}</b>
+            <b className={labelCls}>{t(field.labelName, field.labelName)}</b>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {field.fields?.map(f => (
@@ -96,10 +96,10 @@ function UserProfileModal({
                   layOut={f.layOut || 1}
                   id={f.id}
                   inputType={f.inputType || "text"}
-                  inputName={f.inputName}
-                  inputValue={formValues[f.dataKey] || ""}
-                  inputOnChange={e => handleChange(f.dataKey, e.target.value)}
-                  placeholder={t(f.placeholderKey || f.placeholder, f.placeholder)}
+                  inputName={f.inputName || f.id}
+                  inputValue={formValues[f.id] || ""}
+                  inputOnChange={e => handleChange(f.id, e.target.value)}
+                  placeholder={t(f.placeholder)}
                   inputClass={inputCls}
                 />
               </div>
@@ -109,38 +109,18 @@ function UserProfileModal({
       )
     }
 
-    if (field.layOut === 2) {
-      const opts = options[field.optionsKey] || []
-      return (
-        <div key={field.id} className="mb-3 sm:mb-4">
-          <FormData
-            layOut={2}
-            selectID={field.id}
-            labelName={t(field.labelKey || field.labelName, field.labelName)}
-            labelClass={labelCls}
-            selectName={field.selectName}
-            selectValue={formValues[field.dataKey] || ""}
-            selectOnChange={e => handleChange(field.dataKey, e.target.value)}
-            selectOptions={opts}
-            selectClassName={inputCls}
-          />
-          {field.hint && <p className="text-[11px] sm:text-xs text-gray-400 mt-1">{t(field.hintKey || field.hint, field.hint)}</p>}
-        </div>
-      )
-    }
-
     return (
       <div key={field.id} className="mb-3 sm:mb-4">
         <FormData
           layOut={1}
           id={field.id}
-          labelName={t(field.labelKey || field.labelName, field.labelName)}
+          labelName={t(field.labelName)}
           labelClass={labelCls}
           inputType={field.inputType || "text"}
-          inputName={field.inputName}
-          inputValue={formValues[field.dataKey] || ""}
-          inputOnChange={e => handleChange(field.dataKey, e.target.value)}
-          placeholder={t(field.placeholderKey || field.placeholder, field.placeholder)}
+          inputName={field.inputName || field.id}
+          inputValue={formValues[field.id] || ""}
+          inputOnChange={e => handleChange(field.id, e.target.value)}
+          placeholder={t(field.placeholder)}
           inputClass={inputCls}
         />
       </div>
@@ -163,10 +143,10 @@ function UserProfileModal({
             <AvatarInitial name={userData.name} size={44} />
             <div className="min-w-0 flex-1">
               <p className="font-bold text-gray-800 text-sm sm:text-base leading-snug truncate">
-                {userData.name || userData.firstName || t("user", "User")}
+                {userData.name || t("user")}
               </p>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                {userData.role || userData.designation || ""}
+                {userData.role || " "}
               </p>
             </div>
           </div>

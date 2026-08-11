@@ -2915,9 +2915,11 @@ const DynamicVoiceChat = ({
             <div className="saathi-popup-sidebar-logout">
               <button className="saathi-popup-user-trigger" onClick={handleOpenProfileModal}>
                 <span className="saathi-popup-user-avatar">
-                  {(profileApiData?.first_name || firstName)[0].toUpperCase()}
+                  {((profileApiData?.name || "U")[0] || "U").toUpperCase()}
                 </span>
-                <span className="saathi-popup-user-name">{profileApiData?.first_name || firstName || t("user")}</span>
+                <span className="saathi-popup-user-name">
+                  {profileApiData?.name || t("user")}
+                </span>
                 <FiLogOut className="saathi-popup-logout-icon" />
               </button>
             </div>
