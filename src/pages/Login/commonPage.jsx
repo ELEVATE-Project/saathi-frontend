@@ -2,8 +2,6 @@ import "../../components/custom-style.css"
 import "../../index.css"
 import "./commonPageStyle.css"
 import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
-import { sessionFlowName } from "../../constants/session"
-import { URL_PARAMS } from "../../constants/urls"
 import { useAudio } from "../../hooks/useAudio"
 import { useEffect, useMemo, useState, useCallback } from "react"
 import env from "../../utils/env"
@@ -17,7 +15,6 @@ import Header from "../../components/Header"
 import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
 import ROUTES from "../../url"
-import useUrlFlow from "hooks/useUrlFlow"
 import { useUserDataLocalStore, useChatDataLocalStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
@@ -27,7 +24,7 @@ import { validateSession } from "../../utils/session"
 import { clearFromStorage } from "../../services/storage_service"
 import { getSessionDetails } from "../../services/api.service"
 
-function CommonHomePage({ usecaseType }) {
+function CommonHomePage() {
   const { audioRef, stopAudioTriggered, setStopAudioTriggered, stopAllAudio } = useAudio()
   const { isLoading, setIsLoading, handleFlowSelection } = useFlow()
   const { languageButtonSelect, handleLanguageChange } = useLanguage()
@@ -48,22 +45,15 @@ function CommonHomePage({ usecaseType }) {
 
   const { t } = useTranslation()
 
-  const isSaathiHome = !usecaseType
-
-  const [isTokenValidating, setIsTokenValidating] = useState(() => isSaathiHome && !!accessToken)
+  const [isTokenValidating, setIsTokenValidating] = useState(() => !!accessToken)
 
   const showLanding =
-    isSaathiHome &&
     !Boolean(accessToken) &&
     !isTokenValidating
-
-  const ptm_case = sessionFlowName.megaPTM === usecaseType
-  const ylc_case = sessionFlowName.YLC === usecaseType
 
   const navigate = useNavigate()
 
   const [searchParams] = useSearchParams()
-  const { flow: urlFlow, setFlow } = useUrlFlow()
   const urlLanguage = useMemo(() => searchParams.get("language"), [searchParams])
 
   const [isTncAccepted, setIsTncAccepted] = useState(null)
@@ -72,20 +62,12 @@ function CommonHomePage({ usecaseType }) {
   const [isProfileLoading, setIsProfileLoading] = useState(false)
 
   const languageSelected = hasSelectedLanguage || !!urlLanguage
-  const isSaathiOnboarding =
-    isSaathiHome &&
-    (!urlFlow || urlFlow === "saathi")
-
   const saathiOnboardingDone =
-    !isSaathiOnboarding ||
-    (
-      isTncAccepted === true &&
-      isProfileComplete === true &&
-      !showProfilePopup
-    )
+    isTncAccepted === true &&
+    isProfileComplete === true &&
+    !showProfilePopup
 
   const showTnCPopup =
-    isSaathiOnboarding &&
     languageSelected &&
     isTncAccepted === false &&
     !isProfileLoading
@@ -104,7 +86,7 @@ function CommonHomePage({ usecaseType }) {
   }, [])
 
   useEffect(() => {
-    if (!isSaathiHome || !accessToken) return
+    if (!accessToken) return
 
     const storedToken = accessToken
     const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
@@ -154,13 +136,6 @@ function CommonHomePage({ usecaseType }) {
     }
   }, [accessToken, showLanding, navigate])
 
-  // Default to flow=saathi when no flow param is present on the Saathi home page
-  useEffect(() => {
-    if (isSaathiHome && !urlFlow) {
-      setFlow("saathi")
-    }
-  }, [isSaathiHome, urlFlow, setFlow])
-
   // Initialize language and flow processing
   useEffect(() => {
     if (chatLanguage) return
@@ -171,23 +146,14 @@ function CommonHomePage({ usecaseType }) {
   }, [chatLanguage])
 
   useEffect(() => {
-    if (!urlFlow) return
-
-    stopAllAudio()
-  }, [urlFlow])
-
-  useEffect(() => {
     if (isTokenValidating) return
     if (showLanding) return
-    if (isSaathiOnboarding && !saathiOnboardingDone) return
+    if (!saathiOnboardingDone) return
 
-    if (!hasSelectedLanguage || !urlFlow) return
+    if (!hasSelectedLanguage) return
 
-    navigate({
-      pathname: ROUTES.COMMON_CHAT,
-      search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
-    })
-  }, [isTokenValidating, urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
+    navigate(ROUTES.COMMON_CHAT)
+  }, [isTokenValidating, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   // Process language selection
   useEffect(() => {
@@ -197,40 +163,12 @@ function CommonHomePage({ usecaseType }) {
       setIsLoading(false)
       return
     }
-    if (isSaathiOnboarding && !saathiOnboardingDone) return
+    if (!saathiOnboardingDone) return
 
-
-    if (ptm_case) {
-      navigate(ROUTES.SHIKSHALOKAM_PTM_CHAT_PAGE)
-      return
-    }
-
-    if (ylc_case) {
-      navigate(ROUTES.SHIKSHALOKAM_YLC_CHAT_PAGE)
-      return
-    }
-
-    if (!urlFlow) {
-      setIsLoading(false)
-      return
-    }
-
-    const URL_PARAMS_MAP = {
-      [sessionFlowName.ListeningActivity]: ROUTES.SHIKSHALOKAM_GUEST_LISTENING_CHAT,
-      [sessionFlowName.ParentPerceptionSurvey]: ROUTES.SHIKSHALOKAM_PPPI_VOICE_CHAT,
-    }
     setPreviousUrl(window.location.href)
 
-    if (URL_PARAMS_MAP[urlFlow]) {
-      navigate(URL_PARAMS_MAP[urlFlow])
-      return
-    }
-
-    navigate({
-      pathname: ROUTES.COMMON_CHAT,
-      search: new URLSearchParams({ [URL_PARAMS.FLOW]: urlFlow }).toString(),
-    })
-  }, [isTokenValidating, chatLanguage, urlLanguage, urlFlow, hasSelectedLanguage, showLanding, isSaathiOnboarding, saathiOnboardingDone])
+    navigate(ROUTES.COMMON_CHAT)
+  }, [isTokenValidating, chatLanguage, urlLanguage, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   useEffect(() => {
     handleLanguageChange(chatLanguage, audioRef, stopAllAudio, setStopAudioTriggered)
@@ -243,7 +181,6 @@ function CommonHomePage({ usecaseType }) {
   }, [showLanding, setIsLoading])
 
   useEffect(() => {
-    if (!isSaathiOnboarding) return
     if (showLanding) return
     if (!languageSelected) return
     if (isTncAccepted !== null) return
@@ -298,7 +235,7 @@ function CommonHomePage({ usecaseType }) {
       cancelled = true
       setIsProfileLoading(false)
     }
-  }, [isSaathiOnboarding, showLanding, profileId, languageSelected, isTncAccepted, accessToken])
+  }, [showLanding, profileId, languageSelected, isTncAccepted, accessToken])
 
   const handleAcceptTnC = useCallback(async () => {
     try {
@@ -350,13 +287,12 @@ function CommonHomePage({ usecaseType }) {
 
     // If no LOGIN_REDIRECT_URL configured, fall back to the internal login page
     if (!loginRedirectUrl) {
-      navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
+      navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
       return
     }
 
-    // Step 1: Construct the target app URL — {SAATHI_FE_URL}{REDIRECT_URL_PATH}?flow={FLOW_NAME}
+    // Step 1: Construct the target app URL — {SAATHI_FE_URL}{REDIRECT_URL_PATH}
     const targetUrl = new URL(env.REDIRECT_URL_PATH(), env.SAATHI_FE_URL())
-    targetUrl.searchParams.set("flow", env.FLOW_NAME())
 
     // Step 2: Append URL-encoded target URL as redirectUrl param to LOGIN_REDIRECT_URL
     const finalLoginUrl = new URL(loginRedirectUrl)
@@ -462,7 +398,7 @@ function CommonHomePage({ usecaseType }) {
         />
       )}
 
-      {isSaathiOnboarding && showProfilePopup && (
+      {showProfilePopup && (
         <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} />
       )}
 
@@ -478,8 +414,8 @@ function CommonHomePage({ usecaseType }) {
           <div className="bg-slate-50 sm:pt-6 sm:h-[100%] flex flex-col justify-center mt-0 w-full">
             <div className="flex justify-end mr-6 relative block sm:hidden"></div>
 
-            {!hasSelectedLanguage && <LanguageSelectionGrid usecaseType={usecaseType} />}
-            {!ptm_case && !ylc_case && hasSelectedLanguage && !urlFlow && saathiOnboardingDone && (
+            {!hasSelectedLanguage && <LanguageSelectionGrid />}
+            {hasSelectedLanguage && saathiOnboardingDone && (
               <FlowSelection
                 audioRef={audioRef}
                 stopAudioTriggered={stopAudioTriggered}
@@ -492,7 +428,7 @@ function CommonHomePage({ usecaseType }) {
         </div>
 
         {/* Loading Spinner */}
-        <LoadingSpinner isVisible={isLoading || (isSaathiOnboarding && isProfileLoading)} />
+        <LoadingSpinner isVisible={isLoading || isProfileLoading} />
       </div>
     </>
   )
