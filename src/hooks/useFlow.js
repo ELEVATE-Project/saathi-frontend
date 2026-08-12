@@ -1,15 +1,14 @@
-import { sessionFlowName } from "../constants/session"
 import { useChatDataLocalStore } from "../store"
 import { useChatStorage, useSiteStorage } from "hooks/useStorage"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import ROUTES from "../url"
+import { env } from "utils/env"
 
 export const useFlow = () => {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const selectedFlow = useChatStorage()(state => state.flow)
-  const [searchParams] = useSearchParams()
   const { setPreviousUrl } = useSiteStorage().getState()
 
   const handleFlowSelection = async stopAllAudio => {
@@ -18,27 +17,11 @@ export const useFlow = () => {
     setIsLoading(true)
     await stopAllAudio()
 
-    let navigateUrl
-
     setPreviousUrl(window.location.href)
 
-    const flowRoutes = {
-      [sessionFlowName.GuestDiscussion]: ROUTES.SHIKSHALOKAM_GUEST_VOICE_CHAT,
-      [sessionFlowName.GuestMiStory]: ROUTES.SHIKSHALOKAM_GUEST_MI_STORY,
-    }
+    useChatDataLocalStore.getState().setFlow(env.FLOW_NAME())
 
-    const route = flowRoutes[selectedFlow]
-    if (!route) {
-      return
-    }
-
-    if (searchParams.get("flow")) {
-      useChatDataLocalStore.getState().setFlow(searchParams.get("flow"))
-    }
-
-    navigateUrl = route
-
-    navigate(navigateUrl)
+    navigate(ROUTES.COMMON_CHAT)
     setIsLoading(false)
   }
 

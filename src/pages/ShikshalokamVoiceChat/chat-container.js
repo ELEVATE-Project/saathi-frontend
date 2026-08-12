@@ -12,12 +12,12 @@ import { useSiteDataSessionStore } from "store"
 import DynamicVoiceChat from "./dynamic-voice-chat"
 import ROUTES from "../../url"
 import useSmartChatStorage from "../../hooks/useSmartChatStorage"
-import useUrlFlow from "../../hooks/useUrlFlow"
 import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
+import { env } from "utils/env"
 
 function ChatContainer() {
   const navigate = useNavigate()
-  const { flow: urlFlow } = useUrlFlow()
+  const flowName = env.FLOW_NAME()
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
@@ -45,8 +45,8 @@ function ChatContainer() {
   const accessToken = useUserDataLocalStore(state => state.access_token)
 
   const { data: flowInfo } = useQuery({
-    queryKey: [API_ENDPOINTS.FLOW_CONNECTION_INFO, urlFlow],
-    queryFn: () => getFlowInfoApi(urlFlow),
+    queryKey: [API_ENDPOINTS.FLOW_CONNECTION_INFO, flowName],
+    queryFn: () => getFlowInfoApi(flowName),
     // staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

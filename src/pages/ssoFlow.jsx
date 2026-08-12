@@ -27,7 +27,6 @@ function SsoFlow() {
     async function fetchProfileDetails() {
       const accessToken = searchParams.get(URL_PARAMS.ACCESS_TOKEN)
       const refreshToken = searchParams.get(URL_PARAMS.REFRESH_TOKEN)
-      const flow_type = searchParams.get(URL_PARAMS.FLOW)
       const projectId = searchParams.get(URL_PARAMS.PROJECT_ID)
       const taskId = searchParams.get(URL_PARAMS.TASK_ID)
       const sessionId = searchParams.get(URL_PARAMS.SESSION_ID)
@@ -38,8 +37,7 @@ function SsoFlow() {
       }
 
       if (env.AUTH_METHOD() === "url" && (!accessToken || accessToken === "")) {
-        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
-        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true });
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true });
         return
       }
 
@@ -50,8 +48,7 @@ function SsoFlow() {
       catch (error) {
         console.error("[SsoFlow] readElevateProfileApi failed:", error)
         clearFromStorage()
-        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
-        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
         return
      }
 
@@ -62,8 +59,7 @@ function SsoFlow() {
             const statusRes = await updateReflectionStatusApi(projectId, "started", sessionFlowName.SsoFlow, accessToken)
             if (statusRes?.status !== 200) {
               clearFromStorage();
-              const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
-              navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+              navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
               return
             }
           }
@@ -90,7 +86,7 @@ function SsoFlow() {
           setFirstName(profile_details.first_name)
           setCompanyName(profile_details.company)
           setState(profile_details.state)
-          setFlow(flow_type)
+          setFlow(env.FLOW_NAME())
           const hasAcc = profile_details.has_accepted_tnc;
           setAcceptedTnC(typeof hasAcc === "string" ? hasAcc : "ONGOING")
           setAccessToken(env.AUTH_METHOD() === "url" ? accessToken : true)
@@ -101,7 +97,6 @@ function SsoFlow() {
           setTaskId(taskId)
 
           const params = new URLSearchParams()
-          if (flow_type) params.append("flow", flow_type)
           if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
             params.append("language", languagePassed)
           }
@@ -110,13 +105,11 @@ function SsoFlow() {
           navigate(navigationPath, { replace: true })
         } else {
           clearFromStorage()
-          const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
-          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
         }
       } else {
         clearFromStorage()
-        const fallbackParams = flow_type ? `?${new URLSearchParams({ flow: flow_type }).toString()}` : ""
-        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE + fallbackParams, { replace: true })
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
       }
     }
 

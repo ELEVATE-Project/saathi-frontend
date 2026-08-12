@@ -50,8 +50,6 @@ export const env = {
 
   ONBOARDING_REDIRECT_DELAY: () => parseInt(getEnv("REACT_APP_ONBOARDING_REDIRECT_DELAY", "3000"), 10),
 
-  CHAT_SESSION_TYPE: () => getEnv("REACT_APP_CHAT_SESSION_TYPE", "saathi"),
-
   // Login redirect configuration
   SAATHI_FE_URL: () => getEnv("REACT_APP_SAATHI_FE_URL", ""),
   LOGIN_REDIRECT_URL: () => getEnv("REACT_APP_LOGIN_REDIRECT_URL", ""),
