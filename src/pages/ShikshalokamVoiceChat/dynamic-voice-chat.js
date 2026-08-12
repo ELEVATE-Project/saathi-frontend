@@ -56,7 +56,6 @@ import ROUTES from "../../url"
 import Swal from "sweetalert2"
 import useCustomMediaQuery from "hooks/useCustomMediaQuery"
 import useSmartChatStorage from "hooks/useSmartChatStorage"
-import useUrlFlow from "../../hooks/useUrlFlow"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 
@@ -96,9 +95,7 @@ const DynamicVoiceChat = ({
   isPopupMode = false,
   onProfileExtracted,
 }) => {
-  const { flow: urlFlow } = useUrlFlow()
-
-  const storageFlow = flowOverride || urlFlow
+  const storageFlow = flowOverride || env.FLOW_NAME()
   const showHistorySidebar = !!(storageFlow && storageFlow !== PROFILE_FLOW)
 
   // ========== useState Hooks ==========
@@ -224,10 +221,8 @@ const DynamicVoiceChat = ({
   const validateToken = async () => {
     const token = _userData?.access_token ?? null
     if (token === null) {
-      const flowName = env.FLOW_NAME()
-      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
       clearFromStorage()
-      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
       return
     }
     try {
@@ -383,8 +378,6 @@ const DynamicVoiceChat = ({
 
     if (wsSystemErrorRef.current) {
       wsSystemErrorRef.current = false
-      const flowName = env.FLOW_NAME()
-      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
       const result = await Swal.fire({
         text: t("sessionExpiredMessage"),
         confirmButtonText: t("confirmChanges"),
@@ -392,7 +385,7 @@ const DynamicVoiceChat = ({
       })
       if (result.isConfirmed) {
         clearFromStorage()
-        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
       }
       return
     }
@@ -419,10 +412,8 @@ const DynamicVoiceChat = ({
     }
 
     function onNoButtonClick() {
-      const flowName = env.FLOW_NAME()
-      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
       clearFromStorage()
-      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
     }
 
     showConfirmationPopup(onYesButtonClick, onNoButtonClick)
@@ -1260,10 +1251,7 @@ const DynamicVoiceChat = ({
         setChatLanguage(languageList[0].value)
         stopAllAudio()
         if (accessToken) {
-          navigate({
-            pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
-            search: new URLSearchParams({ flow: env.FLOW_NAME() }).toString(),
-          }, { replace: true })
+          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
         } else {
           navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
         }
@@ -1672,10 +1660,7 @@ const DynamicVoiceChat = ({
           setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
           setHasSelectedLanguage(false)
           stopAllAudio()
-          navigate({
-            pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
-            search: storageFlow ? new URLSearchParams({ flow: storageFlow }).toString() : ''
-          })
+          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
           window.location.reload()
         }
       })
@@ -2187,13 +2172,7 @@ const DynamicVoiceChat = ({
   const navigateBack = () => {
     stopAllAudio()
     setHasSelectedLanguage(false)
-    navigate(
-      {
-        pathname: ROUTES.SHIKSHALOKAM_HOME_PAGE,
-        search: new URLSearchParams({ flow: env.FLOW_NAME() }).toString(),
-      },
-      { replace: true }
-    )
+    navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
   }
 
   function navigateSsoFlow() {
@@ -2690,7 +2669,7 @@ const DynamicVoiceChat = ({
   }
 
   function processSidebarResults(results) {
-    const sessionTypeFilter = env.CHAT_SESSION_TYPE()
+    const sessionTypeFilter = env.FLOW_NAME()
     let localTitles = {}
     try { localTitles = JSON.parse(localStorage.getItem("__session_titles") || "{}") } catch {}
     const items = results
