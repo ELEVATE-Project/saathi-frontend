@@ -2723,21 +2723,21 @@ const DynamicVoiceChat = ({
     try {
       const res = await updateUserProfileApi(payload, token)
 
-      if (payload.name) setFirstName(payload.name)
-      if (payload.state) setState(payload.state)
+      setFirstName(payload.name)
+      setState(payload.state)
 
       if (_userData) {
-        if (payload.name) _userData.name = payload.name
-        if (payload.state) _userData.state = payload.state
-        if (payload.school_name) _userData.school_name = payload.school_name
-        if (payload.district) _userData.district = payload.district
-        if (payload.role) _userData.role = payload.role
+        _userData.name = payload.name
+        _userData.state = payload.state
+        _userData.school_name = payload.school_name
+        _userData.district = payload.district
+        _userData.role = payload.role
       }
 
       setProfileApiData(prev => ({
         ...prev,
         ...payload,
-        name: payload.name || prev?.name || prev?.first_name || "",
+        name: payload.name,
       }))
 
       showNotification({
@@ -2746,7 +2746,7 @@ const DynamicVoiceChat = ({
       })
       setShowProfileModal(false)
     } catch (error) {
-      const message = error?.response?.data?.message || error?.message || "Failed to update profile"
+      const message = t("profileUpdateFailed")
       showNotification({ message, type: "error" })
     }
   }

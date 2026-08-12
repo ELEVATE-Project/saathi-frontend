@@ -161,5 +161,6 @@
     "location": "Location",
     "district": "District",
     "save": "Save",
-    "user": "User"
-    }
+    "user": "User",
+    "profileUpdateFailed": "Profile update failed."
+}

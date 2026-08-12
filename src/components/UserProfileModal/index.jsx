@@ -57,19 +57,38 @@ function UserProfileModal({
 
   const fields = schema.fields || []
 
-  // Re-initialise form whenever modal opens or userData changes
+  const wasOpenRef = useRef(false)
+  const prevUserDataKeyRef = useRef("")
+
+  // Serialize active profile values to avoid resetting on reference-only changes while editing
+  const userDataKey = fields
+    .flatMap(field => (field.type === "split" ? field.fields || [] : [field]))
+    .map(f => `${f.id}:${userData[f.id] ?? ""}`)
+    .join("|")
+
   useEffect(() => {
-    if (!isOpen) return
-    const init = {}
-    fields.forEach(field => {
-      if (field.type === "split") {
-        field.fields?.forEach(f => { init[f.id] = userData[f.id] ?? "" })
-      } else {
-        init[field.id] = userData[field.id] ?? ""
-      }
-    })
-    setFormValues(init)
-  }, [isOpen, userData])
+    if (!isOpen) {
+      wasOpenRef.current = false
+      return
+    }
+
+    const justOpened = !wasOpenRef.current
+    const dataChanged = prevUserDataKeyRef.current !== userDataKey
+
+    if (justOpened || dataChanged) {
+      const init = {}
+      fields.forEach(field => {
+        if (field.type === "split") {
+          field.fields?.forEach(f => { init[f.id] = userData[f.id] ?? "" })
+        } else {
+          init[field.id] = userData[field.id] ?? ""
+        }
+      })
+      setFormValues(init)
+      wasOpenRef.current = true
+      prevUserDataKeyRef.current = userDataKey
+    }
+  }, [isOpen, userDataKey])
 
   if (!isOpen) return null
 
