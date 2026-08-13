@@ -162,5 +162,6 @@
     "district": "District",
     "save": "Save",
     "user": "User",
-    "profileUpdateFailed": "Profile update failed."
+    "profileUpdateFailed": "Profile update failed.",
+    "profileFetchFailed": "Failed to load profile details. Please try again."
 }

@@ -49,3 +49,28 @@ export const PROFILE_FORM_SCHEMA = {
 export const PROFILE_MODAL_CONFIG = {
   maxWidth: "480px",
 }
+
+/**
+ * Helper to normalize and extract profile field values from API response/state object.
+ * Reused across token validation, session validation, and UserProfileModal data-binding.
+ * 
+ * @param {Object} profileData - API profile object or state
+ * @param {string} [fallbackName=""] - Fallback name value
+ * @returns {Object} Normalized profile object: { name, role, school_name, state, district }
+ */
+export function extractUserProfileData(profileData = {}, fallbackName = "") {
+  const canonicalName =
+    profileData.name ||
+    profileData.first_name ||
+    profileData.firstName ||
+    fallbackName ||
+    ""
+
+  return {
+    name: canonicalName,
+    role: profileData.role || profileData.designation || "",
+    school_name: profileData.school_name || profileData.organisationSchool || "",
+    state: profileData.state || profileData.userState || "",
+    district: profileData.district || "",
+  }
+}

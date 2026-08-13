@@ -14,7 +14,7 @@ import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
 import UserProfileModal from "components/UserProfileModal"
-import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG } from "constants/profileForm"
+import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG, extractUserProfileData } from "constants/profileForm"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
@@ -244,10 +244,9 @@ const DynamicVoiceChat = ({
       const res = await validateSession()
       const details = res?.profile_details || {}
       if (details) {
-        const canonicalName = details.name || details.first_name || details.firstName || firstName || ""
-        const normalized = { ...details, name: canonicalName }
+        const normalized = extractUserProfileData(details, firstName)
         setProfileApiData(normalized)
-        if (canonicalName) setFirstName(canonicalName)
+        if (normalized.name) setFirstName(normalized.name)
       }
       setIsTokenValidated(true)
     } catch (error) {
@@ -1236,6 +1235,7 @@ const DynamicVoiceChat = ({
     }
 
     const handleOnline = () => {
+      if (!isSlowOrOffline) return
       isSlowOrOffline = false
       toast.dismiss()
       toastId = showNotification({
@@ -2701,18 +2701,21 @@ const DynamicVoiceChat = ({
   const handleOpenProfileModal = async () => {
     setShowProfileModal(true)
     // Reuse profileApiData already fetched during validateToken/validateSession to avoid duplicate API calls
-    if (!profileApiData || Object.keys(profileApiData).length === 0) {
+    if (!profileApiData) {
       try {
         const res = await validateSession()
         const details = res?.profile_details || {}
         if (details) {
-          const canonicalName = details.name || details.first_name || details.firstName || firstName || ""
-          const normalized = { ...details, name: canonicalName }
+          const normalized = extractUserProfileData(details, firstName)
           setProfileApiData(normalized)
-          if (canonicalName) setFirstName(canonicalName)
+          if (normalized.name) setFirstName(normalized.name)
         }
       } catch (error) {
         console.error("Error fetching profile via validateSession:", error)
+        showNotification({
+          message: t("profileFetchFailed"),
+          type: "error",
+        })
       }
     }
   }
@@ -2869,16 +2872,16 @@ const DynamicVoiceChat = ({
           {/* Mobile overlay backdrop */}
           {isSidebarOpen && (
             <div
-              className="saathi-sidebar-backdrop"
+              className="chat-sidebar-backdrop"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
-          <aside className={`saathi-popup-sidebar${isMobile ? (isSidebarOpen ? " saathi-popup-sidebar--open" : " saathi-popup-sidebar--closed") : ""}`}>
+          <aside className={`chat-sidebar${isMobile ? (isSidebarOpen ? " chat-sidebar--open" : " chat-sidebar--closed") : ""}`}>
             {/* Sidebar header */}
-            <div className="saathi-popup-sidebar-header">
-              <span className="saathi-popup-sidebar-title">{t("sidebarTitle")}</span>
+            <div className="chat-sidebar-header">
+              <span className="chat-sidebar-title">{t("sidebarTitle")}</span>
               <button
-                className="saathi-popup-new-chat-btn"
+                className="chat-sidebar-new-btn"
                 onClick={async e => {
                   await resetChat(e)
                 }}
@@ -2889,17 +2892,17 @@ const DynamicVoiceChat = ({
 
             {/* Empty state */}
             {(!chatTitle || chatTitle.length === 0) ? (
-              <div className="saathi-popup-sidebar-empty">
+              <div className="chat-sidebar-empty">
                 <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 <p>{t("sidebarEmptyText")}</p>
               </div>
             ) : (
-              <div className="saathi-popup-sidebar-sessions">
-                <p className="saathi-popup-recents-label">{t("recents")}</p>
+              <div className="chat-sidebar-sessions">
+                <p className="chat-sidebar-recents-label">{t("recents")}</p>
                 <div
-                  className="saathi-popup-sessions-scroll"
+                  className="chat-sidebar-sessions-scroll"
                   onScroll={e => {
                     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
                     const distanceFromBottom = scrollHeight - scrollTop - clientHeight
@@ -2913,7 +2916,7 @@ const DynamicVoiceChat = ({
                   {chatTitle.map((item, index) => (
                     <div
                       key={index}
-                      className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
+                      className={`chat-sidebar-session-item${item.session === sessionId ? " chat-sidebar-session-item--active" : ""}`}
                       onClick={() => handleSessionSelect(item.session)}
                       title={item.title || "Untitled chat"}
                     >
@@ -2928,15 +2931,15 @@ const DynamicVoiceChat = ({
                 </div>
               </div>
             )}
-            <div className="saathi-popup-sidebar-logout">
-              <button className="saathi-popup-user-trigger" onClick={handleOpenProfileModal}>
-                <span className="saathi-popup-user-avatar">
+            <div className="chat-sidebar-footer">
+              <button className="chat-sidebar-user-trigger" onClick={handleOpenProfileModal}>
+                <span className="chat-sidebar-user-avatar">
                   {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
                 </span>
-                <span className="saathi-popup-user-name">
+                <span className="chat-sidebar-user-name">
                   {profileApiData?.name || firstName || t("user")}
                 </span>
-                <FiLogOut className="saathi-popup-logout-icon" />
+                <FiLogOut className="chat-sidebar-logout-icon" />
               </button>
             </div>
           </aside>
@@ -2954,13 +2957,7 @@ const DynamicVoiceChat = ({
             onClose={() => setShowProfileModal(false)}
             onLogout={() => { setShowProfileModal(false); handleLogout() }}
             onSave={handleSaveProfile}
-            userData={{
-              name: profileApiData?.name || "",
-              role: profileApiData?.role || "",
-              school_name: profileApiData?.school_name || "",
-              state: profileApiData?.state || "",
-              district: profileApiData?.district || "",
-            }}
+            userData={extractUserProfileData(profileApiData, firstName)}
             schema={PROFILE_FORM_SCHEMA}
             options={{ languages: languageList }}
             modalConfig={PROFILE_MODAL_CONFIG}
@@ -2973,7 +2970,7 @@ const DynamicVoiceChat = ({
         {/* Mobile hamburger to open sidebar */}
         {showHistorySidebar && isMobile && (
           <button
-            className="saathi-sidebar-toggle"
+            className="chat-sidebar-toggle"
             onClick={() => setIsSidebarOpen(prev => !prev)}
             aria-label="Toggle chat history"
           >

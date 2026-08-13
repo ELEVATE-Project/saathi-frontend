@@ -1278,10 +1278,10 @@ html, body {
 }
 
 /* ========================================================
-   SAATHI POPUP CHAT HISTORY SIDEBAR
+   CHAT HISTORY SIDEBAR
    ======================================================== */
 
-.saathi-popup-sidebar {
+.chat-sidebar {
   width: 260px;
   min-width: 260px;
   height: 100%;
@@ -1293,7 +1293,7 @@ html, body {
   flex-shrink: 0;
 }
 
-.saathi-popup-sidebar-header {
+.chat-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1303,7 +1303,7 @@ html, body {
   flex-shrink: 0;
 }
 
-.saathi-popup-sidebar-title {
+.chat-sidebar-title {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1311,7 +1311,7 @@ html, body {
   color: #6b7280;
 }
 
-.saathi-popup-new-chat-btn {
+.chat-sidebar-new-btn {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1327,12 +1327,12 @@ html, body {
   transition: background 0.15s, color 0.15s;
 }
 
-.saathi-popup-new-chat-btn:hover {
+.chat-sidebar-new-btn:hover {
   background: #572e91;
   color: #fff;
 }
 
-.saathi-popup-sidebar-empty {
+.chat-sidebar-empty {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1344,17 +1344,17 @@ html, body {
   text-align: center;
 }
 
-.saathi-popup-sidebar-empty svg {
+.chat-sidebar-empty svg {
   opacity: 0.45;
 }
 
-.saathi-popup-sidebar-empty p {
+.chat-sidebar-empty p {
   font-size: 0.72rem;
   line-height: 1.4;
   margin: 0;
 }
 
-.saathi-popup-sidebar-sessions {
+.chat-sidebar-sessions {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1362,7 +1362,7 @@ html, body {
   min-height: 0;
 }
 
-.saathi-popup-recents-label {
+.chat-sidebar-recents-label {
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -1372,22 +1372,22 @@ html, body {
   flex-shrink: 0;
 }
 
-.saathi-popup-sessions-scroll {
+.chat-sidebar-sessions-scroll {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
 
-.saathi-popup-sessions-scroll::-webkit-scrollbar {
+.chat-sidebar-sessions-scroll::-webkit-scrollbar {
   width: 4px;
 }
 
-.saathi-popup-sessions-scroll::-webkit-scrollbar-thumb {
+.chat-sidebar-sessions-scroll::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 2px;
 }
 
-.saathi-popup-session-item {
+.chat-sidebar-session-item {
   padding: 8px 12px;
   font-size: 0.75rem;
   color: #374151;
@@ -1400,24 +1400,24 @@ html, body {
   transition: background 0.12s;
 }
 
-.saathi-popup-session-item:hover {
+.chat-sidebar-session-item:hover {
   background: #ede9f5;
   color: #572e91;
 }
 
-.saathi-popup-session-item--active {
+.chat-sidebar-session-item--active {
   background: #572e91;
   color: #fff;
   font-weight: 500;
 }
 
-.saathi-popup-session-item--active:hover {
+.chat-sidebar-session-item--active:hover {
   background: #4a2580;
   color: #fff;
 }
 
 /* Mobile sidebar toggle button */
-.saathi-sidebar-toggle {
+.chat-sidebar-toggle {
   display: none;
   position: absolute;
   top: 8px;
@@ -1433,7 +1433,7 @@ html, body {
 }
 
 /* Mobile sidebar overlay backdrop */
-.saathi-sidebar-backdrop {
+.chat-sidebar-backdrop {
   display: none;
   position: absolute;
   inset: 0;
@@ -1443,15 +1443,15 @@ html, body {
 
 /* Mobile: sidebar as overlay, toggle visible */
 @media screen and (max-width: 500px) {
-  .saathi-sidebar-toggle {
+  .chat-sidebar-toggle {
     display: flex;
   }
 
-  .saathi-sidebar-backdrop {
+  .chat-sidebar-backdrop {
     display: block;
   }
 
-  .saathi-popup-sidebar {
+  .chat-sidebar {
     position: absolute;
     top: 0;
     left: 0;
@@ -1462,22 +1462,22 @@ html, body {
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
   }
 
-  .saathi-popup-sidebar--open {
+  .chat-sidebar--open {
     transform: translateX(0);
   }
 
-  .saathi-popup-sidebar--closed {
+  .chat-sidebar--closed {
     transform: translateX(-100%);
   }
 }
 
-.saathi-popup-sidebar-logout {
+.chat-sidebar-footer {
   padding: 12px 16px;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 
-.saathi-popup-logout-btn {
+.chat-sidebar-logout-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1494,17 +1494,17 @@ html, body {
   transition: background 0.15s, color 0.15s;
 }
 
-.saathi-popup-logout-btn:hover {
+.chat-sidebar-logout-btn:hover {
   background: #572e91;
   color: #fff;
 }
 
-.saathi-popup-logout-icon {
+.chat-sidebar-logout-icon {
   font-size: 1rem;
   flex-shrink: 0;
 }
 
-.saathi-popup-user-trigger {
+.chat-sidebar-user-trigger {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1518,11 +1518,11 @@ html, body {
   transition: background 0.15s;
 }
 
-.saathi-popup-user-trigger:hover {
+.chat-sidebar-user-trigger:hover {
   background: #f3eef9;
 }
 
-.saathi-popup-user-avatar {
+.chat-sidebar-user-avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1536,7 +1536,7 @@ html, body {
   flex-shrink: 0;
 }
 
-.saathi-popup-user-name {
+.chat-sidebar-user-name {
   flex: 1;
   font-size: 0.875rem;
   font-weight: 600;

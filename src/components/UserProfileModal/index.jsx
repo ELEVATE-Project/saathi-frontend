@@ -55,71 +55,71 @@ function UserProfileModal({
   const [formValues, setFormValues] = useState({})
   const overlayRef = useRef(null)
 
-  const fields = schema.fields || []
+  const formFields = schema.fields || []
 
-  const wasOpenRef = useRef(false)
-  const prevUserDataKeyRef = useRef("")
+  const wasModalOpenRef = useRef(false)
+  const previousUserDataKeyRef = useRef("")
 
   // Serialize active profile values to avoid resetting on reference-only changes while editing
-  const userDataKey = fields
+  const serializedProfileDataKey = formFields
     .flatMap(field => (field.type === "split" ? field.fields || [] : [field]))
-    .map(f => `${f.id}:${userData[f.id] ?? ""}`)
+    .map(subField => `${subField.id}:${userData[subField.id] ?? ""}`)
     .join("|")
 
   useEffect(() => {
     if (!isOpen) {
-      wasOpenRef.current = false
+      wasModalOpenRef.current = false
       return
     }
 
-    const justOpened = !wasOpenRef.current
-    const dataChanged = prevUserDataKeyRef.current !== userDataKey
+    const isModalJustOpened = !wasModalOpenRef.current
+    const hasProfileDataChanged = previousUserDataKeyRef.current !== serializedProfileDataKey
 
-    if (justOpened || dataChanged) {
-      const init = {}
-      fields.forEach(field => {
+    if (isModalJustOpened || hasProfileDataChanged) {
+      const initialFormValues = {}
+      formFields.forEach(field => {
         if (field.type === "split") {
-          field.fields?.forEach(f => { init[f.id] = userData[f.id] ?? "" })
+          field.fields?.forEach(subField => { initialFormValues[subField.id] = userData[subField.id] ?? "" })
         } else {
-          init[field.id] = userData[field.id] ?? ""
+          initialFormValues[field.id] = userData[field.id] ?? ""
         }
       })
-      setFormValues(init)
-      wasOpenRef.current = true
-      prevUserDataKeyRef.current = userDataKey
+      setFormValues(initialFormValues)
+      wasModalOpenRef.current = true
+      previousUserDataKeyRef.current = serializedProfileDataKey
     }
-  }, [isOpen, userDataKey])
+  }, [isOpen, serializedProfileDataKey])
 
   if (!isOpen) return null
 
-  const handleChange = (key, value) => setFormValues(prev => ({ ...prev, [key]: value }))
+  const handleChange = (fieldId, fieldValue) => setFormValues(prevValues => ({ ...prevValues, [fieldId]: fieldValue }))
 
-  const handleOverlayClick = e => { if (e.target === overlayRef.current) onClose() }
+  const handleOverlayClick = event => { if (event.target === overlayRef.current) onClose() }
 
-  const inputCls =
+  const inputStyleClasses =
     "w-full px-3.5 sm:px-4 py-2 sm:py-2.5 bg-[#f7f5f5] rounded-lg sm:rounded-xl text-xs sm:text-sm text-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all"
 
-  const labelCls = "block text-xs font-semibold text-[#572e91] mb-1"
+  const labelStyleClasses = "block text-xs font-semibold text-[#572e91] mb-1"
 
   function renderField(field) {
     if (field.type === "split") {
       return (
         <div key={field.id} className="mb-3 sm:mb-4">
-          <div className="label-div">
-            <b className={labelCls}>{t(field.labelName, field.labelName)}</b>
+          <div className="mb-1">
+            <b className={labelStyleClasses}>{t(field.labelName)}</b>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-            {field.fields?.map(f => (
-              <div key={f.id} className="w-full">
+            {field.fields?.map(subField => (
+              <div key={subField.id} className="w-full">
                 <FormData
-                  layOut={f.layOut || 1}
-                  id={f.id}
-                  inputType={f.inputType || "text"}
-                  inputName={f.inputName || f.id}
-                  inputValue={formValues[f.id] || ""}
-                  inputOnChange={e => handleChange(f.id, e.target.value)}
-                  placeholder={t(f.placeholder)}
-                  inputClass={inputCls}
+                  layOut={subField.layOut || 1}
+                  id={subField.id}
+                  inputType={subField.inputType || "text"}
+                  inputName={subField.inputName || subField.id}
+                  inputValue={formValues[subField.id] || ""}
+                  inputOnChange={event => handleChange(subField.id, event.target.value)}
+                  placeholder={t(subField.placeholder)}
+                  inputClass={inputStyleClasses}
                 />
               </div>
             ))}
@@ -134,13 +134,13 @@ function UserProfileModal({
           layOut={1}
           id={field.id}
           labelName={t(field.labelName)}
-          labelClass={labelCls}
+          labelClass={labelStyleClasses}
           inputType={field.inputType || "text"}
           inputName={field.inputName || field.id}
           inputValue={formValues[field.id] || ""}
-          inputOnChange={e => handleChange(field.id, e.target.value)}
+          inputOnChange={event => handleChange(field.id, event.target.value)}
           placeholder={t(field.placeholder)}
-          inputClass={inputCls}
+          inputClass={inputStyleClasses}
         />
       </div>
     )
@@ -180,7 +180,7 @@ function UserProfileModal({
 
         {/* Scrollable form body */}
         <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
-          {fields.map(field => renderField(field))}
+          {formFields.map(field => renderField(field))}
         </div>
 
         {/* Footer */}
