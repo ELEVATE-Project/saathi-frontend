@@ -1216,49 +1216,60 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
     let toastId = null
-
-    const checkNetworkSpeed = () => {
-      if (connection) {
-        const { effectiveType } = connection
-        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g") && navigator.onLine) {
-          if (toastId) {
-            toast.dismiss(toastId)
-          }
-          const message = t("networkWarning")
-          toastId = showNotification({
-            message: message,
-            type: "warning",
-            options: {
-              position: "top-center",
-              style: { fontWeight: "bold", color: "#1D1616" },
-            },
-          })
-        }
-      }
-    }
+    let isSlowOrOffline = false
 
     const handleOffline = () => {
-      if (toastId) {
-        toast.dismiss(toastId)
-      }
-      toastId = toast.error(t("offlineNetwork"), {
-        position: "top-center",
-        style: { fontWeight: "bold", color: "#fff" },
+      if (isSlowOrOffline) return
+      isSlowOrOffline = true
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("offlineNetwork"),
+        type: "error",
+        options: {
+          isOfflineToast: true,
+          autoClose: false,
+          closeButton: false,
+          position: "top-center",
+          style: { fontWeight: "bold", color: "#fff" },
+        },
       })
     }
 
     const handleOnline = () => {
-      if (toastId) {
-        toast.dismiss(toastId)
-      }
-      toastId = toast.success(t("onlineNetwork"), {
-        position: "top-center",
-        style: { fontWeight: "bold", color: "#1D1616" },
+      isSlowOrOffline = false
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("onlineNetwork"),
+        type: "success",
+        options: {
+          autoClose: 3000,
+          closeButton: false,
+          position: "top-center",
+          style: { fontWeight: "bold", color: "#1D1616" },
+        },
       })
-      checkNetworkSpeed()
     }
 
-    checkNetworkSpeed()
+    const checkNetworkSpeed = () => {
+      if (!navigator.onLine) {
+        handleOffline()
+        return
+      }
+      if (connection) {
+        const { effectiveType } = connection
+        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
+          handleOffline()
+        } else if (isSlowOrOffline) {
+          handleOnline()
+        }
+      }
+    }
+
+    if (!navigator.onLine) {
+      handleOffline()
+    } else {
+      checkNetworkSpeed()
+    }
     connection?.addEventListener("change", checkNetworkSpeed)
     window.addEventListener("offline", handleOffline)
     window.addEventListener("online", handleOnline)
