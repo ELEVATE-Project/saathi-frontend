@@ -5,12 +5,10 @@ import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
 import { useAudio } from "../../hooks/useAudio"
 import { useEffect, useMemo, useState, useCallback } from "react"
 import env from "../../utils/env"
-import { useFlow } from "../../hooks/useFlow"
 import { useLanguage } from "../../hooks/useLanguage"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useSiteDataSessionStore } from "store"
 import { useSiteStorage } from "hooks/useStorage"
-import FlowSelection from "../../components/FlowSelection"
 import Header from "../../components/Header"
 import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
@@ -26,7 +24,7 @@ import { getSessionDetails } from "../../services/api.service"
 
 function CommonHomePage() {
   const { audioRef, stopAudioTriggered, setStopAudioTriggered, stopAllAudio } = useAudio()
-  const { isLoading, setIsLoading, handleFlowSelection } = useFlow()
+  const [isLoading, setIsLoading] = useState(false)
   const { languageButtonSelect, handleLanguageChange } = useLanguage()
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const hasSelectedLanguage = useSiteDataSessionStore(state => state.hasSelectedLanguage)
@@ -302,8 +300,9 @@ function CommonHomePage() {
     window.location.href = finalLoginUrl.toString()
   }, [navigate])
 
-  const onFlowContinue = () => {
-    return handleFlowSelection(stopAllAudio)
+  // Auto-navigating to common-chat — show spinner while effect navigates
+  if (!isTokenValidating && !showLanding && hasSelectedLanguage && saathiOnboardingDone) {
+    return <LoadingSpinner isVisible={true} />
   }
 
   if (showLanding) {
@@ -415,15 +414,6 @@ function CommonHomePage() {
             <div className="flex justify-end mr-6 relative block sm:hidden"></div>
 
             {!hasSelectedLanguage && <LanguageSelectionGrid />}
-            {hasSelectedLanguage && saathiOnboardingDone && (
-              <FlowSelection
-                audioRef={audioRef}
-                stopAudioTriggered={stopAudioTriggered}
-                setStopAudioTriggered={setStopAudioTriggered}
-                onFlowContinue={onFlowContinue}
-                setIsLoading={setIsLoading}
-              />
-            )}
           </div>
         </div>
 
