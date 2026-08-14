@@ -1,8 +1,8 @@
 import { createStoryMediaApi } from "api/endpoints"
 import { handleS3Upload } from "../services/storage_service"
 import { sessionFlowName } from "../constants/session"
-import { URL_PARAMS } from "../constants/urls"
 import { useUserDataLocalStore } from "../store"
+import env from "./env"
 import axiosInstance from "./axios"
 import i18n from "../i18n"
 
@@ -113,8 +113,7 @@ const convertHeifToJpg = async file => {
 }
 
 export const handleMultipleUploads = async (e, storyData, files, sessionId, maxImages = 10, perImageSize = 2) => {
-  const urlParams = new URLSearchParams(window.location.search)
-  const storageFlow = urlParams.get(URL_PARAMS.FLOW)
+  const storageFlow = env.FLOW_NAME()
 
   const filesArray = Array.from(e.target.files).filter(file => {
     const fileSizeInMB = file.size / (1024 * 1024)

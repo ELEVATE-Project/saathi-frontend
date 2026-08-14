@@ -123,11 +123,9 @@ export const readElevateProfileApi = async accessToken => {
         allowOutsideClick: false,
         allowEscapeKey: false,
       })
-      const flowName = env.FLOW_NAME()
-      const search = flowName ? `?${new URLSearchParams({ flow: flowName }).toString()}` : ""
       useUserDataLocalStore.getState().setAccessToken(null)
       clearFromStorage()
-      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE + search
+      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
     }
     else {
       throw error
