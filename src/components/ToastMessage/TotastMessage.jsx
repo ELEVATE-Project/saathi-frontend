@@ -6,11 +6,13 @@ import "./toastmessage_style.css";
 const Notification = () => {
   return (
     <ToastContainer
-      position="bottom-left"
-      autoClose={false}
+      position="top-center"
+      autoClose={3000}
       limit={1}
       newestOnTop={false}
       closeOnClick
+      closeButton={false}
+      hideProgressBar={true}
       rtl={false}
       pauseOnFocusLoss
       draggable
@@ -23,9 +25,10 @@ const Notification = () => {
 };
 
 const defaultConfig = {
-  position: "bottom-left",
-  autoClose: false,
-  hideProgressBar: false,
+  position: "top-center",
+  autoClose: 3000,
+  closeButton: false,
+  hideProgressBar: true,
   closeOnClick: true,
   pauseOnHover: true,
   draggable: true,
@@ -34,11 +37,25 @@ const defaultConfig = {
   transition: Bounce,
 };
 
+const isBadNetworkOrOffline = () => {
+  if (typeof window === "undefined") return false;
+  if (!navigator.onLine) return true;
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (connection?.effectiveType && (connection.effectiveType === "2g" || connection.effectiveType === "3g")) {
+    return true;
+  }
+  return false;
+};
+
 export const showNotification = ({
   message = "🦄 Default Message",
   type = "warn",
   options = {},
 }) => {
+  if (isBadNetworkOrOffline() && !options?.isOfflineToast) {
+    return null;
+  }
+  toast.dismiss();
   return toast[type](message, { ...defaultConfig, ...options }); 
 };
 

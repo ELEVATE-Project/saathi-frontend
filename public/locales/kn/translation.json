@@ -123,5 +123,16 @@
   "profileOnboardingCompleteMessage": "ಧನ್ಯವಾದಗಳು. ನನಗೆ ಬೇಕಾದ ಎಲ್ಲಾ ಮಾಹಿತಿ ನನ್ನಲ್ಲಿದೆ. ನಿಮ್ಮನ್ನು ಸಾಥಿಗೆ ಮರುನಿರ್ದೇಶಿಸುತ್ತಿದ್ದೇನೆ.",
   "logoutConfirmMessage": "ನೀವು ಖಚಿತವಾಗಿ ಲಾಗ್ ಔಟ್ ಮಾಡಲು ಬಯಸುವಿರಾ?",
   "confirmLogout": "ಲಾಗ್ ಔಟ್ ಮಾಡಿ",
-  "recents": "ಇತ್ತೀಚಿನದು"
+  "recents": "ಇತ್ತೀಚಿನದು",
+  "profileUpdatedSuccess": "ಪ್ರೊಫೈಲ್ ಅನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ!",
+  "profileDetails": "ಪ್ರೊಫೈಲ್ ವಿವರಗಳು",
+  "name": "ಹೆಸರು",
+  "roleDesignation": "ಪಾತ್ರ / ಹುದ್ದೆ",
+  "organisationSchool": "ಸಂಸ್ಥೆ / ಶಾಲೆ",
+  "location": "ಸ್ಥಳ",
+  "district": "ಜಿಲ್ಲೆ",
+  "save": "ಉಳಿಸಿ",
+  "user": "ಬಳಕೆದಾರ",
+  "profileUpdateFailed": "ಪ್ರೊಫೈಲ್ ಅನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿಲ್ಲ.",
+  "profileFetchFailed": "ಪ್ರೊಫೈಲ್ ವಿವರಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
 }

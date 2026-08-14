@@ -4,7 +4,7 @@ import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi } from "api/endpoints/user"
+import { createUserProfileApi, updateUserProfileApi } from "api/endpoints/user"
 import { validateSession } from "utils/session"
 import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
@@ -13,6 +13,8 @@ import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMult
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
+import UserProfileModal from "components/UserProfileModal"
+import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG, extractUserProfileData } from "constants/profileForm"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
@@ -50,6 +52,7 @@ import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 import Popup from "components/Popup"
+import Chip from "components/Chip"
 import ReportEditor from "components/ReportEditor"
 import ReportEditorAuth from "../../components/ReportEditorAuth"
 import ROUTES from "../../url"
@@ -59,6 +62,7 @@ import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useUrlFlow from "../../hooks/useUrlFlow"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
+import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
 
 const cookies = new Cookies()
 
@@ -151,8 +155,13 @@ const DynamicVoiceChat = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [profileApiData, setProfileApiData] = useState({})
   const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false)
   const [isTokenValidated, setIsTokenValidated] = useState(false)
+  // Tracks the updated_at ID of the bot message whose chips have been used.
+  // Once set, the chip bar is hidden until a new bot message with chips arrives.
+  const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -212,6 +221,7 @@ const DynamicVoiceChat = ({
   const sidebarBottomReachedRef = useRef(false)
   const isLogoutNavigationRef = useRef(false)
   const hasStreamedRef = useRef(false)
+  const quickReplyLockRef = useRef(new Set())
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -231,7 +241,13 @@ const DynamicVoiceChat = ({
       return
     }
     try {
-      await validateSession()
+      const res = await validateSession()
+      const details = res?.profile_details || {}
+      if (details) {
+        const normalized = extractUserProfileData(details, firstName)
+        setProfileApiData(normalized)
+        if (normalized.name) setFirstName(normalized.name)
+      }
       setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
@@ -829,7 +845,7 @@ const DynamicVoiceChat = ({
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
         received: true,
-        ...(isBot && chat?.other_params?.extra_content?.download ? {
+        ...(isBot && chat?.other_params?.extra_content != null ? {
           extra_content: chat.other_params.extra_content,
         } : {}),
       },
@@ -874,16 +890,18 @@ const DynamicVoiceChat = ({
    * Sends user message through WebSocket connection
    * Handles message submission, WebSocket connection, and UI updates
    */
-  async function handleSendMessage(event) {
+  async function handleSendMessage(event, overrideText) {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
+    // overrideText is used by quick-reply chips to send directly without touching textMessage
+    const messageToSend = (overrideText ?? textMessage)?.trim() || ""
 
     try {
       await validateToken()
     } catch {
-      return
+      return false
     }
 
     setLlmError("")
@@ -895,9 +913,9 @@ const DynamicVoiceChat = ({
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    if (!textMessage.trim()) return
+    if (!messageToSend) return false
 
-    const chat_history = handleMessagesForUser(textMessage)
+    const chat_history = handleMessagesForUser(messageToSend)
     const userMsgCount = chat_history.filter(chat => chat.source === "user").length
     if (userMsgCount === 1 || !isSocketConnected) {
       connectToWebSocket()
@@ -914,7 +932,7 @@ const DynamicVoiceChat = ({
       })
     }
     if (showHistorySidebar) {
-      const firstMsg = textMessage.trim()
+      const firstMsg = messageToSend
       if (userMsgCount === 1) {
         try {
           const stored = JSON.parse(localStorage.getItem("__session_titles") || "{}")
@@ -932,14 +950,26 @@ const DynamicVoiceChat = ({
       })
     }
     sendSocketMessage({
-      text: textMessage,
+      text: messageToSend,
       context: "",
       asr_audio: asrAudio,
     })
 
     setAsrAudio(null)
     handleScrollToView()
-    setTextMessage("")
+    // Only clear the textarea when the message came from it (not from a chip)
+    if (!overrideText) {
+      setTextMessage("")
+      // Dismiss chips by recording the actual bot message ID that had chips.
+      // Using Date.now() would fail to match when the next bot reply has no chips
+      // (lastBotMsg would still point to the old message and chips would reappear).
+      const currentHistory = getChatHistory()
+      const lastBotWithChips = [...currentHistory].reverse().find(
+        chat => chat.source === CHAT_SOURCE.BOT && Array.isArray(chat.extra_content?.quick_reply_chips) && chat.extra_content.quick_reply_chips.length > 0
+      )
+      if (lastBotWithChips) setQuickReplySentForMsgId(lastBotWithChips.updated_at)
+    }
+    return true
   }
 
   // ========================================================================
@@ -1185,49 +1215,61 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
     let toastId = null
-
-    const checkNetworkSpeed = () => {
-      if (connection) {
-        const { effectiveType } = connection
-        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g") && navigator.onLine) {
-          if (toastId) {
-            toast.dismiss(toastId)
-          }
-          const message = t("networkWarning")
-          toastId = showNotification({
-            message: message,
-            type: "warning",
-            options: {
-              position: "top-center",
-              style: { fontWeight: "bold", color: "#1D1616" },
-            },
-          })
-        }
-      }
-    }
+    let isSlowOrOffline = false
 
     const handleOffline = () => {
-      if (toastId) {
-        toast.dismiss(toastId)
-      }
-      toastId = toast.error(t("offlineNetwork"), {
-        position: "top-center",
-        style: { fontWeight: "bold", color: "#fff" },
+      if (isSlowOrOffline) return
+      isSlowOrOffline = true
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("offlineNetwork"),
+        type: "error",
+        options: {
+          isOfflineToast: true,
+          autoClose: false,
+          closeButton: false,
+          position: "top-center",
+          style: { fontWeight: "bold", color: "#fff" },
+        },
       })
     }
 
     const handleOnline = () => {
-      if (toastId) {
-        toast.dismiss(toastId)
-      }
-      toastId = toast.success(t("onlineNetwork"), {
-        position: "top-center",
-        style: { fontWeight: "bold", color: "#1D1616" },
+      if (!isSlowOrOffline) return
+      isSlowOrOffline = false
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("onlineNetwork"),
+        type: "success",
+        options: {
+          autoClose: 3000,
+          closeButton: false,
+          position: "top-center",
+          style: { fontWeight: "bold", color: "#1D1616" },
+        },
       })
-      checkNetworkSpeed()
     }
 
-    checkNetworkSpeed()
+    const checkNetworkSpeed = () => {
+      if (!navigator.onLine) {
+        handleOffline()
+        return
+      }
+      if (connection) {
+        const { effectiveType } = connection
+        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
+          handleOffline()
+        } else if (isSlowOrOffline) {
+          handleOnline()
+        }
+      }
+    }
+
+    if (!navigator.onLine) {
+      handleOffline()
+    } else {
+      checkNetworkSpeed()
+    }
     connection?.addEventListener("change", checkNetworkSpeed)
     window.addEventListener("offline", handleOffline)
     window.addEventListener("online", handleOnline)
@@ -2656,8 +2698,71 @@ const DynamicVoiceChat = ({
     return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
+  const handleOpenProfileModal = async () => {
+    setShowProfileModal(true)
+    // Reuse profileApiData already fetched during validateToken/validateSession to avoid duplicate API calls
+    if (!profileApiData) {
+      try {
+        const res = await validateSession()
+        const details = res?.profile_details || {}
+        if (details) {
+          const normalized = extractUserProfileData(details, firstName)
+          setProfileApiData(normalized)
+          if (normalized.name) setFirstName(normalized.name)
+        }
+      } catch (error) {
+        console.error("Error fetching profile via validateSession:", error)
+        showNotification({
+          message: t("profileFetchFailed"),
+          type: "error",
+        })
+      }
+    }
+  }
+
   function handleLogout() {
     setShowLogoutConfirm(true)
+  }
+
+  async function handleSaveProfile(formValues) {
+    const token = _userData?.access_token || accessToken
+    const payload = {
+      name: formValues.name ?? "",
+      role: formValues.role ?? "",
+      school_name: formValues.school_name ?? "",
+      district: formValues.district ?? "",
+      state: formValues.state ?? "",
+    }
+
+    try {
+      const res = await updateUserProfileApi(payload, token)
+
+      setFirstName(payload.name)
+      setState(payload.state)
+
+      if (_userData) {
+        _userData.name = payload.name
+        _userData.state = payload.state
+        _userData.school_name = payload.school_name
+        _userData.district = payload.district
+        _userData.role = payload.role
+      }
+
+      setProfileApiData(prev => ({
+        ...prev,
+        ...payload,
+        name: payload.name,
+      }))
+
+      showNotification({
+        message: res?.message || t("profileUpdatedSuccess"),
+        type: "success",
+      })
+      setShowProfileModal(false)
+    } catch (error) {
+      const message = t("profileUpdateFailed")
+      showNotification({ message, type: "error" })
+    }
   }
 
   async function handleConfirmLogout() {
@@ -2767,16 +2872,16 @@ const DynamicVoiceChat = ({
           {/* Mobile overlay backdrop */}
           {isSidebarOpen && (
             <div
-              className="saathi-sidebar-backdrop"
+              className="chat-sidebar-backdrop"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
-          <aside className={`saathi-popup-sidebar${isMobile ? (isSidebarOpen ? " saathi-popup-sidebar--open" : " saathi-popup-sidebar--closed") : ""}`}>
+          <aside className={`chat-sidebar${isMobile ? (isSidebarOpen ? " chat-sidebar--open" : " chat-sidebar--closed") : ""}`}>
             {/* Sidebar header */}
-            <div className="saathi-popup-sidebar-header">
-              <span className="saathi-popup-sidebar-title">{t("sidebarTitle")}</span>
+            <div className="chat-sidebar-header">
+              <span className="chat-sidebar-title">{t("sidebarTitle")}</span>
               <button
-                className="saathi-popup-new-chat-btn"
+                className="chat-sidebar-new-btn"
                 onClick={async e => {
                   await resetChat(e)
                 }}
@@ -2787,17 +2892,17 @@ const DynamicVoiceChat = ({
 
             {/* Empty state */}
             {(!chatTitle || chatTitle.length === 0) ? (
-              <div className="saathi-popup-sidebar-empty">
+              <div className="chat-sidebar-empty">
                 <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 <p>{t("sidebarEmptyText")}</p>
               </div>
             ) : (
-              <div className="saathi-popup-sidebar-sessions">
-                <p className="saathi-popup-recents-label">{t("recents")}</p>
+              <div className="chat-sidebar-sessions">
+                <p className="chat-sidebar-recents-label">{t("recents")}</p>
                 <div
-                  className="saathi-popup-sessions-scroll"
+                  className="chat-sidebar-sessions-scroll"
                   onScroll={e => {
                     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
                     const distanceFromBottom = scrollHeight - scrollTop - clientHeight
@@ -2811,7 +2916,7 @@ const DynamicVoiceChat = ({
                   {chatTitle.map((item, index) => (
                     <div
                       key={index}
-                      className={`saathi-popup-session-item${item.session === sessionId ? " saathi-popup-session-item--active" : ""}`}
+                      className={`chat-sidebar-session-item${item.session === sessionId ? " chat-sidebar-session-item--active" : ""}`}
                       onClick={() => handleSessionSelect(item.session)}
                       title={item.title || "Untitled chat"}
                     >
@@ -2826,9 +2931,15 @@ const DynamicVoiceChat = ({
                 </div>
               </div>
             )}
-            <div className="saathi-popup-sidebar-logout">
-              <button className="saathi-popup-logout-btn" onClick={handleLogout}>
-                <FiLogOut className="saathi-popup-logout-icon" /> {t("logout")}
+            <div className="chat-sidebar-footer">
+              <button className="chat-sidebar-user-trigger" onClick={handleOpenProfileModal}>
+                <span className="chat-sidebar-user-avatar">
+                  {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
+                </span>
+                <span className="chat-sidebar-user-name">
+                  {profileApiData?.name || firstName || t("user")}
+                </span>
+                <FiLogOut className="chat-sidebar-logout-icon" />
               </button>
             </div>
           </aside>
@@ -2841,6 +2952,16 @@ const DynamicVoiceChat = ({
             handleConfirm={handleConfirmLogout}
             handleDiscard={() => setShowLogoutConfirm(false)}
           />
+          <UserProfileModal
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            onLogout={() => { setShowProfileModal(false); handleLogout() }}
+            onSave={handleSaveProfile}
+            userData={extractUserProfileData(profileApiData, firstName)}
+            schema={PROFILE_FORM_SCHEMA}
+            options={{ languages: languageList }}
+            modalConfig={PROFILE_MODAL_CONFIG}
+          />
         </>
       )}
 
@@ -2849,7 +2970,7 @@ const DynamicVoiceChat = ({
         {/* Mobile hamburger to open sidebar */}
         {showHistorySidebar && isMobile && (
           <button
-            className="saathi-sidebar-toggle"
+            className="chat-sidebar-toggle"
             onClick={() => setIsSidebarOpen(prev => !prev)}
             aria-label="Toggle chat history"
           >
@@ -3276,7 +3397,7 @@ const DynamicVoiceChat = ({
 
         {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
-            className="div39 form-1 sm:p-[10px_35px] p-[10px_25px]"
+            className="form-1 flex flex-col"
             style={(showHistorySidebar || isPopupMode) ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (!hasStartedListening && !isFetchingData) {
@@ -3285,6 +3406,70 @@ const DynamicVoiceChat = ({
             }}
             autoComplete="off"
           >
+            {/* Quick reply chips — above the input row, below the chat messages.
+                Two cases:
+                  1. WS connected + streaming done → show chips from last bot msg that has chips
+                  2. WS disconnected (history load/refresh) → show chips only if the very last
+                     message in history IS a bot message with chips (i.e. bot was waiting for reply) */}
+            {(() => {
+              let lastBotMsg
+              const history = chatHistory ?? []
+
+              if (isSocketConnected) {
+                // Live session: show chips once streaming has finished
+                if (!isStreamingComplete) return null
+                lastBotMsg = [...history].reverse().find(
+                  chat => chat.source === CHAT_SOURCE.BOT &&
+                    Array.isArray(chat.extra_content?.quick_reply_chips) &&
+                    chat.extra_content.quick_reply_chips.length > 0
+                )
+              } else {
+                // History load / WS not yet connected:
+                // Only show chips if the last real message in history is a bot msg with chips
+                const filtered = history.filter(c => c.updated_at !== CHAT_SPECIAL_IDS.INTRO_MSG)
+                const lastMsg = filtered[filtered.length - 1]
+                if (
+                  lastMsg?.source === CHAT_SOURCE.BOT &&
+                  Array.isArray(lastMsg?.extra_content?.quick_reply_chips) &&
+                  lastMsg.extra_content.quick_reply_chips.length > 0
+                ) {
+                  lastBotMsg = lastMsg
+                }
+              }
+
+              const chips = lastBotMsg?.extra_content?.quick_reply_chips ?? []
+              if (!chips.length || quickReplySentForMsgId === lastBotMsg?.updated_at) return null
+              return (
+                <div className="flex flex-wrap gap-2 px-6 pb-2 pt-2 border-b border-slate-200">
+                  {chips.map((chip, idx) => (
+                    <Chip
+                      key={idx}
+                      label={chip}
+                      size="sm"
+                      disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                      onClick={async () => {
+                        const msgId = lastBotMsg?.updated_at ?? "default_quick_reply"
+                        if (quickReplyLockRef.current.has(msgId)) return
+                        quickReplyLockRef.current.add(msgId)
+                        try {
+                          const sent = await handleSendMessage(null, chip)
+                          if (sent) {
+                            setQuickReplySentForMsgId(lastBotMsg?.updated_at)
+                          } else {
+                            quickReplyLockRef.current.delete(msgId)
+                          }
+                        } catch (err) {
+                          quickReplyLockRef.current.delete(msgId)
+                          throw err
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
+            {/* Input row: mic + timer + textarea + send */}
+            <div className="div39 sm:p-[10px_35px] p-[10px_25px]">
             <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
               <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
                 {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
@@ -3350,6 +3535,7 @@ const DynamicVoiceChat = ({
                 </button>
               </div>
             )}
+            </div>
           </form>
         )}
       </div>

@@ -140,5 +140,16 @@
   "profileOnboardingCompleteMessage": "धन्यवाद। मुझे सारी जरूरी जानकारी मिल गई है। आपको 'साथी' पर लेकर जा रहा हूँ।",
   "logoutConfirmMessage": "क्या आप वाकई लोग आउट करना चाहते हैं?",
   "confirmLogout": "लोग आउट",
-  "recents": "हालिया"
+  "recents": "हालिया",
+  "profileUpdatedSuccess": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई!",
+  "profileDetails": "प्रोफ़ाइल विवरण",
+  "name": "नाम",
+  "roleDesignation": "भूमिका / पद",
+  "organisationSchool": "संस्था / विद्यालय",
+  "location": "स्थान",
+  "district": "जिला",
+  "save": "सहेजें",
+  "user": "उपयोगकर्ता",
+  "profileUpdateFailed": "प्रोफ़ाइल अपडेट करने में विफल।",
+  "profileFetchFailed": "प्रोफ़ाइल विवरण लोड करने में विफल। कृपया पुन: प्रयास करें।"
 }
