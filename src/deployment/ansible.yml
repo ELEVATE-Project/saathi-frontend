@@ -18,25 +18,25 @@
         src: "{{vault_token_path}}"
       register: slurpfile
 
-    - name: Resolve nvm-managed Node bin directory
-      shell: |
-        set -euo pipefail
-        export NVM_DIR=/root/.nvm
-        . "$NVM_DIR/nvm.sh"
-        resolved="$(dirname "$(nvm which default)")"
-        case "$resolved" in
-          /*) ;;
-          *) echo "Resolved node bin dir '$resolved' is not an absolute path - nvm resolution failed" >&2; exit 1 ;;
-        esac
-        echo "$resolved"
-      args:
-        executable: /bin/bash
-      register: nvm_node_bin
-      changed_when: false
+    # - name: Resolve nvm-managed Node bin directory
+    #   shell: |
+    #     set -euo pipefail
+    #     export NVM_DIR=/root/.nvm
+    #     . "$NVM_DIR/nvm.sh"
+    #     resolved="$(dirname "$(nvm which default)")"
+    #     case "$resolved" in
+    #       /*) ;;
+    #       *) echo "Resolved node bin dir '$resolved' is not an absolute path - nvm resolution failed" >&2; exit 1 ;;
+    #     esac
+    #     echo "$resolved"
+    #   args:
+    #     executable: /bin/bash
+    #   register: nvm_node_bin
+    #   changed_when: false
 
-    - name: Set Node bin directory fact
-      set_fact:
-        node_bin_dir: "{{ nvm_node_bin.stdout }}"
+    # - name: Set Node bin directory fact
+    #   set_fact:
+    #     node_bin_dir: "{{ nvm_node_bin.stdout }}"
 
     - name: Ensure project directory exists
       file:
