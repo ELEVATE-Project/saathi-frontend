@@ -596,6 +596,9 @@ const DynamicVoiceChat = ({
         const streamedMsg = streamingBotMessageRef.current
         streamingBotMessageRef.current = null
 
+        const targetTempId = streamedMsg?.id
+        const targetSessionId = sessionId
+
         // Commit the fully streamed bot message to chatHistory immediately, before
         // TTS runs. This decouples UI display from the audio pipeline entirely.
         // Guard against replay duplicates (iOS reconnect): skip if a bot message
@@ -609,7 +612,7 @@ const DynamicVoiceChat = ({
               msg: streamedMsg.text,
               source: "bot",
               received: true,
-              updated_at: streamedMsg.id,
+              updated_at: targetTempId,
             })
             if (message?.extra_content) {
               botMessage.extra_content = message.extra_content
@@ -619,28 +622,28 @@ const DynamicVoiceChat = ({
         }
 
         // Fetch DB companychat id for the session to ensure companyChatId is updated with the real DB record id
-        if (sessionId) {
+        if (targetSessionId && targetTempId) {
           setTimeout(async () => {
             try {
-              const freshData = await getChatsFromDB(sessionId)
+              if (useChatStorage.getState().sessionId !== targetSessionId) return
+              const freshData = await getChatsFromDB(targetSessionId)
               const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
               if (results.length > 0) {
                 const sorted = quickSort(results, compareById)
                 const lastBotDbChat = [...sorted].reverse().find(c => c?.sender?.id === 1 || c?.role === CHAT_SOURCE.BOT)
                 if (lastBotDbChat && lastBotDbChat.id) {
+                  if (useChatStorage.getState().sessionId !== targetSessionId) return
                   const currentHistory = getChatHistory()
                   if (Array.isArray(currentHistory) && currentHistory.length > 0) {
-                    const updated = [...currentHistory]
-                    for (let i = updated.length - 1; i >= 0; i--) {
-                      if (updated[i].source === CHAT_SOURCE.BOT && updated[i].updated_at !== CHAT_SPECIAL_IDS.INTRO_MSG) {
-                        updated[i] = {
-                          ...updated[i],
-                          updated_at: lastBotDbChat.id,
-                        }
-                        break
+                    const targetIndex = currentHistory.findIndex(c => c?.updated_at === targetTempId)
+                    if (targetIndex !== -1) {
+                      const updated = [...currentHistory]
+                      updated[targetIndex] = {
+                        ...updated[targetIndex],
+                        updated_at: lastBotDbChat.id,
                       }
+                      setChatHistory(updated)
                     }
-                    setChatHistory(updated)
                   }
                 }
               }

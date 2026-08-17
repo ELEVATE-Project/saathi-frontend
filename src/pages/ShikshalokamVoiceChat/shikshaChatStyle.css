@@ -1637,10 +1637,10 @@ html, body {
   gap: 12px;
   box-shadow: 0 8px 32px rgba(87, 46, 145, 0.12), 0 2px 8px rgba(0,0,0,0.08);
   border: 1px solid #e5e7eb;
-  animation: feedbackFadeIn 0.2s ease;
+  animation: feedback-fade-in 0.2s ease;
 }
 
-@keyframes feedbackFadeIn {
+@keyframes feedback-fade-in {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
@@ -1740,7 +1740,7 @@ html, body {
   inset: 0;
   background: rgba(0,0,0,0.25);
   z-index: 1100;
-  animation: fadeIn 0.2s ease;
+  animation: fade-in 0.2s ease;
 }
 
 /* ---- Mobile: bottom sheet ---- */
@@ -1964,7 +1964,7 @@ html, body {
   padding: 24px 0;
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }

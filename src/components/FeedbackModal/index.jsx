@@ -1,8 +1,10 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { submitChatFeedbackApi } from "api/endpoints/feedback"
 import { getChatsFromDB } from "api/endpoints/chat_flow"
 import { showNotification } from "components/ToastMessage/TotastMessage"
+
+const isInvalidOrTempId = (id) => typeof id !== "number" || isNaN(id) || id > 10000000000
 
 /**
  * FeedbackModal — single modal for both positive and negative feedback.
@@ -12,6 +14,33 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   const { t } = useTranslation()
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [targetCompanyChatId, setTargetCompanyChatId] = useState(companyChatId)
+
+  useEffect(() => {
+    let isMounted = true
+    const resolveChatId = async () => {
+      let chatId = companyChatId
+      if (isInvalidOrTempId(chatId) && sessionId) {
+        try {
+          const freshData = await getChatsFromDB(sessionId)
+          const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
+          const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === "bot")
+          if (lastBotDbChat?.id && isMounted) {
+            chatId = lastBotDbChat.id
+          }
+        } catch (err) {
+          console.error("Error resolving companychat ID from DB:", err)
+        }
+      }
+      if (isMounted) {
+        setTargetCompanyChatId(chatId)
+      }
+    }
+
+    if (isOpen) {
+      resolveChatId()
+    }
+  }, [isOpen, companyChatId, sessionId])
 
   if (!isOpen) return null
 
@@ -24,14 +53,14 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      let targetCompanyChatId = companyChatId
-      if ((typeof targetCompanyChatId !== "number" || isNaN(targetCompanyChatId)) && sessionId) {
+      let finalCompanyChatId = targetCompanyChatId
+      if (isInvalidOrTempId(finalCompanyChatId) && sessionId) {
         try {
           const freshData = await getChatsFromDB(sessionId)
           const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
           const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === "bot")
           if (lastBotDbChat?.id) {
-            targetCompanyChatId = lastBotDbChat.id
+            finalCompanyChatId = lastBotDbChat.id
           }
         } catch (err) {
           console.error("Error resolving companychat ID from DB:", err)
@@ -39,7 +68,7 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
       }
 
       await submitChatFeedbackApi({
-        company_chat: targetCompanyChatId,
+        company_chat: finalCompanyChatId,
         thumbs_up: isPositive,
         thumbs_down: !isPositive,
         comment: comment.trim(),

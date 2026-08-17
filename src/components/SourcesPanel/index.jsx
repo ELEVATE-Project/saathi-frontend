@@ -28,6 +28,16 @@ function SourceIcon({ src }) {
 }
 
 
+function isValidUrl(urlString) {
+  if (!urlString || typeof urlString !== "string") return false
+  try {
+    const parsed = new URL(urlString)
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 /**
  * SourcesPanel — bottom sheet on mobile, right slide-in on desktop.
  * @param {{ isOpen: boolean, sources: Array, isMobile: boolean, onClose: () => void }} props
@@ -68,27 +78,36 @@ function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
             <p className="sources-empty">{t("noSources")}</p>
           ) : (
             <ul className="sources-list">
-              {sources.map((src, idx) => (
-                <li key={idx} className="source-item">
-                  <SourceIcon src={src} />
-                  <div className="source-item-content">
-                    <a
-                      href={src.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="source-item-title"
-                      title={src.title}
-                    >
-                      {src.title}
-                    </a>
-                    <div className="source-item-meta">
-                      <span className={`source-item-badge source-item-badge--${src.source === SOURCE_TYPE.WEB_SEARCH ? "web" : "kb"}`}>
-                        {src.company}
-                      </span>
+              {sources.map((src, idx) => {
+                const validUrl = isValidUrl(src?.url)
+                return (
+                  <li key={idx} className="source-item">
+                    <SourceIcon src={src} />
+                    <div className="source-item-content">
+                      {validUrl ? (
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="source-item-title"
+                          title={src.title}
+                        >
+                          {src.title}
+                        </a>
+                      ) : (
+                        <span className="source-item-title" title={src.title}>
+                          {src.title}
+                        </span>
+                      )}
+                      <div className="source-item-meta">
+                        <span className={`source-item-badge source-item-badge--${src.source === SOURCE_TYPE.WEB_SEARCH ? "web" : "kb"}`}>
+                          {src.company}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
