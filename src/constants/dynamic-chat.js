@@ -14,3 +14,17 @@ export const CHAT_SOURCE = {
 export const CHAT_SPECIAL_IDS = {
   INTRO_MSG: "intro_msg_id",
 }
+
+/**
+ * Chat source search type identifiers
+ */
+export const SOURCE_TYPE = {
+  WEB_SEARCH: "web_search",
+  KB_SEARCH: "kb_search",
+}
+
+/**
+ * Default source logos
+ */
+export const DEFAULT_KB_LOGO = "https://shikshagraha.org/wp-content/uploads/2024/09/Group-22x-p-500-1.png"
+export const DEFAULT_WEB_LOGO = "https://static.thenounproject.com/png/249243-200.png"
