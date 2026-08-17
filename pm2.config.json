@@ -1,7 +1,7 @@
 {
     "apps": [
       {
-        "name": "mohini-app",
+        "name": "saathi-frontend",
         "script": "server.js",
         "args": [],
         "instances": "1",
@@ -10,7 +10,7 @@
         "merge_logs": true,
         "env": {
           "NODE_ENV": "production",
-          "PORT": 1819
+          "PORT": 3005
         }
       }
     ]
