@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import { RxCross2 } from "react-icons/rx"
 import { submitChatFeedbackApi } from "api/endpoints/feedback"
 import { getChatsFromDB } from "api/endpoints/chat_flow"
 import { showNotification } from "components/ToastMessage/TotastMessage"
@@ -91,9 +92,19 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   }
 
   return (
-    <div className="feedback-modal-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
+    <div className="feedback-modal-overlay">
       <div className="feedback-modal">
-        <h3 className="feedback-modal-title">{title}</h3>
+        <div className="feedback-modal-header">
+          <h3 className="feedback-modal-title">{title}</h3>
+          <button
+            className="feedback-modal-close"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            aria-label="Close"
+          >
+            <RxCross2 size={18} />
+          </button>
+        </div>
         <p className="feedback-modal-label">{t("feedbackDetailsLabel")}</p>
         <textarea
           className="feedback-modal-textarea"

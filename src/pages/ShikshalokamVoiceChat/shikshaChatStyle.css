@@ -1645,6 +1645,35 @@ html, body {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+.feedback-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedback-modal-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.feedback-modal-close:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.feedback-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .feedback-modal-title {
   font-size: 1rem;
   font-weight: 700;

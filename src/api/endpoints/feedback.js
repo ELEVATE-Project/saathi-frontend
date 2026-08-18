@@ -26,7 +26,7 @@ export const submitFeedBackApi = async (body) => {
  */
 export const submitChatFeedbackApi = async (body) => {
   try {
-    const response = await apiClient.post(API_ENDPOINTS.COMPANYCHAT_FEEDBACK, body, {
+    const response = await apiClient.post(API_ENDPOINTS.COMPANY_CHAT_FEEDBACK, body, {
       headers: { "Content-Type": "application/json" },
     });
     return response.data;

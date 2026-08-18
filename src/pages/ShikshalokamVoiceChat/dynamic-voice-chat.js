@@ -3117,7 +3117,7 @@ const DynamicVoiceChat = ({
                         )}
                       </div>
                     ) : null}
-                    {chat?.source === "bot" && isStreamingComplete && (
+                    {chat?.source === CHAT_SOURCE.BOT && isStreamingComplete && (
                       <MessageActionBar
                         message={chat.msg || ""}
                         companyChatId={chat.updated_at}
