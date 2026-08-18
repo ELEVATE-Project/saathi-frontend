@@ -1,13 +1,42 @@
-- hosts: elevate
+- hosts: all
+  become: true
+
+  environment:
+    PATH: "{{ (node_bin_dir ~ ':') if node_bin_dir | default('') else '' }}{{ ansible_env.PATH }}"
+
   vars:
-    project_path: /opt/frontend/mohini-app/mohini-app-frontend
-    root_path: /opt/frontend
+    root_path: /opt/deployment/frontend/saathi
+    project_path: "{{root_path}}/saathi-frontend"
+    vault_token_path: /opt/deployment/.token
+    repo_url: https://github.com/ELEVATE-Project/saathi-frontend
+    vault_env_path: saathi_env
+    vault_pm2_config_path: saathi_pm2Config
 
   tasks:
     - name: Slurp host file
       slurp:
-        src: "/opt/backend/deployment/.token"
+        src: "{{vault_token_path}}"
       register: slurpfile
+
+    - name: Resolve nvm-managed Node bin directory
+      shell: |
+        set -euo pipefail
+        export NVM_DIR=/root/.nvm
+        . "$NVM_DIR/nvm.sh"
+        resolved="$(dirname "$(nvm which default)")"
+        case "$resolved" in
+          /*) ;;
+          *) echo "Resolved node bin dir '$resolved' is not an absolute path - nvm resolution failed" >&2; exit 1 ;;
+        esac
+        echo "$resolved"
+      args:
+        executable: /bin/bash
+      register: nvm_node_bin
+      changed_when: false
+
+    - name: Set Node bin directory fact
+      set_fact:
+        node_bin_dir: "{{ nvm_node_bin.stdout }}"
 
     - name: Ensure project directory exists
       file:
@@ -17,7 +46,7 @@
 
     - name: Fetch the latest code
       git:
-        repo: https://github.com/ELEVATE-Project/mohini-app-frontend
+        repo: "{{ repo_url }}"
         dest: "{{ project_path }}"
         version: "{{ gitBranch }}"
         force: yes
@@ -27,45 +56,24 @@
 
     - name: Fetch .env from Vault
       shell: >
-        curl --location --request GET '{{ vaultAddress }}mohini-env' 
-        --header 'X-Vault-Token: {{ slurpfile['content'] | b64decode }}' | jq '.data' > '{{ project_path }}/data2.json'""
+        curl --insecure --http1.1 --location --request GET '{{ vaultAddress }}{{ vault_env_path }}'
+        --header 'X-Vault-Token: {{ slurpfile['content'] | b64decode }}' | jq '.data.data' > '{{ project_path }}/data2.json'
       register: env_response
+
+    - name: Read fetched .env data for debugging
+      shell: "cat {{ project_path }}/data2.json"
+      register: data2_content
+
+    - name: Fail if .env data from Vault is empty or invalid
+      fail:
+        msg: "Vault .env fetch returned empty or invalid data - check the debug output above and Vault connectivity/secret path ({{ vault_env_path }})."
+      when: (data2_content.stdout | trim == '') or not (data2_content.stdout is search('^\s*\{'))
 
     - name: generate .env 
       shell: cat {{ project_path }}/data2.json | {{ project_path }}/src/scripts/json2env.sh > {{ project_path }}/.env
       register: envConfig 
     - debug: 
-        msg: " cred {{ envConfig }} "    
-
-    - name: Fetch credentials from Vault
-      shell: >
-        curl --location --request GET '{{ vaultAddress }}mohini-frontend' 
-        --header 'X-Vault-Token: {{ slurpfile['content'] | b64decode }}'
-      register: vault_response
-
-    - name: Ensure Vault response is valid JSON
-      fail:
-        msg: "Vault response is not valid JSON or does not contain expected data."
-      when: vault_response.stdout is not search('\"data\":')
-
-    - name: Debug Vault response (for troubleshooting)
-      debug:
-        msg: "{{ vault_response.stdout }}"
-
-    - name: Extract and write the entire data.data to .env-cmdrc
-      copy:
-        content: "{{ vault_response.stdout | from_json | json_query('data.data') | to_json }}"
-        dest: "{{ project_path }}/.env-cmdrc"
-
-    - name: Verify .env-cmdrc file creation
-      stat:
-        path: "{{ project_path }}/.env-cmdrc"
-      register: env_file_stat
-
-    - name: Fail if .env-cmdrc file was not created
-      fail:
-        msg: ".env-cmdrc file was not created!"
-      when: not env_file_stat.stat.exists
+        msg: " cred {{ envConfig }} "
 
     - name: Remove the old build
       shell: "rm -rf {{project_path}}/build"
@@ -84,12 +92,23 @@
 
     - name: Fetch pm2 config file
       shell: >
-        curl --location --request GET '{{ vaultAddress }}mohiniPortalPM2Config'
+        curl --insecure --http1.1 --location --request GET '{{ vaultAddress }}{{ vault_pm2_config_path }}'
         --header 'X-Vault-Token: {{ slurpfile['content'] | b64decode }}' 
         | jq '.data.data' > '{{ project_path }}/pm2.config.json'
+      register: pm2_fetch_response
 
-    - name: Build mohini app
-      shell: "cd {{ project_path }} && npm run build-prod"
+    - name: Read fetched pm2 config for debugging
+      shell: "cat {{ project_path }}/pm2.config.json"
+      register: pm2_content
+    
+    - name: Debug Vault pm2 config response (for troubleshooting)
+      debug:
+        msg: "{{ pm2_content.stdout }}"
+
+    - name: Build saathi app
+      shell: "cd {{ project_path }} && npm run build"
+      environment:
+        NODE_OPTIONS: "--max-old-space-size=4096"
 
     - name: Start pm2
       shell: "cd {{ project_path }} && pm2 start pm2.config.json"
