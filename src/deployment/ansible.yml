@@ -77,7 +77,7 @@
       shell: cat {{ project_path }}/data2.json | {{ project_path }}/src/scripts/json2env.sh > {{ project_path }}/.env
       register: envConfig 
     - debug: 
-        msg: " cred {{ envConfig }} "    
+        msg: " cred {{ envConfig }} "
 
     - name: Remove the old build
       shell: "rm -rf {{project_path}}/build"
@@ -86,10 +86,12 @@
       shell: "rm -rf {{ project_path }}/node_modules"
 
     - name: Clear npm cache
-      shell: "{{ node_bin_dir }}/npm cache clean --force"
+      # shell: "{{ node_bin_dir }}/npm cache clean --force"
+      shell: "npm cache clean --force"
 
     - name: Install dependencies
-      shell: "cd {{ project_path }} && {{ node_bin_dir }}/npm i --force"
+      # shell: "cd {{ project_path }} && {{ node_bin_dir }}/npm i --force"
+      shell: "cd {{ project_path }} && npm i --force"
 
     - name: Set permission for json2env.sh
       shell: "chmod 744 {{ project_path }}/src/scripts/json2env.sh"
