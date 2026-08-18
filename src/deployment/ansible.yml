@@ -38,9 +38,9 @@
       set_fact:
         node_bin_dir: "{{ nvm_node_bin.stdout }}"
 
-    - name: Debug resolved node bin directory
-      debug:
-        msg: "node_bin_dir={{ node_bin_dir }}"
+    # - name: Debug resolved node bin directory
+    #   debug:
+    #     msg: "node_bin_dir={{ node_bin_dir }}"
 
     - name: Ensure project directory exists
       file:
