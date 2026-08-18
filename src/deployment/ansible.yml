@@ -38,10 +38,6 @@
       set_fact:
         node_bin_dir: "{{ nvm_node_bin.stdout }}"
 
-    # - name: Debug resolved node bin directory
-    #   debug:
-    #     msg: "node_bin_dir={{ node_bin_dir }}"
-
     - name: Ensure project directory exists
       file:
         path: "{{ project_path }}"
@@ -86,11 +82,9 @@
       shell: "rm -rf {{ project_path }}/node_modules"
 
     - name: Clear npm cache
-      # shell: "{{ node_bin_dir }}/npm cache clean --force"
       shell: "npm cache clean --force"
 
     - name: Install dependencies
-      # shell: "cd {{ project_path }} && {{ node_bin_dir }}/npm i --force"
       shell: "cd {{ project_path }} && npm i --force"
 
     - name: Set permission for json2env.sh
