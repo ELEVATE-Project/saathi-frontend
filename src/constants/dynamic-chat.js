@@ -16,6 +16,14 @@ export const CHAT_SPECIAL_IDS = {
 }
 
 /**
+ * Feedback types for chat messages
+ */
+export const FEEDBACK_TYPE = {
+  THUMBS_UP: "thumbs_up",
+  THUMBS_DOWN: "thumbs_down",
+}
+
+/**
  * Chat source search type identifiers
  */
 export const SOURCE_TYPE = {

@@ -3,12 +3,29 @@ import { useTranslation } from "react-i18next"
 import { submitChatFeedbackApi } from "api/endpoints/feedback"
 import { getChatsFromDB } from "api/endpoints/chat_flow"
 import { showNotification } from "components/ToastMessage/TotastMessage"
+import { FEEDBACK_TYPE } from "constants/dynamic-chat"
 
 const isInvalidOrTempId = (id) => typeof id !== "number" || isNaN(id) || id > 10000000000
 
+const resolveValidCompanyChatId = async (chatId, sessionId) => {
+  if (isInvalidOrTempId(chatId) && sessionId) {
+    try {
+      const freshData = await getChatsFromDB(sessionId)
+      const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
+      const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === "bot")
+      if (lastBotDbChat?.id) {
+        return lastBotDbChat.id
+      }
+    } catch (err) {
+      console.error("Error resolving companychat ID from DB:", err)
+    }
+  }
+  return chatId
+}
+
 /**
  * FeedbackModal — single modal for both positive and negative feedback.
- * @param {{ isOpen: boolean, type: "thumbs_up"|"thumbs_down", companyChatId: number, sessionId: string, onClose: () => void, onSubmitted: (type: string) => void }} props
+ * @param {{ isOpen: boolean, type: string, companyChatId: number, sessionId: string, onClose: () => void, onSubmitted: (type: string) => void }} props
  */
 function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubmitted }) {
   const { t } = useTranslation()
@@ -19,21 +36,9 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   useEffect(() => {
     let isMounted = true
     const resolveChatId = async () => {
-      let chatId = companyChatId
-      if (isInvalidOrTempId(chatId) && sessionId) {
-        try {
-          const freshData = await getChatsFromDB(sessionId)
-          const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
-          const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === "bot")
-          if (lastBotDbChat?.id && isMounted) {
-            chatId = lastBotDbChat.id
-          }
-        } catch (err) {
-          console.error("Error resolving companychat ID from DB:", err)
-        }
-      }
+      const resolvedId = await resolveValidCompanyChatId(companyChatId, sessionId)
       if (isMounted) {
-        setTargetCompanyChatId(chatId)
+        setTargetCompanyChatId(resolvedId)
       }
     }
 
@@ -44,7 +49,7 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
 
   if (!isOpen) return null
 
-  const isPositive = type === "thumbs_up"
+  const isPositive = type === FEEDBACK_TYPE.THUMBS_UP
   const title = isPositive ? t("feedbackPositiveTitle") : t("feedbackNegativeTitle")
   const placeholder = isPositive
     ? t("feedbackPositivePlaceholder")
@@ -53,19 +58,7 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      let finalCompanyChatId = targetCompanyChatId
-      if (isInvalidOrTempId(finalCompanyChatId) && sessionId) {
-        try {
-          const freshData = await getChatsFromDB(sessionId)
-          const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
-          const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === "bot")
-          if (lastBotDbChat?.id) {
-            finalCompanyChatId = lastBotDbChat.id
-          }
-        } catch (err) {
-          console.error("Error resolving companychat ID from DB:", err)
-        }
-      }
+      const finalCompanyChatId = await resolveValidCompanyChatId(targetCompanyChatId, sessionId)
 
       await submitChatFeedbackApi({
         company_chat: finalCompanyChatId,
@@ -118,7 +111,7 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
             {t("cancel")}
           </button>
           <button className="feedback-modal-submit" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? t("submitting") : t("submit")}
+            {isSubmitting ? `${t("submitting")}...` : t("submit")}
           </button>
         </div>
       </div>

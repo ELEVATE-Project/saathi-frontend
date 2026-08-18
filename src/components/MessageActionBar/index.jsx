@@ -4,7 +4,7 @@ import { FiCopy, FiThumbsUp, FiThumbsDown, FiGlobe } from "react-icons/fi"
 import { BiLibrary } from "react-icons/bi"
 import { showNotification } from "components/ToastMessage/TotastMessage"
 import FeedbackModal from "components/FeedbackModal"
-import { DEFAULT_KB_LOGO, DEFAULT_WEB_LOGO } from "constants/dynamic-chat"
+import { DEFAULT_KB_LOGO, DEFAULT_WEB_LOGO, FEEDBACK_TYPE } from "constants/dynamic-chat"
 // SourcesPanel is now imported and rendered at the top-level DynamicVoiceChat component to allow layout squeezing
 
 /**
@@ -23,8 +23,8 @@ function MessageActionBar({
 }) {
   const { t } = useTranslation()
   const [activeFeedback, setActiveFeedback] = useState(null) 
-  const [feedbackModal, setFeedbackModal] = useState(null)   // "thumbs_up" | "thumbs_down" | null
-  
+  const [feedbackModal, setFeedbackModal] = useState(null)
+
   const sourcesOpen = activeSourcesChatId === companyChatId
 
   const hasSources = Array.isArray(sources) && sources.length > 0
@@ -35,7 +35,7 @@ function MessageActionBar({
       const plain = message.replace(/<[^>]*>/g, "")
       await navigator.clipboard.writeText(plain)
       showNotification({
-        message: t("copied"),
+        message: `${t("copied")}!`,
         type: "success",
         options: { autoClose: 3000, isOfflineToast: true },
       })
@@ -82,11 +82,11 @@ function MessageActionBar({
         {/* Thumbs Up — only for logged-in users */}
         {accessToken && (
           <button
-            className={`msg-action-btn ${activeFeedback === "thumbs_up" ? "msg-action-btn--active msg-action-btn--positive" : ""}`}
-            onClick={() => handleFeedbackClick("thumbs_up")}
+            className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_UP ? "msg-action-btn--active msg-action-btn--positive" : ""}`}
+            onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_UP)}
             title={t("thumbsUp")}
             aria-label={t("thumbsUp")}
-            aria-pressed={activeFeedback === "thumbs_up"}
+            aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_UP}
           >
             <FiThumbsUp />
           </button>
@@ -95,11 +95,11 @@ function MessageActionBar({
         {/* Thumbs Down — only for logged-in users */}
         {accessToken && (
           <button
-            className={`msg-action-btn ${activeFeedback === "thumbs_down" ? "msg-action-btn--active msg-action-btn--negative" : ""}`}
-            onClick={() => handleFeedbackClick("thumbs_down")}
+            className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN ? "msg-action-btn--active msg-action-btn--negative" : ""}`}
+            onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_DOWN)}
             title={t("thumbsDown")}
             aria-label={t("thumbsDown")}
-            aria-pressed={activeFeedback === "thumbs_down"}
+            aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN}
           >
             <FiThumbsDown />
           </button>
