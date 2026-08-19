@@ -53,7 +53,6 @@ function UserProfileModal({
 }) {
   const { t } = useTranslation()
   const [formValues, setFormValues] = useState({})
-  const overlayRef = useRef(null)
 
   const formFields = schema.fields || []
 
@@ -93,8 +92,6 @@ function UserProfileModal({
   if (!isOpen) return null
 
   const handleChange = (fieldId, fieldValue) => setFormValues(prevValues => ({ ...prevValues, [fieldId]: fieldValue }))
-
-  const handleOverlayClick = event => { if (event.target === overlayRef.current) onClose() }
 
   const inputStyleClasses =
     "w-full px-3.5 sm:px-4 py-2 sm:py-2.5 bg-[#f7f5f5] rounded-lg sm:rounded-xl text-xs sm:text-sm text-gray-700 border border-transparent focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all"
@@ -147,11 +144,7 @@ function UserProfileModal({
   }
 
   return (
-    <div
-      ref={overlayRef}
-      onClick={handleOverlayClick}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
-    >
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs">
       <div
         className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[88vh]"
         style={{ maxWidth: modalConfig.maxWidth || "480px" }}

@@ -14,6 +14,8 @@ import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
 import UserProfileModal from "components/UserProfileModal"
+import MessageActionBar from "components/MessageActionBar"
+import SourcesPanel from "components/SourcesPanel"
 import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG, extractUserProfileData } from "constants/profileForm"
 import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
@@ -137,6 +139,9 @@ const DynamicVoiceChat = ({
   const [mediaRecorder, setMediaRecorder] = useState(null)
   const [noStoryFound, setNoStoryFound] = useState(false)
   const [reconText, setReconText] = useState("")
+  const [activeSourcesChatId, setActiveSourcesChatId] = useState(null)
+  const [activeSources, setActiveSources] = useState([])
+  const hasActiveFlexLayout = showHistorySidebar || isPopupMode || !!activeSourcesChatId
   const [seconds, setSeconds] = useState(0)
   const [sentences, setSentences] = useState([])
   const [shouldFetchIntro, setShouldFetchIntro] = useState(false)
@@ -591,6 +596,9 @@ const DynamicVoiceChat = ({
         const streamedMsg = streamingBotMessageRef.current
         streamingBotMessageRef.current = null
 
+        const targetTempId = streamedMsg?.id
+        const targetSessionId = sessionId
+
         // Commit the fully streamed bot message to chatHistory immediately, before
         // TTS runs. This decouples UI display from the audio pipeline entirely.
         // Guard against replay duplicates (iOS reconnect): skip if a bot message
@@ -604,13 +612,45 @@ const DynamicVoiceChat = ({
               msg: streamedMsg.text,
               source: "bot",
               received: true,
-              updated_at: streamedMsg.id,
+              updated_at: targetTempId,
             })
             if (message?.extra_content) {
               botMessage.extra_content = message.extra_content
             }
             setChatHistory([...currentHistory, botMessage])
           }
+        }
+
+        // Fetch DB companychat id for the session to ensure companyChatId is updated with the real DB record id
+        if (targetSessionId && targetTempId) {
+          setTimeout(async () => {
+            try {
+              if (useChatStorage.getState().sessionId !== targetSessionId) return
+              const freshData = await getChatsFromDB(targetSessionId)
+              const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
+              if (results.length > 0) {
+                const sorted = quickSort(results, compareById)
+                const lastBotDbChat = [...sorted].reverse().find(c => c?.sender?.id === 1 || c?.role === CHAT_SOURCE.BOT)
+                if (lastBotDbChat && lastBotDbChat.id) {
+                  if (useChatStorage.getState().sessionId !== targetSessionId) return
+                  const currentHistory = getChatHistory()
+                  if (Array.isArray(currentHistory) && currentHistory.length > 0) {
+                    const targetIndex = currentHistory.findIndex(c => c?.updated_at === targetTempId)
+                    if (targetIndex !== -1) {
+                      const updated = [...currentHistory]
+                      updated[targetIndex] = {
+                        ...updated[targetIndex],
+                        updated_at: lastBotDbChat.id,
+                      }
+                      setChatHistory(updated)
+                    }
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Error fetching companychat DB id:", err)
+            }
+          }, 600)
         }
 
         if (isPopupMode && message?.extra_content?.profile_extracted === true) {
@@ -2844,8 +2884,7 @@ const DynamicVoiceChat = ({
   }
 
   return (
-    <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "row", height: isPopupMode ? "100%" : "100dvh", overflow: "hidden", position: "relative" } : undefined}>
-      {/* ===== CHAT HISTORY SIDEBAR (popup mode, non-profile flows) ===== */}
+      <div style={hasActiveFlexLayout ? { display: "flex", flexDirection: "row", height: isPopupMode ? "100%" : "100dvh", overflow: "hidden", position: "relative" } : undefined}>      {/* ===== CHAT HISTORY SIDEBAR (popup mode, non-profile flows) ===== */}
       {showHistorySidebar && (
         <>
           {/* Mobile overlay backdrop */}
@@ -2945,7 +2984,7 @@ const DynamicVoiceChat = ({
       )}
 
       {/* ===== MAIN CHAT CONTENT ===== */}
-      <div style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, overflow: "hidden" } : undefined}>
+      <div style={hasActiveFlexLayout ? { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, overflow: "hidden" } : undefined}>
         {/* Mobile hamburger to open sidebar */}
         {showHistorySidebar && isMobile && (
           <button
@@ -2994,7 +3033,7 @@ const DynamicVoiceChat = ({
         ) : (
           <ReportEditor onClose={closeModal} onSave={onEditorSave} disabled={isLoading || isSaving} />
         ))}
-      <div className={`${accessToken ? "div72" : ""}`} style={(showHistorySidebar || isPopupMode) ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
+      <div className={`${accessToken ? "div72" : ""}`} style={hasActiveFlexLayout ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
         {shouldFetchChatSession && !isPopupMode &&(
           <button
             onClick={() => {
@@ -3009,7 +3048,7 @@ const DynamicVoiceChat = ({
           </button>
         )}
         <HiddenRecorder />
-        <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={(showHistorySidebar || isPopupMode) ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
+        <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={hasActiveFlexLayout ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
           {!showHomepage && (
             <ul className="div34">
               {chatHistory &&
@@ -3078,6 +3117,27 @@ const DynamicVoiceChat = ({
                         )}
                       </div>
                     ) : null}
+                    {chat?.source === CHAT_SOURCE.BOT && isStreamingComplete && (
+                      <MessageActionBar
+                        message={chat.msg || ""}
+                        companyChatId={chat.updated_at}
+                        sessionId={sessionId}
+                        sources={chat?.extra_content?.sources || []}
+                        isStreaming={!isStreamingComplete && i === chatHistory.length - 1}
+                        isMobile={isMobile}
+                        accessToken={accessToken}
+                        activeSourcesChatId={activeSourcesChatId}
+                        onToggleSources={(sourcesList) => {
+                          if (activeSourcesChatId === chat.updated_at) {
+                            setActiveSourcesChatId(null)
+                            setActiveSources([])
+                          } else {
+                            setActiveSourcesChatId(chat.updated_at)
+                            setActiveSources(sourcesList)
+                          }
+                        }}
+                      />
+                    )}
                   </li>
                 ))}
             </ul>
@@ -3377,7 +3437,7 @@ const DynamicVoiceChat = ({
         {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
             className="form-1 flex flex-col"
-            style={(showHistorySidebar || isPopupMode) ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
+            style={hasActiveFlexLayout ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (!hasStartedListening && !isFetchingData) {
                 handleSendMessage(event)
@@ -3519,6 +3579,16 @@ const DynamicVoiceChat = ({
         )}
       </div>
       </div>
+
+      <SourcesPanel
+        isOpen={!!activeSourcesChatId}
+        sources={activeSources}
+        isMobile={isMobile}
+        onClose={() => {
+          setActiveSourcesChatId(null)
+          setActiveSources([])
+        }}
+      />
     </div>
   )
 }

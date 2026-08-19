@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   STORY_MEDIA: "/api/storymedia/",
   STORY: "/api/story/",
   SUBMIT_FEEDBACK: "/api/feedback/",
+  COMPANY_CHAT_FEEDBACK: "/api/companychat-feedback/",
   TEXT_TO_SPEECH: "/api/text_to_speech/",
   TEXT_TRANSLITERATE: "/api/text_transliterate/",
   UPDATE_PROJECT_STATUS: "/api/shikshalokam/update-project-status/",
