@@ -177,8 +177,8 @@
     "copied": "Copied",
     "copyFailed": "Failed to copy.",
     "copy": "Copy",
-    "thumbsUp": "Good response",
-    "thumbsDown": "Bad response",
+    "goodResponse": "Good response",
+    "badResponse": "Bad response",
     "sources": "Sources",
     "close": "Close",
     "noSources": "No sources available."

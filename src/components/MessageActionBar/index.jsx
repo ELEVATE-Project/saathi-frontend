@@ -84,8 +84,8 @@ function MessageActionBar({
           <button
             className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_UP ? "msg-action-btn--active msg-action-btn--positive" : ""}`}
             onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_UP)}
-            title={t("thumbsUp")}
-            aria-label={t("thumbsUp")}
+            title={t("goodResponse")}
+            aria-label={t("goodResponse")}
             aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_UP}
           >
             <FiThumbsUp />
@@ -97,8 +97,8 @@ function MessageActionBar({
           <button
             className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN ? "msg-action-btn--active msg-action-btn--negative" : ""}`}
             onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_DOWN)}
-            title={t("thumbsDown")}
-            aria-label={t("thumbsDown")}
+            title={t("badResponse")}
+            aria-label={t("badResponse")}
             aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN}
           >
             <FiThumbsDown />
