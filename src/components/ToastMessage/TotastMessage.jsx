@@ -1,5 +1,6 @@
 import React from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
+import i18n from "i18next";
 import "react-toastify/dist/ReactToastify.css";
 import "./toastmessage_style.css";
 
@@ -8,7 +9,6 @@ const Notification = () => {
     <ToastContainer
       position="top-center"
       autoClose={3000}
-      limit={1}
       newestOnTop={false}
       closeOnClick
       closeButton={false}
@@ -37,26 +37,30 @@ const defaultConfig = {
   transition: Bounce,
 };
 
-const isBadNetworkOrOffline = () => {
-  if (typeof window === "undefined") return false;
-  if (!navigator.onLine) return true;
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if (connection?.effectiveType && (connection.effectiveType === "2g" || connection.effectiveType === "3g")) {
-    return true;
-  }
-  return false;
-};
-
 export const showNotification = ({
   message = "🦄 Default Message",
   type = "warn",
   options = {},
 }) => {
-  if (isBadNetworkOrOffline() && !options?.isOfflineToast) {
-    return null;
+  let finalMessage = message;
+  let finalType = type;
+  let finalOptions = { ...options };
+
+  if (typeof window !== "undefined" && !navigator.onLine) {
+    finalMessage = i18n.t("offlineNetwork") || "You are offline. Please check your internet connection.";
+    finalType = "error";
+    finalOptions = {
+      autoClose: false,
+      closeButton: true,
+      style: { fontWeight: "bold", color: "#fff" },
+      ...finalOptions,
+      isOfflineToast: true,
+    };
   }
+
+  toast.clearWaitingQueue();
   toast.dismiss();
-  return toast[type](message, { ...defaultConfig, ...options }); 
+  return toast[finalType](finalMessage, { ...defaultConfig, ...finalOptions }); 
 };
 
 export default Notification;

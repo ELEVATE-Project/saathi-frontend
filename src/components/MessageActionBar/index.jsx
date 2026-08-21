@@ -113,6 +113,7 @@ function MessageActionBar({
             title={t("sources")}
             aria-label={t("sources")}
           >
+            <div className="msg-action-logos-container">
             <img
               src={DEFAULT_WEB_LOGO}
               alt="Web source"
@@ -123,6 +124,7 @@ function MessageActionBar({
               alt="KB source"
               className="msg-action-logo"
             />
+            </div>
             <span className="msg-action-label">{t("sources")} ({sources.length})</span>
           </button>
         )}
