@@ -164,6 +164,7 @@ const DynamicVoiceChat = ({
   // Tracks the updated_at ID of the bot message whose chips have been used.
   // Once set, the chip bar is hidden until a new bot message with chips arrives.
   const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
+  const [isOffline, setIsOffline] = useState(typeof window !== "undefined" ? !navigator.onLine : false)
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -1249,6 +1250,7 @@ const DynamicVoiceChat = ({
     let isSlowOrOffline = false
 
     const handleOffline = () => {
+      setIsOffline(true)
       if (isSlowOrOffline) return
       isSlowOrOffline = true
       toast.dismiss()
@@ -1258,7 +1260,7 @@ const DynamicVoiceChat = ({
         options: {
           isOfflineToast: true,
           autoClose: false,
-          closeButton: false,
+          closeButton: true,
           position: "top-center",
           style: { fontWeight: "bold", color: "#fff" },
         },
@@ -1266,6 +1268,7 @@ const DynamicVoiceChat = ({
     }
 
     const handleOnline = () => {
+      setIsOffline(false)
       if (!isSlowOrOffline) return
       isSlowOrOffline = false
       toast.dismiss()
@@ -1281,6 +1284,24 @@ const DynamicVoiceChat = ({
       })
     }
 
+    const handleSlowNetwork = () => {
+      setIsOffline(false)
+      if (isSlowOrOffline) return
+      isSlowOrOffline = true
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("networkWarning"),
+        type: "warn",
+        options: {
+          isOfflineToast: true,
+          autoClose: false,
+          closeButton: true,
+          position: "top-center",
+          style: { fontWeight: "bold", color: "#000" },
+        },
+      })
+    }
+
     const checkNetworkSpeed = () => {
       if (!navigator.onLine) {
         handleOffline()
@@ -1289,7 +1310,7 @@ const DynamicVoiceChat = ({
       if (connection) {
         const { effectiveType } = connection
         if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
-          handleOffline()
+          handleSlowNetwork()
         } else if (isSlowOrOffline) {
           handleOnline()
         }
@@ -2786,15 +2807,15 @@ const DynamicVoiceChat = ({
 
   async function handleConfirmLogout() {
     stopAllAudio()
+    setShowLogoutConfirm(false)
 
     try {
-      await logoutApi(_userData?.access_token, _userData?.refresh_token)
-    } catch (error) {
-      if (error?.response?.status !== 401) {
-        const message = error?.response?.data?.message || error?.message || String(error)
+      const res = await logoutApi(_userData?.access_token, _userData?.refresh_token)
+      if (res && res.status && res.status !== 200 && res.status !== "200") {
+        const message = res.message || t("logoutFailed") || "Logout failed"
         showNotification({ message, type: "error" })
+        return
       }
-    }
 
     _userData = null // invalidate cache so next mount re-fetches fresh tokens from localStorage
     // sessionStorage survives clearFromStorage (which only resets Zustand stores).
@@ -2810,6 +2831,23 @@ const DynamicVoiceChat = ({
       navigate(-(window.history.length - firstHomeHistoryLength))
     } else {
       navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
+    }
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        _userData = null
+        const firstHomeHistoryLength = parseInt(sessionStorage.getItem("__first_home_history_length"), 10)
+        clearFromStorage()
+        isLogoutNavigationRef.current = true
+        if (Number.isFinite(firstHomeHistoryLength)) {
+          navigate(-(window.history.length - firstHomeHistoryLength))
+        } else {
+          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
+        }
+      } else {
+        const message = error?.response?.data?.message || error?.message || String(error)
+        showNotification({ message, type: "error" })
+        // Do not clear storage or navigate when logout API fails
+      }
     }
   }
 
@@ -3485,7 +3523,7 @@ const DynamicVoiceChat = ({
                       key={idx}
                       label={chip}
                       size="sm"
-                      disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                      disabled={isOffline || hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
                         const msgId = lastBotMsg?.updated_at ?? "default_quick_reply"
                         if (quickReplyLockRef.current.has(msgId)) return
@@ -3510,7 +3548,7 @@ const DynamicVoiceChat = ({
             {/* Input row: mic + timer + textarea + send */}
             <div className="div39 sm:p-[10px_35px] p-[10px_25px]">
             <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
-              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
+              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={!hasStartedRecording && (isOffline || isFetchingData)} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
                 {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
               </button>
             </div>
@@ -3530,7 +3568,7 @@ const DynamicVoiceChat = ({
                 name="message-box"
                 value={textMessage}
                 autoFocus={false}
-                disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                disabled={isOffline || hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                 ref={textAreaCallbackRef}
                 onInput={e => {
                   e.target.style.height = "auto"
@@ -3569,7 +3607,7 @@ const DynamicVoiceChat = ({
             </div>
             {isTyping && !hasStartedListening && !isFetchingData && (
               <div className="button-container">
-                <button type="submit" disabled={hasStartedRecording || isFetchingData} className="button-6 sm:ml-[1.3rem] ml-[0.8rem]">
+                <button type="submit" disabled={isOffline || hasStartedRecording || isFetchingData} className="button-6 sm:ml-[1.3rem] ml-[0.8rem]">
                   <MdSend />
                 </button>
               </div>

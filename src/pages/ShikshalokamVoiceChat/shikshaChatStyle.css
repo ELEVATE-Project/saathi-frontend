@@ -1579,12 +1579,34 @@ html, body {
   flex-shrink: 0;
 }
 
+.msg-action-logos-container {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 2px;
+}
+
 .msg-action-logo {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   flex-shrink: 0;
-  border-radius: 2px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.15s ease;
+}
+
+.msg-action-logos-container .msg-action-logo:nth-child(n+2) {
+  margin-left: -9px; /* 50% overlap */
+}
+
+.msg-action-btn:hover .msg-action-logo {
+  border-color: #f3f4f6;
+}
+
+.msg-action-btn--active .msg-action-logo {
+  border-color: #f0f0ff;
 }
 
 .msg-action-btn:hover {
@@ -1936,6 +1958,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-wrap: anywhere;
 }
 
 .source-item-title {
@@ -1943,10 +1966,9 @@ html, body {
   font-weight: 600;
   color: #374151;
   text-decoration: none;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .source-item-title:hover {
