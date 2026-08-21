@@ -50,10 +50,10 @@ export const showNotification = ({
     finalMessage = i18n.t("offlineNetwork") || "You are offline. Please check your internet connection.";
     finalType = "error";
     finalOptions = {
+      ...finalOptions,
       autoClose: false,
       closeButton: true,
       style: { fontWeight: "bold", color: "#fff" },
-      ...finalOptions,
       isOfflineToast: true,
     };
   }

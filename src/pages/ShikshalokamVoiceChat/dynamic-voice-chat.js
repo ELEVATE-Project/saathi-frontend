@@ -3548,7 +3548,7 @@ const DynamicVoiceChat = ({
             {/* Input row: mic + timer + textarea + send */}
             <div className="div39 sm:p-[10px_35px] p-[10px_25px]">
             <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
-              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={isOffline || isFetchingData} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
+              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={!hasStartedRecording && (isOffline || isFetchingData)} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
                 {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
               </button>
             </div>
