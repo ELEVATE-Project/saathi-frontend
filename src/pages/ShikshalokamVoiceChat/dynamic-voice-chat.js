@@ -2811,8 +2811,11 @@ const DynamicVoiceChat = ({
 
     try {
       const res = await logoutApi(_userData?.access_token, _userData?.refresh_token)
-      if (res && res.status && res.status !== 200 && res.status !== "200") {
-        const message = res.message || t("logoutFailed") || "Logout failed"
+      const isSuccess = res && (
+        res.status === "ok"
+      )
+      if (!isSuccess) {
+        const message = res?.message || t("logoutFailed") || "Logout failed"
         showNotification({ message, type: "error" })
         return
       }
