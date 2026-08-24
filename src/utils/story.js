@@ -60,7 +60,7 @@ export const getQuestionAnswersFromBlocks = blocks => {
 export function extractStoryData(flow, blocks) {
   if (!flow) return null
 
-  if ([sessionFlowName.LoginDiscussion, sessionFlowName.GuestDiscussion].includes(flow)) {
+  if ([sessionFlowName.LoginDiscussion].includes(flow)) {
     const challenges = getListAfterHeaderText(i18n.t("challengesHeader"), blocks)
     const solutions = getListAfterHeaderText(i18n.t("solutionsHeader"), blocks)
 
@@ -197,7 +197,7 @@ export const getEditorContentBlocks = (otherParams, storageFlow, editorCopyChang
     if (!otherParams || !storageFlow) return []
     let parsed_content = []
 
-    if ([sessionFlowName.LoginDiscussion, sessionFlowName.GuestDiscussion].includes(storageFlow)) {
+    if ([sessionFlowName.LoginDiscussion].includes(storageFlow)) {
       const challenges = otherParams?.challenges_faced || []
       const solutions = otherParams?.solutions_discussed || []
 

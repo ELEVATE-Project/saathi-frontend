@@ -4,21 +4,6 @@ import Swal from "sweetalert2"
 export const useConfirmationPopup = () => {
   const { t } = useTranslation()
 
-  const showGuestPopup = async (yesButtonAction, noButtonAction) => {
-    const result = await Swal.fire({
-      title: t("guestPopUpChanges"),
-      showCancelButton: true,
-      confirmButtonText: t("confirmChanges"),
-      cancelButtonText: t("denyButton"),
-    })
-
-    if (result.isConfirmed && yesButtonAction) {
-      yesButtonAction()
-    } else if (noButtonAction) {
-      noButtonAction()
-    }
-  }
-
   const showConfirmationPopup = async (yesButtonAction, noButtonAction) => {
     const result = await Swal.fire({
       title: t("popUpChanges"),
@@ -56,7 +41,6 @@ export const useConfirmationPopup = () => {
   }
 
   return {
-    showGuestPopup,
     showConfirmationPopup,
     commonsNetworkReconnectionPopup
   }

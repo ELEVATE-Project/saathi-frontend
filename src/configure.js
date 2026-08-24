@@ -5,26 +5,15 @@ import ROUTES from "./url"
 export const lang_codes = {
   kn: "kn-IN",
   en: "en-IN",
-  mr: "mr-IN",
-  gu: "gu-IN",
   hi: "hi-IN",
-  ml: "ml-IN",
-  ne: "ne-IN",
   or: "or-IN",
-  pa: "pa-IN",
-  sa: "sa-IN",
   ta: "ta-IN",
-  bn: "bn-IN",
-  id: "id-ID",
-  enus: "en-US",
 }
 
 export const bot_routes = {
   normal: "/",
-  guest_normal: "/guided_guest",
   reflection: "/reflection",
   oneshot: "/oneshot_bot",
-  guest_oneshot: "/oneshot_guest",
   shikshalokam_chaupal: "/shikshalokam_chaupal",
   listening_activity: "/listening_activity",
   search_bot: "/sg_search_bot",
@@ -48,10 +37,8 @@ export const FLOW_TYPES = {
 
 export const bot_websocket = {
   normal: "/ws/shikshalokam_new/",
-  guest_normal: "/ws/common/",
   reflection: "/ws/reflection/",
   oneshot: "/ws/common/",
-  guest_oneshot: "/ws/common/",
   shikshalokam_chaupal: "/ws/common/",
   listening_activity: "/ws/common/",
   parent_perception_survey: "/ws/common/",
@@ -87,17 +74,9 @@ export const all_companies = Object.keys(company_list)
 export const available_languages = {
   [lang_codes.kn]: "Kannada (India)",
   [lang_codes.en]: "English (US)",
-  [lang_codes.mr]: "Marathi (India)",
-  [lang_codes.gu]: "Gujarati (India)",
   [lang_codes.hi]: "Hindi (India)",
-  [lang_codes.ml]: "Malayalam (India)",
-  [lang_codes.ne]: "Nepali (India)",
   [lang_codes.or]: "Odia (India)",
-  [lang_codes.pa]: "Punjabi (India)",
-  [lang_codes.sa]: "Sanskrit (India)",
   [lang_codes.ta]: "Tamil (India)",
-  [lang_codes.bn]: "Bangla (India)",
-  [lang_codes.id]: "Bahasa (Indonesia)",
 }
 
 let init_config = {

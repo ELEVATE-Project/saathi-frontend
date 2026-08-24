@@ -11,7 +11,7 @@ import { sessionFlowName } from "../../constants/session"
 import { clearFromStorage } from "../../services/storage_service"
 import { useSiteStorage, useChatStorage } from "hooks/useStorage"
 
-const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, showScrollbarContent, resetChat, setIsResetCalled, showGuestPopup, stopAllAudio }) => {
+const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, showScrollbarContent, resetChat, setIsResetCalled, stopAllAudio }) => {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, sho
       clearFromStorage(true)
       navigateSsoFlow()
     } else {
-      navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
+      navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
     }
   }
 
@@ -63,11 +63,7 @@ const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, sho
                   className="button-4"
                   onClick={e => {
                     setIsResetCalled(true)
-                    if (showGuestPopup) {
-                      showGuestPopup()
-                    } else {
-                      resetChat(e)
-                    }
+                    resetChat(e)
                   }}
                 >
                   <FiPlus className="icon-2" /> {t("newChat")}

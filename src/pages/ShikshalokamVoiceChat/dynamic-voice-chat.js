@@ -1353,11 +1353,7 @@ const DynamicVoiceChat = ({
         setLanguage(languageList[0].value)
         setChatLanguage(languageList[0].value)
         stopAllAudio()
-        if (accessToken) {
-          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
-        } else {
-          navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
-        }
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
       }
     }
 
@@ -3059,9 +3055,9 @@ const DynamicVoiceChat = ({
             {endStoryMutation.isPending && (
               <div className="div69 text-center">
                 <h2 className="form-label label1 font-bold text-lg sm:text-2xl text-center">
-                  {storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("feedbackLoaderHeading") : storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoaderHeading") : storageFlow && [sessionFlowName.GuestMiStory].includes(storageFlow) ? t("storyGuestLoaderHeading") : t("storyLoaderHeading")}
+                  {storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("feedbackLoaderHeading") : storageFlow && [sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoaderHeading") : t("storyLoaderHeading")}
                 </h2>
-                <label className="form-label label1 text-center">{storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoader") : t("storyLoader")}</label>
+                <label className="form-label label1 text-center">{storageFlow && [sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoader") : t("storyLoader")}</label>
               </div>
             )}
           </div>
@@ -3262,22 +3258,18 @@ const DynamicVoiceChat = ({
               )}
             </>
           )}
-          {isStreamingComplete && showFileInput && !showHomepage && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && storyData?.id !== "" && !([sessionFlowName.GuestMiStory].includes(storageFlow) && accessToken) && (
+          {isStreamingComplete && showFileInput && !showHomepage && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && storyData?.id !== "" && (
             <>
-              {(flowInfo && flowInfo.image_config) && 
+              {(flowInfo && flowInfo.image_config) &&
                 <div className="div13">
                   <ChatMessage
                     botNameToDisplay={botNameToDisplay}
                     userType="bot"
-                    message={(() => {
-                      const flow = storageFlow
-                      return flow && [sessionFlowName.GuestMiStory].includes(flow) ? t("evidenceStory") : t("evidence")
-                    })()}
+                    message={t("evidence")}
                     isTalking={false}
                     handleOnStopSpeaking={() => handleOnStopSpeaking()}
                     handleOnSpeaking={() => {
-                      const flow = storageFlow
-                      const message_to_use = flow && [sessionFlowName.GuestMiStory].includes(flow) ? t("evidenceStory") : t("evidence")
+                      const message_to_use = t("evidence")
                       handleOnSpeaking(message_to_use, "upload-img-id", { msg: message_to_use, updated_at: "upload-img-id", source: "bot" })
                     }}
                     isAnyPlaying={!!hasOverRideId || isTalking}
@@ -3372,11 +3364,11 @@ const DynamicVoiceChat = ({
                   <ChatMessage
                     botNameToDisplay={botNameToDisplay}
                     userType="bot"
-                    message={storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")}
+                    message={storageFlow && [sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")}
                     isTalking={false}
                     handleOnStopSpeaking={() => handleOnStopSpeaking()}
                     handleOnSpeaking={() => {
-                      const message_to_use = storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")
+                      const message_to_use = storageFlow && [sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")
                       console.log("message_to_use", message_to_use)
                       handleOnSpeaking(message_to_use, "download-story-id", { msg: message_to_use, updated_at: "download-story-id", source: "bot" })
                     }}
@@ -3402,7 +3394,7 @@ const DynamicVoiceChat = ({
                         <div className="download-story-div">
                           <FiDownload className="icon-1" />
                           <span className="div16" ref={endPageToScrollRef}>
-                            {storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("downloadReportText") : t("downloadStoryText")}
+                            {storageFlow && [sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("downloadReportText") : t("downloadStoryText")}
                           </span>
                         </div>
                       </button>
@@ -3415,7 +3407,7 @@ const DynamicVoiceChat = ({
                       <div className="download-story-div">
                         <MdEdit className="icon-1" />
                         <span className="div16" ref={endPageToScrollRef}>
-                          {storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("editReportText") : t("editStoryText")}
+                          {storageFlow && [sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("editReportText") : t("editStoryText")}
                         </span>
                       </div>
                     </button>
