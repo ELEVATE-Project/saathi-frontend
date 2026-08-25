@@ -1,8 +1,10 @@
+import Notification, { showNotification } from "../../components/ToastMessage/TotastMessage"
 import "../../components/custom-style.css"
 import "../../index.css"
 import "./commonPageStyle.css"
 import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
 import { useAudio } from "../../hooks/useAudio"
+import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useEffect, useMemo, useState, useCallback } from "react"
 import env from "../../utils/env"
 import { useLanguage } from "../../hooks/useLanguage"
@@ -24,6 +26,7 @@ import { getSessionDetails } from "../../services/api.service"
 
 function CommonHomePage() {
   const { audioRef, stopAudioTriggered, setStopAudioTriggered, stopAllAudio } = useAudio()
+  const { isOffline } = useNetworkStatus()
   const [isLoading, setIsLoading] = useState(false)
   const { languageButtonSelect, handleLanguageChange } = useLanguage()
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
@@ -308,6 +311,7 @@ function CommonHomePage() {
   if (showLanding) {
     return (
       <>
+        <Notification />
         {/* Mobile layout */}
         <div className="sm:hidden flex flex-col" style={{ height: "100dvh" }}>
           <div className="flex flex-col items-center justify-center px-4" style={{ height: "50dvh" }}>
@@ -388,6 +392,7 @@ function CommonHomePage() {
 
   return (
     <>
+      <Notification />
       {showTnCPopup && (
         <PrivacyPolicyPopup
           tncText={t("tncText")}

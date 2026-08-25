@@ -38,6 +38,7 @@ import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import { useChatStorage, useUserStorage, useSiteStorage } from "hooks/useStorage"
 import { useChatWebhook } from "../../hooks/useChatWebhook"
 import { useConfirmationPopup } from "hooks/useConfirmationPopup"
+import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -164,7 +165,7 @@ const DynamicVoiceChat = ({
   // Tracks the updated_at ID of the bot message whose chips have been used.
   // Once set, the chip bar is hidden until a new bot message with chips arrives.
   const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
-  const [isOffline, setIsOffline] = useState(typeof window !== "undefined" ? !navigator.onLine : false)
+  const { isOffline } = useNetworkStatus()
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -1242,96 +1243,6 @@ const DynamicVoiceChat = ({
 
   /**
    * Network monitoring - detects online/offline status and connection speed
-   * Shows toast notifications for network changes
-   */
-  useEffect(() => {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-    let toastId = null
-    let isSlowOrOffline = false
-
-    const handleOffline = () => {
-      setIsOffline(true)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("offlineNetwork"),
-        type: "error",
-        options: {
-          isOfflineToast: true,
-          autoClose: false,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#fff" },
-        },
-      })
-    }
-
-    const handleOnline = () => {
-      setIsOffline(false)
-      if (!isSlowOrOffline) return
-      isSlowOrOffline = false
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("onlineNetwork"),
-        type: "success",
-        options: {
-          autoClose: 3000,
-          closeButton: false,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#1D1616" },
-        },
-      })
-    }
-
-    const handleSlowNetwork = () => {
-      setIsOffline(false)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("networkWarning"),
-        type: "warn",
-        options: {
-          isOfflineToast: true,
-          autoClose: false,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#000" },
-        },
-      })
-    }
-
-    const checkNetworkSpeed = () => {
-      if (!navigator.onLine) {
-        handleOffline()
-        return
-      }
-      if (connection) {
-        const { effectiveType } = connection
-        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
-          handleSlowNetwork()
-        } else if (isSlowOrOffline) {
-          handleOnline()
-        }
-      }
-    }
-
-    if (!navigator.onLine) {
-      handleOffline()
-    } else {
-      checkNetworkSpeed()
-    }
-    connection?.addEventListener("change", checkNetworkSpeed)
-    window.addEventListener("offline", handleOffline)
-    window.addEventListener("online", handleOnline)
-
-    return () => {
-      connection?.removeEventListener("change", checkNetworkSpeed)
-      window.removeEventListener("offline", handleOffline)
-      window.removeEventListener("online", handleOnline)
-    }
-  }, [])
 
   /**
    * Browser back button handling - intercepts browser navigation
@@ -2669,6 +2580,7 @@ const DynamicVoiceChat = ({
                   options: {
                     position: "top-center",
                     autoClose: 6000,
+                    closeButton: true,
                     style: { fontWeight: "bold" },
                   },
                 })
@@ -2696,6 +2608,7 @@ const DynamicVoiceChat = ({
                   options: {
                     position: "top-center",
                     autoClose: 6000,
+                    closeButton: true,
                     style: { fontWeight: "bold" },
                   },
                 })
