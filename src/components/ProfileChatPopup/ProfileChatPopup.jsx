@@ -10,13 +10,19 @@ function ProfileChatPopup({ isOpen, onClose }) {
   const timerRef = useRef(null)
 
   useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+      document.documentElement.style.overflow = "hidden"
+    }
     return () => {
+      document.body.style.overflow = ""
+      document.documentElement.style.overflow = ""
       if (timerRef.current) {
         clearTimeout(timerRef.current)
         timerRef.current = null
       }
     }
-  }, [])
+  }, [isOpen])
 
   if (!isOpen) return null
 

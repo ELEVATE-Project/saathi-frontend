@@ -1,15 +1,17 @@
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { getFlowInfoApi } from "../../api/endpoints"
+import { getProfileApi } from "../../api/endpoints/user"
 import { getSessionDetails } from "../../services/api.service"
 import { languageList } from "./enum"
 import { setLanguage } from "../../i18n"
 import { useChatStorage, useUserStorage } from "../../hooks/useStorage"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { useSiteDataSessionStore } from "store"
 import DynamicVoiceChat from "./dynamic-voice-chat"
+import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
 import ROUTES from "../../url"
 import useSmartChatStorage from "../../hooks/useSmartChatStorage"
 import useChatDataSessionStore from "../../store/slices/chatData/chatDataSession"
@@ -27,10 +29,10 @@ function ChatContainer() {
   }, [])
 
   const [isLoading, setIsLoading] = useState(false)
+  const [showProfilePopup, setShowProfilePopup] = useState(false)
 
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const ipFetched = useUserStorage()(state => state.ipFetched)
-  const sessionId = useChatStorage()(state => state.sessionId)
   const setIpFetched = useUserStorage()(state => state.setIpFetched)
   const setIsNewChatOpen = useChatStorage()(state => state.setIsNewChatOpen)
   const setIsOldChatOpen = useChatStorage()(state => state.setIsOldChatOpen)
@@ -39,11 +41,11 @@ function ChatContainer() {
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
 
   const accessToken = useUserDataLocalStore(state => state.access_token)
+  const profileId = useUserDataLocalStore(state => state.profileId)
 
   const { data: flowInfo } = useQuery({
     queryKey: [API_ENDPOINTS.FLOW_CONNECTION_INFO, flowName],
     queryFn: () => getFlowInfoApi(flowName),
-    // staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -53,6 +55,44 @@ function ChatContainer() {
     const chat_history = getChatHistory()
     const updated_chat_history = chat_history.filter(chat => chat.received)
     setChatHistory(updated_chat_history)
+  }, [])
+
+  // Check if profile onboarding is needed
+  useEffect(() => {
+    if (!accessToken || !profileId) return
+    const acceptedTnC = useUserDataLocalStore.getState().has_accepted_tnc
+    if (acceptedTnC !== true) return
+
+    ;(async () => {
+      try {
+        const data = await getProfileApi(profileId, accessToken)
+        if (data?.is_profile_complete === false) {
+          setShowProfilePopup(true)
+        }
+      } catch (error) {
+        console.error("[ChatContainer] profile check failed:", error)
+      }
+    })()
+  }, [accessToken, profileId])
+
+  const handleProfilePopupClose = useCallback(async () => {
+    const store = useChatDataSessionStore.getState()
+    store.setIsOldChatOpen(false)
+    store.setIsNewChatOpen(true)
+    store.setShowHomepage(true)
+    store.setIntroMessage(null)
+    store.setSessionId(null)
+    store.setStrandStep(null)
+    store.setChatHistory([])
+
+    try {
+      const session = await getSessionDetails()
+      store.setSessionId(session.sessionid)
+    } catch (error) {
+      console.error("[handleProfilePopupClose] getSessionDetails failed:", error)
+    } finally {
+      setShowProfilePopup(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -95,7 +135,12 @@ function ChatContainer() {
 
   return (
     <>
-      {accessToken && !isLoading && <DynamicVoiceChat />}
+      <div style={showProfilePopup ? { filter: "blur(10px)", pointerEvents: "none", position: "fixed", inset: 0, overflow: "hidden" } : undefined}>
+        {accessToken && !isLoading && <DynamicVoiceChat key={showProfilePopup ? "onboarding" : "main"} />}
+      </div>
+      {showProfilePopup && (
+        <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} />
+      )}
       {(isLoading || !ipFetched) && (
         <div className="loader-load-spinner">
           <div className="div67">

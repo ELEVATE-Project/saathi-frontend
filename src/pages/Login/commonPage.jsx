@@ -61,9 +61,7 @@ function CommonHomePage() {
 
   const languageSelected = hasSelectedLanguage || !!urlLanguage
   const saathiOnboardingDone =
-    isTncAccepted === true &&
-    isProfileComplete === true &&
-    !showProfilePopup
+    isTncAccepted === true
 
   const showTnCPopup =
     languageSelected &&
@@ -394,10 +392,6 @@ function CommonHomePage() {
           useStaticText={false}
           isGuestChat={false}
         />
-      )}
-
-      {showProfilePopup && (
-        <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} />
       )}
 
       <div className="container max-w-full md mt-0 mx-auto grid md:grid-cols-2 px-0">
