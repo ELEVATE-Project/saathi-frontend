@@ -12,6 +12,7 @@ const defaultConfig = {
   progress: undefined,
   theme: "colored",
   transition: Bounce,
+  style: { fontWeight: "bold" },
 }
 
 export const showNotification = ({
@@ -28,7 +29,10 @@ export const showNotification = ({
 
   let finalMessage = message
   let finalType = type
-  let finalOptions = { ...options }
+  let finalOptions: Record<string, any> = {
+    ...options,
+    style: { ...defaultConfig.style, ...options?.style },
+  }
 
   if (typeof window !== "undefined" && !navigator.onLine) {
     finalMessage = i18n.t("offlineNetwork") || "You are offline. Please check your internet connection."
@@ -36,9 +40,7 @@ export const showNotification = ({
     finalOptions = {
       ...finalOptions,
       autoClose: false,
-      closeButton: true,
-      position: "top-center",
-      style: { fontWeight: "bold", color: "#fff", ...finalOptions.style },
+      style: { ...finalOptions.style, color: "#fff" },
       isOfflineToast: true,
     }
   }
@@ -53,9 +55,7 @@ export const showOfflineNotification = () => {
     options: {
       isOfflineToast: true,
       autoClose: false,
-      closeButton: true,
-      position: "top-center",
-      style: { fontWeight: "bold", color: "#fff" },
+      style: { color: "#fff" },
     },
   })
 }

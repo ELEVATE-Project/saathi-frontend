@@ -16,36 +16,25 @@ export const useNetworkStatus = () => {
       navigator.webkitConnection
 
     let toastId = null
-    let isSlowOrOffline = false
+    let isOfflineState = false
+    let isSlowState = false
 
     const handleOffline = () => {
       setIsOffline(true)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
-      toastId = showOfflineNotification()
-    }
-
-    const handleOnline = () => {
-      setIsOffline(false)
-      if (!isSlowOrOffline) return
-      isSlowOrOffline = false
+      if (isOfflineState) return
+      isOfflineState = true
+      isSlowState = false
       toast.dismiss()
-      toastId = showNotification({
-        message: t("onlineNetwork"),
-        type: "success",
-        options: {
-          autoClose: 3000,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#1D1616" },
-        },
-      })
+      toastId = showOfflineNotification()
     }
 
     const handleSlowNetwork = () => {
       setIsOffline(false)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
+      if (isOfflineState) {
+        isOfflineState = false
+      }
+      if (isSlowState) return
+      isSlowState = true
       toast.dismiss()
       toastId = showNotification({
         message: t("networkWarning"),
@@ -53,9 +42,34 @@ export const useNetworkStatus = () => {
         options: {
           isOfflineToast: true,
           autoClose: false,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#000" },
+          style: { color: "#000" },
+        },
+      })
+    }
+
+    const handleOnline = () => {
+      setIsOffline(false)
+      const wasOffline = isOfflineState
+      const wasSlow = isSlowState
+      isOfflineState = false
+      isSlowState = false
+
+      if (!wasOffline && !wasSlow) return
+
+      if (connection) {
+        const { effectiveType } = connection
+        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
+          handleSlowNetwork()
+          return
+        }
+      }
+
+      toast.dismiss()
+      toastId = showNotification({
+        message: t("onlineNetwork"),
+        type: "success",
+        options: {
+          style: { color: "#1D1616" },
         },
       })
     }
@@ -69,9 +83,11 @@ export const useNetworkStatus = () => {
         const { effectiveType } = connection
         if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
           handleSlowNetwork()
-        } else if (isSlowOrOffline) {
+        } else if (isSlowState || isOfflineState) {
           handleOnline()
         }
+      } else if (isOfflineState) {
+        handleOnline()
       }
     }
 
