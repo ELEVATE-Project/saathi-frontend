@@ -13,7 +13,7 @@ import Header from "../../components/Header"
 import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
 import ROUTES from "../../url"
-import { useUserDataLocalStore, useChatDataSessionStore } from "store"
+import { useUserDataLocalStore, useChatDataLocalStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
@@ -255,7 +255,7 @@ function CommonHomePage() {
       setIntroMessage,
       setStrandStep,
       setChatHistory,
-    } = useChatDataSessionStore.getState()
+    } = useChatDataLocalStore.getState()
 
     // Mirror resetChat() (without reload)
     setIsOldChatOpen(false)

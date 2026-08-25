@@ -8,7 +8,7 @@ import { sessionFlowName } from "../constants/session"
 import { readElevateProfileApi } from "../api/endpoints/user"
 import { setLanguage } from "../i18n"
 import { URL_PARAMS } from "constants/urls"
-import { useChatDataSessionStore, useSiteDataLocalStore, useUserDataLocalStore } from "store"
+import { useChatDataLocalStore, useSiteDataLocalStore, useUserDataLocalStore } from "store"
 import { useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import ROUTES from "../url"
@@ -19,7 +19,7 @@ function SsoFlow() {
   const [searchParams] = useSearchParams()
 
   const { setChatLanguage, setHasSelectedLanguage, setSsoRerouteURL } = useSiteDataLocalStore.getState()
-  const { setFlow, setSessionId, setIsNewChatOpen, setProjectId, setTaskId } = useChatDataSessionStore.getState()
+  const { setFlow, setSessionId, setIsNewChatOpen, setProjectId, setTaskId } = useChatDataLocalStore.getState()
   const { setFirstName, setCompanyName, setState, setAcceptedTnC, setAccessToken, setRefreshToken, setProfileId } = useUserDataLocalStore.getState()
 
   useEffect(() => {

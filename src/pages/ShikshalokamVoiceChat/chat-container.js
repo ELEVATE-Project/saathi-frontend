@@ -14,7 +14,7 @@ import DynamicVoiceChat from "./dynamic-voice-chat"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
 import ROUTES from "../../url"
 import useSmartChatStorage from "../../hooks/useSmartChatStorage"
-import useChatDataSessionStore from "../../store/slices/chatData/chatDataSession"
+import useChatDataLocalStore from "../../store/slices/chatData/chatDataLocal"
 import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
 import { env } from "utils/env"
 
@@ -76,7 +76,7 @@ function ChatContainer() {
   }, [accessToken, profileId])
 
   const handleProfilePopupClose = useCallback(async () => {
-    const store = useChatDataSessionStore.getState()
+    const store = useChatDataLocalStore.getState()
     store.setIsOldChatOpen(false)
     store.setIsNewChatOpen(true)
     store.setShowHomepage(true)
@@ -103,7 +103,7 @@ function ChatContainer() {
           return
         }
 
-        const currentSessionId = useChatDataSessionStore.getState().sessionId
+        const currentSessionId = useChatDataLocalStore.getState().sessionId
         if (!currentSessionId) {
           setIsLoading(true)
           setIsOldChatOpen(false)
