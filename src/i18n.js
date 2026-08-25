@@ -1,12 +1,12 @@
 import i18n from "i18next"
-import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
+import { DEFAULT_LANGUAGE } from "pages/ShikshalokamVoiceChat/enum"
 import { initReactI18next } from "react-i18next"
 import HttpApi from "i18next-http-backend"
 import { useSiteDataSessionStore } from "store"
 import env from "./utils/env"
 
 const chatLanguageLocal = useSiteDataSessionStore.getState().getChatLanguage()
-const languageToUse = chatLanguageLocal || LANGUAGE_ENUMS.ENGLISH
+const languageToUse = chatLanguageLocal || DEFAULT_LANGUAGE
 
 i18n
   .use(HttpApi)

@@ -115,6 +115,12 @@ export function clearFromStorage() {
 
     useUserDataLocalStore.setState(useUserDataLocalStore.getInitialState(), true)
     useUserDataSessionStore.setState(useUserDataSessionStore.getInitialState(), true)
+
+    // Also clear persisted localStorage directly to prevent
+    // stale tokens from rehydrating on page reload after logout.
+    localStorage.removeItem("userData")
+    localStorage.removeItem("chatData")
+    localStorage.removeItem("siteData")
   } catch (error) {
     console.error("Error while clearing: ", error)
   }

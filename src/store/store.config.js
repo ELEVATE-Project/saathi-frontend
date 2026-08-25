@@ -35,10 +35,3 @@ export const createSessionStore = (name, storeCreator, options = {}) => {
     )
 }
 
-// Configuration for stores without persistence
-export const createMemoryStore = (name, storeCreator) => {
-    return devtools(
-        subscribeWithSelector(storeCreator),
-        { name }
-    )
-}

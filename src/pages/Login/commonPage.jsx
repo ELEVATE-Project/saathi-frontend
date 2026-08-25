@@ -1,7 +1,7 @@
 import "../../components/custom-style.css"
 import "../../index.css"
 import "./commonPageStyle.css"
-import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
+import { DEFAULT_LANGUAGE } from "pages/ShikshalokamVoiceChat/enum"
 import { useAudio } from "../../hooks/useAudio"
 import { useEffect, useMemo, useState, useCallback } from "react"
 import env from "../../utils/env"
@@ -13,7 +13,7 @@ import Header from "../../components/Header"
 import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
 import ROUTES from "../../url"
-import { useUserDataLocalStore, useChatDataLocalStore } from "store"
+import { useUserDataLocalStore, useChatDataSessionStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
@@ -90,9 +90,8 @@ function CommonHomePage() {
     const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
     ;(async () => {
       try {
-        const data = await readElevateProfileApi(storedToken)
+        const data = await readElevateProfileApi(storedToken, { silent: true })
         if (data) {
-          clearFromStorage()
           const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
           store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
@@ -139,7 +138,7 @@ function CommonHomePage() {
     if (chatLanguage) return
 
     if (!urlLanguage && !languageButtonSelect) {
-      setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+      setChatLanguage(DEFAULT_LANGUAGE)
     }
   }, [chatLanguage])
 
@@ -258,7 +257,7 @@ function CommonHomePage() {
       setIntroMessage,
       setStrandStep,
       setChatHistory,
-    } = useChatDataLocalStore.getState()
+    } = useChatDataSessionStore.getState()
 
     // Mirror resetChat() (without reload)
     setIsOldChatOpen(false)

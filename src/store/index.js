@@ -10,7 +10,7 @@ import useUserDataSessionStore from "./slices/userData/userDataSession"
 const SLICES_STORE_MAP = {
   local: {
     [STORE_NAME_CONSTANTS.USER_DATA]: useUserDataLocalStore,
-    [STORE_NAME_CONSTANTS.CHAT_DATA]: useChatDataLocalStore,
+    [STORE_NAME_CONSTANTS.CHAT_DATA]: useChatDataSessionStore,
     [STORE_NAME_CONSTANTS.SITE_DATA]: useSiteDataLocalStore,
   },
   session: {

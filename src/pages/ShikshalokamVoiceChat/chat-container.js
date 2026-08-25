@@ -12,7 +12,7 @@ import { useSiteDataSessionStore } from "store"
 import DynamicVoiceChat from "./dynamic-voice-chat"
 import ROUTES from "../../url"
 import useSmartChatStorage from "../../hooks/useSmartChatStorage"
-import useChatDataLocalStore from "../../store/slices/chatData/chatDataLocal"
+import useChatDataSessionStore from "../../store/slices/chatData/chatDataSession"
 import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
 import { env } from "utils/env"
 
@@ -33,6 +33,7 @@ function ChatContainer() {
   const sessionId = useChatStorage()(state => state.sessionId)
   const setIpFetched = useUserStorage()(state => state.setIpFetched)
   const setIsNewChatOpen = useChatStorage()(state => state.setIsNewChatOpen)
+  const setIsOldChatOpen = useChatStorage()(state => state.setIsOldChatOpen)
   const setSessionId = useChatStorage()(state => state.setSessionId)
 
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -62,9 +63,10 @@ function ChatContainer() {
           return
         }
 
-        const currentSessionId = useChatDataLocalStore.getState().sessionId
+        const currentSessionId = useChatDataSessionStore.getState().sessionId
         if (!currentSessionId) {
           setIsLoading(true)
+          setIsOldChatOpen(false)
           setIsNewChatOpen(true)
 
           try {

@@ -3,13 +3,12 @@ import "../index.css"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage } from "../services/storage_service"
 import { getSessionDetailsApi } from "../api/endpoints/chat"
-import { LANGUAGE_ENUMS } from "./ShikshalokamVoiceChat/enum"
+import { DEFAULT_LANGUAGE, languageList } from "./ShikshalokamVoiceChat/enum"
 import { sessionFlowName } from "../constants/session"
 import { readElevateProfileApi } from "../api/endpoints/user"
 import { setLanguage } from "../i18n"
-import { updateReflectionStatusApi } from "../api/endpoints/project"
 import { URL_PARAMS } from "constants/urls"
-import { useChatDataLocalStore, useSiteDataLocalStore, useUserDataLocalStore } from "store"
+import { useChatDataSessionStore, useSiteDataLocalStore, useUserDataLocalStore } from "store"
 import { useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import ROUTES from "../url"
@@ -20,7 +19,7 @@ function SsoFlow() {
   const [searchParams] = useSearchParams()
 
   const { setChatLanguage, setHasSelectedLanguage, setSsoRerouteURL } = useSiteDataLocalStore.getState()
-  const { setFlow, setSessionId, setIsNewChatOpen, setProjectId, setTaskId } = useChatDataLocalStore.getState()
+  const { setFlow, setSessionId, setIsNewChatOpen, setProjectId, setTaskId } = useChatDataSessionStore.getState()
   const { setFirstName, setCompanyName, setState, setAcceptedTnC, setAccessToken, setRefreshToken, setProfileId } = useUserDataLocalStore.getState()
 
   useEffect(() => {
@@ -55,25 +54,16 @@ function SsoFlow() {
       if (data) {
         const profile_details = data?.profile_details
         if (profile_details) {
-          if (projectId) {
-            const statusRes = await updateReflectionStatusApi(projectId, "started", sessionFlowName.SsoFlow, accessToken)
-            if (statusRes?.status !== 200) {
-              clearFromStorage();
-              navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
-              return
-            }
-          }
-
           clearFromStorage()
-          setLanguage(LANGUAGE_ENUMS.ENGLISH)
-          setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+          setLanguage(DEFAULT_LANGUAGE)
+          setChatLanguage(DEFAULT_LANGUAGE)
           if (sessionId && sessionId !== "" && sessionId !== "null") {
             setSessionId(sessionId)
           } else {
             let session = await getSessionDetailsApi()
             setSessionId(session.sessionid)
           }
-          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
+          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && languageList.some(l => l.value === languagePassed)) {
             setHasSelectedLanguage(true)
             setChatLanguage(languagePassed)
             setLanguage(languagePassed)
@@ -97,7 +87,7 @@ function SsoFlow() {
           setTaskId(taskId)
 
           const params = new URLSearchParams()
-          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && Object.values(LANGUAGE_ENUMS).includes(languagePassed)) {
+          if (languagePassed && languagePassed !== "" && languagePassed !== "null" && languageList.some(l => l.value === languagePassed)) {
             params.append("language", languagePassed)
           }
           const queryString = params.toString()

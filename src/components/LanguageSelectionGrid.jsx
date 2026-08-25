@@ -80,7 +80,6 @@ const LanguageSelectionGrid = () => {
           })}
         {!isFlowLanguagesLoading && !flowLanguages &&
           languageList
-            .filter(lang => !lang.excludeFor.includes(flowName))
             .map((lang, index, arr) => {
               const isLastOdd = arr.length % 2 !== 0 && index === arr.length - 1
               return (

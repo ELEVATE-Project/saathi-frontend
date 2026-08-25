@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useRoutes, Navigate } from "react-router-dom"
-import { UserProvider } from "./context/user"
 import CommonHomePage from "./pages/Login/commonPage"
 import NotFound from "./pages/shikshagraha-repository/not-found"
 import React from "react"
@@ -15,7 +14,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <UserProvider>{elements}</UserProvider>
+      {elements}
     </QueryClientProvider>
   )
 }

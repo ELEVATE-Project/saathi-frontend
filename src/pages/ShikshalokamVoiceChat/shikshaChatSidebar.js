@@ -6,7 +6,7 @@ import { FaArrowLeft, FaPowerOff } from "react-icons/fa6"
 import "./shikshaChatStyle.css"
 import { useTranslation } from "react-i18next"
 import { setLanguage } from "../../i18n"
-import { LANGUAGE_ENUMS } from "./enum"
+import { DEFAULT_LANGUAGE } from "./enum"
 import { sessionFlowName } from "../../constants/session"
 import { clearFromStorage } from "../../services/storage_service"
 import { useSiteStorage, useChatStorage } from "hooks/useStorage"
@@ -31,8 +31,8 @@ const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, sho
     if (stopAllAudio) {
       stopAllAudio()
     }
-    setLanguage(LANGUAGE_ENUMS.ENGLISH)
-    setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+    setLanguage(DEFAULT_LANGUAGE)
+    setChatLanguage(DEFAULT_LANGUAGE)
     if (storageFlow === sessionFlowName.SsoFlow) {
       clearFromStorage(true)
       navigateSsoFlow()

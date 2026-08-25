@@ -1,15 +1,10 @@
-import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
+import { DEFAULT_LANGUAGE } from "pages/ShikshalokamVoiceChat/enum"
 
 export const INITIAL_STATE = (set, get, store) => ({
-  accessToken: null,
-  chatLanguage: LANGUAGE_ENUMS.ENGLISH,
+  chatLanguage: DEFAULT_LANGUAGE,
   hasSelectedLanguage: false,
   previousUrl: null,
   ssoRerouteURL: null,
-
-  setAccessToken: accessToken => set({ accessToken }),
-
-  getAccessToken: () => get().accessToken,
 
   setChatLanguage: chatLanguage => set({ chatLanguage }),
 
