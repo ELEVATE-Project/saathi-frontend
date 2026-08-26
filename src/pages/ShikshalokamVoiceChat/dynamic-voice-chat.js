@@ -1496,6 +1496,8 @@ const DynamicVoiceChat = ({
   const hasScrolledToBottomRef = useRef(false)
   useEffect(() => {
     hasScrolledToBottomRef.current = false
+    setActiveSourcesChatId(null)
+    setActiveSources([])
   }, [sessionId])
   useEffect(() => {
     if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
@@ -2249,6 +2251,8 @@ const DynamicVoiceChat = ({
     disconnectFromWebSocket()
     setIsLoading(true)
     removeChatHistory()
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     setIsOldChatOpen(false)
     setIsNewChatOpen(true)
     setShowFileInput(false)
@@ -2820,6 +2824,8 @@ const DynamicVoiceChat = ({
 
   async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     try {
       await validateToken()
     } catch {
