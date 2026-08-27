@@ -2910,15 +2910,24 @@ const DynamicVoiceChat = ({
               </div>
             )}
             <div className="chat-sidebar-footer">
-              <button className="chat-sidebar-user-trigger" onClick={handleOpenProfileModal}>
+              <div className="chat-sidebar-user-card">
+              <button className="chat-sidebar-user-info-btn" onClick={handleOpenProfileModal}>
                 <span className="chat-sidebar-user-avatar">
                   {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
                 </span>
                 <span className="chat-sidebar-user-name">
                   {profileApiData?.name || firstName || t("user")}
                 </span>
+                </button>
+                <button
+                  className="chat-sidebar-logout-icon-btn"
+                  onClick={handleLogout}
+                  aria-label="Logout"
+                  title={t("logout") || "Logout"}
+                >
                 <FiLogOut className="chat-sidebar-logout-icon" />
               </button>
+              </div>
             </div>
           </aside>
           <Popup

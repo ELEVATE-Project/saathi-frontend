@@ -1477,6 +1477,36 @@ html, body {
   flex-shrink: 0;
 }
 
+.chat-sidebar-user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.chat-sidebar-user-card:hover {
+  background: #f3eef9;
+}
+
+.chat-sidebar-user-info-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
 .chat-sidebar-logout-btn {
   display: flex;
   align-items: center;
@@ -1499,27 +1529,30 @@ html, body {
   color: #fff;
 }
 
-.chat-sidebar-logout-icon {
-  font-size: 1rem;
+.chat-sidebar-logout-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
   flex-shrink: 0;
 }
 
-.chat-sidebar-user-trigger {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
+.chat-sidebar-logout-icon-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
 }
 
-.chat-sidebar-user-trigger:hover {
-  background: #f3eef9;
+.chat-sidebar-logout-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
 }
 
 .chat-sidebar-user-avatar {

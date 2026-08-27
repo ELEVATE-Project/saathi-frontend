@@ -7,6 +7,7 @@ import { default_wave_surfer_config } from "../interview-text-voice/useVoiceReco
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from "rehype-raw";
+import { CHAT_SOURCE } from "constants/dynamic-chat";
 
 function ChatMessage({
   userType,
@@ -89,9 +90,13 @@ function ChatMessage({
           } div52 custom-voice-chat-chats`}
           id={chatId}
         >
-            <ReactMarkdown  children={sanitizedContent} remarkPlugins={[remarkGfm]} 
+          {userType === CHAT_SOURCE.USER ? (
+            <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</span>
+          ) : (
+            <ReactMarkdown children={sanitizedContent} remarkPlugins={[remarkGfm]} 
               rehypePlugins={[rehypeRaw]} className="prose max-w-none"
             />
+          )}
         </div>
       </div>
     </div>
