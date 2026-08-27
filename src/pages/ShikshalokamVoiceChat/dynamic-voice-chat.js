@@ -2923,7 +2923,7 @@ const DynamicVoiceChat = ({
                   className="chat-sidebar-logout-icon-btn"
                   onClick={handleLogout}
                   aria-label="Logout"
-                  title={t("logout") || "Logout"}
+                  title={t("logout")}
                 >
                 <FiLogOut className="chat-sidebar-logout-icon" />
               </button>

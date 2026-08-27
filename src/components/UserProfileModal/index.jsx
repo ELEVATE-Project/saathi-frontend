@@ -144,7 +144,7 @@ function UserProfileModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-sm">
       <div
         className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[88vh]"
         style={{ maxWidth: modalConfig.maxWidth || "480px" }}
