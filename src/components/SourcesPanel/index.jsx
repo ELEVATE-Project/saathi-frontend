@@ -19,7 +19,7 @@ function SourceIcon({ src }) {
       <img
         src={src.logo}
         className="source-item-logo"
-        alt={src.company || "logo"}
+        alt={src.company || src.domain || "logo"}
         onError={() => setImgError(true)}
       />
     )
@@ -80,6 +80,7 @@ function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
             <ul className="sources-list">
               {sources.map((src, idx) => {
                 const validUrl = isValidUrl(src?.url)
+                const label = src.company || src.domain
                 return (
                   <li key={idx} className="source-item">
                     <SourceIcon src={src} />
@@ -99,11 +100,13 @@ function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
                           {src.title}
                         </span>
                       )}
+                      {label && (
                       <div className="source-item-meta">
-                        <span className={`source-item-badge source-item-badge--${src.source === SOURCE_TYPE.WEB_SEARCH ? "web" : "kb"}`}>
-                          {src.company}
+                        <span className="source-item-badge">
+                          {label}
                         </span>
                       </div>
+                      )}
                     </div>
                   </li>
                 )

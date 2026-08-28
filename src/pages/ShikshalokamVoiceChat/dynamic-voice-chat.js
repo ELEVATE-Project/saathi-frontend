@@ -167,6 +167,14 @@ const DynamicVoiceChat = ({
   const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
   const { isOffline } = useNetworkStatus()
 
+  const checkIsOffline = useCallback(() => {
+    if (!navigator.onLine || isOffline) {
+      showOfflineNotification()
+      return true
+    }
+    return false
+  }, [isOffline])
+
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
   // Ensures _userData is lazily initialized from localStorage on first render.
@@ -2542,10 +2550,7 @@ const DynamicVoiceChat = ({
   }
 
   const startRecording = async () => {
-    if (!navigator.onLine || isOffline) {
-      showOfflineNotification()
-      return
-    }
+    if (checkIsOffline()) return
     try {
       await validateToken()
     } catch {
@@ -2660,10 +2665,7 @@ const DynamicVoiceChat = ({
   }
 
   const handleOpenProfileModal = async () => {
-    if (!navigator.onLine || isOffline) {
-      showOfflineNotification()
-      return
-    }
+    if (checkIsOffline()) return
     setShowProfileModal(true)
     // Reuse profileApiData already fetched during validateToken/validateSession to avoid duplicate API calls
     if (!profileApiData) {
@@ -3417,10 +3419,7 @@ const DynamicVoiceChat = ({
             style={hasActiveFlexLayout ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
               if (event) event.preventDefault()
-              if (!navigator.onLine || isOffline) {
-                showOfflineNotification()
-                return
-              }
+              if (checkIsOffline()) return
               if (!hasStartedListening && !isFetchingData) {
                 handleSendMessage(event)
               }
@@ -3469,10 +3468,7 @@ const DynamicVoiceChat = ({
                       size="sm"
                       disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
-                        if (!navigator.onLine || isOffline) {
-                          showOfflineNotification()
-                          return
-                        }
+                        if (checkIsOffline()) return
                         const msgId = lastBotMsg?.updated_at ?? "default_quick_reply"
                         if (quickReplyLockRef.current.has(msgId)) return
                         quickReplyLockRef.current.add(msgId)
@@ -3499,10 +3495,7 @@ const DynamicVoiceChat = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (!hasStartedRecording && (!navigator.onLine || isOffline)) {
-                    showOfflineNotification()
-                    return
-                  }
+                  if (!hasStartedRecording && checkIsOffline()) return
                   if (hasStartedRecording) {
                     stopRecording()
                   } else {
@@ -3559,10 +3552,7 @@ const DynamicVoiceChat = ({
                   if (e.key === "Enter") {
                     if (e.shiftKey) {
                       e.preventDefault()
-                      if (!navigator.onLine || isOffline) {
-                        showOfflineNotification()
-                        return
-                      }
+                      if (checkIsOffline()) return
                       e.target.form.requestSubmit()
                       setTimeout(() => {
                         e.target.value = ""
@@ -3578,10 +3568,9 @@ const DynamicVoiceChat = ({
                   type={isOffline ? "button" : "submit"}
                   disabled={hasStartedRecording || isFetchingData}
                   onClick={e => {
-                    if (!navigator.onLine || isOffline) {
+                    if (checkIsOffline()) {
                       e.preventDefault()
                       e.stopPropagation()
-                      showOfflineNotification()
                     }
                   }}
                   className={`button-6 sm:ml-[1.3rem] ml-[0.8rem] ${isOffline ? "opacity-50 cursor-not-allowed" : ""}`}

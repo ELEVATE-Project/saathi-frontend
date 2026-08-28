@@ -2037,13 +2037,12 @@ html, body {
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  background: #ede9f5;
+  color: #572e91;
+  display: inline-block;
 }
 
-.source-item-badge--web {
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
+.source-item-badge--web,
 .source-item-badge--kb {
   background: #ede9f5;
   color: #572e91;
