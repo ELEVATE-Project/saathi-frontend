@@ -76,7 +76,6 @@ function MessageActionBar({
           aria-label={t("copy")}
         >
           <FiCopy />
-          <span className="msg-action-label">{t("copy")}</span>
         </button>
 
         {/* Thumbs Up — only for logged-in users */}

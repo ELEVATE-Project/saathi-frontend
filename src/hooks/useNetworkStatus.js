@@ -65,6 +65,7 @@ export const useNetworkStatus = () => {
       }
 
       toast.dismiss()
+      if (wasOffline) {
       toastId = showNotification({
         message: t("onlineNetwork"),
         type: "success",
@@ -72,6 +73,7 @@ export const useNetworkStatus = () => {
           style: { color: "#1D1616" },
         },
       })
+      }
     }
 
     const checkNetworkSpeed = () => {

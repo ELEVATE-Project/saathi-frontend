@@ -1496,6 +1496,8 @@ const DynamicVoiceChat = ({
   const hasScrolledToBottomRef = useRef(false)
   useEffect(() => {
     hasScrolledToBottomRef.current = false
+    setActiveSourcesChatId(null)
+    setActiveSources([])
   }, [sessionId])
   useEffect(() => {
     if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
@@ -2249,6 +2251,8 @@ const DynamicVoiceChat = ({
     disconnectFromWebSocket()
     setIsLoading(true)
     removeChatHistory()
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     setIsOldChatOpen(false)
     setIsNewChatOpen(true)
     setShowFileInput(false)
@@ -2820,6 +2824,8 @@ const DynamicVoiceChat = ({
 
   async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     try {
       await validateToken()
     } catch {
@@ -2904,15 +2910,24 @@ const DynamicVoiceChat = ({
               </div>
             )}
             <div className="chat-sidebar-footer">
-              <button className="chat-sidebar-user-trigger" onClick={handleOpenProfileModal}>
+              <div className="chat-sidebar-user-card">
+              <button className="chat-sidebar-user-info-btn" onClick={handleOpenProfileModal}>
                 <span className="chat-sidebar-user-avatar">
                   {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
                 </span>
                 <span className="chat-sidebar-user-name">
                   {profileApiData?.name || firstName || t("user")}
                 </span>
+                </button>
+                <button
+                  className="chat-sidebar-logout-icon-btn"
+                  onClick={handleLogout}
+                  aria-label="Logout"
+                  title={t("logout")}
+                >
                 <FiLogOut className="chat-sidebar-logout-icon" />
               </button>
+              </div>
             </div>
           </aside>
           <Popup
