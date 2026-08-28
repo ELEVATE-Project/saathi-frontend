@@ -52,21 +52,31 @@ function SourceItem({ src }) {
     }
   }, [src?.title])
 
-  return (
-    <li
-      className={`source-item ${validUrl ? "cursor-pointer" : ""} ${isMultiLine ? "source-item--top" : ""}`}
-      onClick={() => {
-        if (validUrl) {
-          window.open(src.url, "_blank", "noopener,noreferrer")
-        }
-      }}
-    >
+  const content = (
+    <>
       <SourceIcon src={src} />
       <div className="source-item-content">
         <span ref={titleRef} className="source-item-title" title={src.title}>
           {src.title}
         </span>
       </div>
+    </>
+  )
+
+  return (
+    <li className={`source-item ${validUrl ? "cursor-pointer" : ""} ${isMultiLine ? "source-item--top" : ""}`}>
+      {validUrl ? (
+        <a
+          href={src.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="source-item-anchor"
+        >
+          {content}
+        </a>
+      ) : (
+        content
+      )}
     </li>
   )
 }

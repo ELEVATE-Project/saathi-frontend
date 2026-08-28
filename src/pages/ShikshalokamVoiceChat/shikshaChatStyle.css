@@ -1981,6 +1981,15 @@ html, body {
   margin-top: 2px;
 }
 
+.source-item-anchor {
+  display: flex;
+  align-items: inherit;
+  gap: inherit;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
 .source-item:hover {
   border-color: #572e91;
   background: #faf8ff;
