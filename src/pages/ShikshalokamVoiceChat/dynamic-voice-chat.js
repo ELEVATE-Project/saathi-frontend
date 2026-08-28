@@ -946,6 +946,7 @@ const DynamicVoiceChat = ({
     } catch {
       return false
     }
+    if (checkIsOffline()) return false
 
     setLlmError("")
     handleOnStopSpeaking()
