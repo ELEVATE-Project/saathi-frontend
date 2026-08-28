@@ -3467,7 +3467,7 @@ const DynamicVoiceChat = ({
                       key={idx}
                       label={chip}
                       size="sm"
-                      disabled={isOffline || hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                      disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
                         if (!navigator.onLine || isOffline) {
                           showOfflineNotification()
