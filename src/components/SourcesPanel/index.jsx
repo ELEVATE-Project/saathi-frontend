@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { RxCross2 } from "react-icons/rx"
 import { FiGlobe } from "react-icons/fi"
@@ -27,7 +27,6 @@ function SourceIcon({ src }) {
   return getSourceIcon(src.source)
 }
 
-
 function isValidUrl(urlString) {
   if (!urlString || typeof urlString !== "string") return false
   try {
@@ -36,6 +35,40 @@ function isValidUrl(urlString) {
   } catch {
     return false
   }
+}
+
+function SourceItem({ src }) {
+  const [isMultiLine, setIsMultiLine] = useState(false)
+  const titleRef = useRef(null)
+  const validUrl = isValidUrl(src?.url)
+
+  useEffect(() => {
+    if (titleRef.current) {
+      const el = titleRef.current
+      const style = window.getComputedStyle(el)
+      const lineHeight = parseFloat(style.lineHeight) || (parseFloat(style.fontSize) * 1.4) || 18
+      const lines = Math.round(el.offsetHeight / lineHeight)
+      setIsMultiLine(lines > 2)
+    }
+  }, [src?.title])
+
+  return (
+    <li
+      className={`source-item ${validUrl ? "cursor-pointer" : ""} ${isMultiLine ? "source-item--top" : ""}`}
+      onClick={() => {
+        if (validUrl) {
+          window.open(src.url, "_blank", "noopener,noreferrer")
+        }
+      }}
+    >
+      <SourceIcon src={src} />
+      <div className="source-item-content">
+        <span ref={titleRef} className="source-item-title" title={src.title}>
+          {src.title}
+        </span>
+      </div>
+    </li>
+  )
 }
 
 /**
@@ -78,39 +111,9 @@ function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
             <p className="sources-empty">{t("noSources")}</p>
           ) : (
             <ul className="sources-list">
-              {sources.map((src, idx) => {
-                const validUrl = isValidUrl(src?.url)
-                const label = src.company || src.domain
-                return (
-                  <li key={idx} className="source-item">
-                    <SourceIcon src={src} />
-                    <div className="source-item-content">
-                      {validUrl ? (
-                        <a
-                          href={src.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="source-item-title"
-                          title={src.title}
-                        >
-                          {src.title}
-                        </a>
-                      ) : (
-                        <span className="source-item-title" title={src.title}>
-                          {src.title}
-                        </span>
-                      )}
-                      {label && (
-                      <div className="source-item-meta">
-                        <span className="source-item-badge">
-                          {label}
-                        </span>
-                      </div>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
+              {sources.map((src, idx) => (
+                <SourceItem key={idx} src={src} />
+              ))}
             </ul>
           )}
         </div>

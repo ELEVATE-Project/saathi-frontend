@@ -1962,13 +1962,23 @@ html, body {
 
 .source-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.source-item.source-item--top {
+  align-items: flex-start;
+}
+
+.source-item.source-item--top .source-item-logo,
+.source-item.source-item--top .source-item-icon {
+  margin-top: 2px;
 }
 
 .source-item:hover {
@@ -1979,7 +1989,6 @@ html, body {
 .source-item-icon {
   font-size: 1.1rem;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .source-item-icon--web {
@@ -1991,11 +2000,10 @@ html, body {
 }
 
 .source-item-logo {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   flex-shrink: 0;
-  margin-top: 2px;
   border-radius: 4px;
 }
 
@@ -2016,11 +2024,6 @@ html, body {
   line-height: 1.4;
   overflow-wrap: anywhere;
   white-space: normal;
-}
-
-.source-item-title:hover {
-  color: #572e91;
-  text-decoration: underline;
 }
 
 .source-item-meta {
