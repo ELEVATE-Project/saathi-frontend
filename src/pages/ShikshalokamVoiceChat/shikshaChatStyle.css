@@ -1962,13 +1962,32 @@ html, body {
 
 .source-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.source-item.source-item--top {
+  align-items: flex-start;
+}
+
+.source-item.source-item--top .source-item-logo,
+.source-item.source-item--top .source-item-icon {
+  margin-top: 2px;
+}
+
+.source-item-anchor {
+  display: flex;
+  align-items: inherit;
+  gap: inherit;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
 }
 
 .source-item:hover {
@@ -1979,7 +1998,6 @@ html, body {
 .source-item-icon {
   font-size: 1.1rem;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .source-item-icon--web {
@@ -1991,11 +2009,10 @@ html, body {
 }
 
 .source-item-logo {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   flex-shrink: 0;
-  margin-top: 2px;
   border-radius: 4px;
 }
 
@@ -2018,11 +2035,6 @@ html, body {
   white-space: normal;
 }
 
-.source-item-title:hover {
-  color: #572e91;
-  text-decoration: underline;
-}
-
 .source-item-meta {
   display: flex;
   align-items: center;
@@ -2037,13 +2049,12 @@ html, body {
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  background: #ede9f5;
+  color: #572e91;
+  display: inline-block;
 }
 
-.source-item-badge--web {
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
+.source-item-badge--web,
 .source-item-badge--kb {
   background: #ede9f5;
   color: #572e91;

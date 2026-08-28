@@ -35,4 +35,4 @@ export const SOURCE_TYPE = {
  * Default source logos
  */
 export const DEFAULT_KB_LOGO = "https://shikshagraha.org/wp-content/uploads/2024/09/Group-22x-p-500-1.png"
-export const DEFAULT_WEB_LOGO = "https://static.thenounproject.com/png/249243-200.png"
+export const DEFAULT_WEB_LOGO = "/assets/web_search_logo.png"
