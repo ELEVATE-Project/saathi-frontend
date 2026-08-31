@@ -2561,7 +2561,7 @@ const DynamicVoiceChat = ({
 
 export default DynamicVoiceChat
 
- function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
+function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
   let sanitizedContent = DOMPurify.sanitize(message)
   return (
     <div className="div41">
