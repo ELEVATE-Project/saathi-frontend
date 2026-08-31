@@ -28,6 +28,15 @@ const resolveValidCompanyChatId = async (chatId, sessionId, chatHistory = []) =>
       const freshData = await getChatsFromDB(sessionId)
       const results = Array.isArray(freshData?.results) ? freshData.results : (Array.isArray(freshData) ? freshData : [])
       
+      const sortedResults = [...results].sort((a, b) => {
+        const idA = Number(a.id)
+        const idB = Number(b.id)
+        if (isNaN(idA) || isNaN(idB)) {
+          return String(a.id).localeCompare(String(b.id))
+        }
+        return idA - idB
+      })
+
       const targetMessage = chatHistory.find(c => c?.updated_at === chatId)
       if (targetMessage) {
         const targetCleaned = cleanText(targetMessage.msg)
@@ -39,15 +48,6 @@ const resolveValidCompanyChatId = async (chatId, sessionId, chatHistory = []) =>
             occurrenceIndex++
           }
         }
-
-        const sortedResults = [...results].sort((a, b) => {
-          const idA = Number(a.id)
-          const idB = Number(b.id)
-          if (isNaN(idA) || isNaN(idB)) {
-            return String(a.id).localeCompare(String(b.id))
-          }
-          return idA - idB
-        })
 
         const botDbChats = sortedResults.filter(c => c?.sender?.id === 1 || c?.role === CHAT_SOURCE.BOT)
 
@@ -63,7 +63,7 @@ const resolveValidCompanyChatId = async (chatId, sessionId, chatHistory = []) =>
         }
       }
 
-      const lastBotDbChat = [...results].reverse().find(c => c?.sender?.id === 1 || c?.role === CHAT_SOURCE.BOT)
+      const lastBotDbChat = [...sortedResults].reverse().find(c => c?.sender?.id === 1 || c?.role === CHAT_SOURCE.BOT)
       if (lastBotDbChat?.id) {
         return lastBotDbChat.id
       }
@@ -96,6 +96,10 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
 
     if (isOpen) {
       resolveChatId()
+    }
+
+    return () => {
+      isMounted = false
     }
   }, [isOpen, companyChatId, sessionId, chatHistory])
 
