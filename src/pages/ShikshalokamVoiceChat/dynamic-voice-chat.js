@@ -2607,8 +2607,12 @@ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, han
             <WaveSurferPlayer url={recording?.result} {...default_wave_surfer_config} />
           </div>
         )}
-        <div className={` ${userType === "bot" ? "div53" : "div54"} div52 custom-voice-chat-chats`} id={chatId}>
-          <ReactMarkdown children={sanitizedContent} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="prose max-w-none" />
+        <div className={` ${userType === CHAT_SOURCE.BOT ? "div53" : "div54"} div52 custom-voice-chat-chats`} id={chatId}>
+          {userType === CHAT_SOURCE.USER ? (
+            <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</span>
+          ) : (
+            <ReactMarkdown children={sanitizedContent} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="prose max-w-none" />
+          )}
         </div>
       </div>
     </div>
