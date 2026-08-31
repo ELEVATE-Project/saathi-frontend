@@ -31,13 +31,15 @@ import useUserDataLocalStore from "store/slices/userData/userDataLocal"
 import { useChatStorage, useUserStorage, useSiteStorage } from "hooks/useStorage"
 import { useChatWebhook } from "../../hooks/useChatWebhook"
 import { useConfirmationPopup } from "hooks/useConfirmationPopup"
+import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import DOMPurify from "dompurify"
 import env from "../../utils/env"
 import MainHeader from "./shikshaChatHeader"
-import Notification, { showNotification } from "../../components/ToastMessage/TotastMessage"
+import Notification, { showNotification, showOfflineNotification } from "../../components/ToastMessage/TotastMessage"
+import PdfDownloader from "../story/upload-content/pdfDownloader"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
@@ -134,7 +136,15 @@ const DynamicVoiceChat = ({
   // Tracks the updated_at ID of the bot message whose chips have been used.
   // Once set, the chip bar is hidden until a new bot message with chips arrives.
   const [quickReplySentForMsgId, setQuickReplySentForMsgId] = useState(null)
-  const [isOffline, setIsOffline] = useState(typeof window !== "undefined" ? !navigator.onLine : false)
+  const { isOffline } = useNetworkStatus()
+
+  const checkIsOffline = useCallback(() => {
+    if (!navigator.onLine || isOffline) {
+      showOfflineNotification()
+      return true
+    }
+    return false
+  }, [isOffline])
 
   // ========== useSelector Hooks ==========
   const [chatHistory, setChatHistory, removeChatHistory, getChatHistory] = useSmartChatStorage()
@@ -221,8 +231,10 @@ const DynamicVoiceChat = ({
   }
 
   useEffect(() => {
-    validateToken()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!isOffline && navigator.onLine) {
+      validateToken().catch(() => {})
+    }
+  }, [isOffline]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== react query hooks ==========
   const {
@@ -797,6 +809,7 @@ const DynamicVoiceChat = ({
     } catch {
       return false
     }
+    if (checkIsOffline()) return false
 
     setLlmError("")
     handleOnStopSpeaking()
@@ -1102,96 +1115,6 @@ const DynamicVoiceChat = ({
 
   /**
    * Network monitoring - detects online/offline status and connection speed
-   * Shows toast notifications for network changes
-   */
-  useEffect(() => {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-    let toastId = null
-    let isSlowOrOffline = false
-
-    const handleOffline = () => {
-      setIsOffline(true)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("offlineNetwork"),
-        type: "error",
-        options: {
-          isOfflineToast: true,
-          autoClose: false,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#fff" },
-        },
-      })
-    }
-
-    const handleOnline = () => {
-      setIsOffline(false)
-      if (!isSlowOrOffline) return
-      isSlowOrOffline = false
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("onlineNetwork"),
-        type: "success",
-        options: {
-          autoClose: 3000,
-          closeButton: false,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#1D1616" },
-        },
-      })
-    }
-
-    const handleSlowNetwork = () => {
-      setIsOffline(false)
-      if (isSlowOrOffline) return
-      isSlowOrOffline = true
-      toast.dismiss()
-      toastId = showNotification({
-        message: t("networkWarning"),
-        type: "warn",
-        options: {
-          isOfflineToast: true,
-          autoClose: false,
-          closeButton: true,
-          position: "top-center",
-          style: { fontWeight: "bold", color: "#000" },
-        },
-      })
-    }
-
-    const checkNetworkSpeed = () => {
-      if (!navigator.onLine) {
-        handleOffline()
-        return
-      }
-      if (connection) {
-        const { effectiveType } = connection
-        if (effectiveType && (effectiveType === "2g" || effectiveType === "3g")) {
-          handleSlowNetwork()
-        } else if (isSlowOrOffline) {
-          handleOnline()
-        }
-      }
-    }
-
-    if (!navigator.onLine) {
-      handleOffline()
-    } else {
-      checkNetworkSpeed()
-    }
-    connection?.addEventListener("change", checkNetworkSpeed)
-    window.addEventListener("offline", handleOffline)
-    window.addEventListener("online", handleOnline)
-
-    return () => {
-      connection?.removeEventListener("change", checkNetworkSpeed)
-      window.removeEventListener("offline", handleOffline)
-      window.removeEventListener("online", handleOnline)
-    }
-  }, [])
 
   /**
    * Browser back button handling - intercepts browser navigation
@@ -1373,6 +1296,8 @@ const DynamicVoiceChat = ({
   const hasScrolledToBottomRef = useRef(false)
   useEffect(() => {
     hasScrolledToBottomRef.current = false
+    setActiveSourcesChatId(null)
+    setActiveSources([])
   }, [sessionId])
   useEffect(() => {
     if (isOldChatOpen === true && chatHistory?.length > 0 && !hasScrolledToBottomRef.current) {
@@ -1613,6 +1538,8 @@ const DynamicVoiceChat = ({
     disconnectFromWebSocket()
     setIsLoading(true)
     removeChatHistory()
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     setIsOldChatOpen(false)
     setIsNewChatOpen(true)
     setLlmError("")
@@ -1677,10 +1604,8 @@ const DynamicVoiceChat = ({
     e.preventDefault()
     const value = e.target.value
 
-    if (textMessage === "") {
-      validateToken().catch(() => {
-        setTextMessage("")
-      })
+    if (textMessage === "" && navigator.onLine && !isOffline) {
+      validateToken().catch(() => {})
     }
 
     setTextMessage(value)
@@ -1842,6 +1767,7 @@ const DynamicVoiceChat = ({
   }
 
   const startRecording = async () => {
+    if (checkIsOffline()) return
     try {
       await validateToken()
     } catch {
@@ -1884,6 +1810,7 @@ const DynamicVoiceChat = ({
                   options: {
                     position: "top-center",
                     autoClose: 6000,
+                    closeButton: true,
                     style: { fontWeight: "bold" },
                   },
                 })
@@ -1911,6 +1838,7 @@ const DynamicVoiceChat = ({
                   options: {
                     position: "top-center",
                     autoClose: 6000,
+                    closeButton: true,
                     style: { fontWeight: "bold" },
                   },
                 })
@@ -1941,6 +1869,7 @@ const DynamicVoiceChat = ({
   }
 
   const handleOpenProfileModal = async () => {
+    if (checkIsOffline()) return
     setShowProfileModal(true)
     // Reuse profileApiData already fetched during validateToken/validateSession to avoid duplicate API calls
     if (!profileApiData) {
@@ -2109,6 +2038,8 @@ const DynamicVoiceChat = ({
 
   async function handleSessionSelect(selectedSessionId) {
     if (selectedSessionId === sessionId) return
+    setActiveSourcesChatId(null)
+    setActiveSources([])
     try {
       await validateToken()
     } catch {
@@ -2193,15 +2124,24 @@ const DynamicVoiceChat = ({
               </div>
             )}
             <div className="chat-sidebar-footer">
-              <button className="chat-sidebar-user-trigger" onClick={handleOpenProfileModal}>
+              <div className="chat-sidebar-user-card">
+              <button className="chat-sidebar-user-info-btn" onClick={handleOpenProfileModal}>
                 <span className="chat-sidebar-user-avatar">
                   {((profileApiData?.name || firstName || t("user"))[0] || "U").toUpperCase()}
                 </span>
                 <span className="chat-sidebar-user-name">
                   {profileApiData?.name || firstName || t("user")}
                 </span>
+                </button>
+                <button
+                  className="chat-sidebar-logout-icon-btn"
+                  onClick={handleLogout}
+                  aria-label="Logout"
+                  title={t("logout")}
+                >
                 <FiLogOut className="chat-sidebar-logout-icon" />
               </button>
+              </div>
             </div>
           </aside>
           <Popup
@@ -2440,6 +2380,8 @@ const DynamicVoiceChat = ({
             className="form-1 flex flex-col"
             style={hasActiveFlexLayout ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}
             onSubmit={event => {
+              if (event) event.preventDefault()
+              if (checkIsOffline()) return
               if (!hasStartedListening && !isFetchingData) {
                 handleSendMessage(event)
               }
@@ -2486,8 +2428,9 @@ const DynamicVoiceChat = ({
                       key={idx}
                       label={chip}
                       size="sm"
-                      disabled={isOffline || hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                      disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                       onClick={async () => {
+                        if (checkIsOffline()) return
                         const msgId = lastBotMsg?.updated_at ?? "default_quick_reply"
                         if (quickReplyLockRef.current.has(msgId)) return
                         quickReplyLockRef.current.add(msgId)
@@ -2511,7 +2454,19 @@ const DynamicVoiceChat = ({
             {/* Input row: mic + timer + textarea + send */}
             <div className="div39 sm:p-[10px_35px] p-[10px_25px]">
             <div className={`audio-recorder ${isFetchingData ? "button-container" : ""}`}>
-              <button type="button" onClick={hasStartedRecording ? stopRecording : startRecording} disabled={!hasStartedRecording && (isOffline || isFetchingData)} className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!hasStartedRecording && checkIsOffline()) return
+                  if (hasStartedRecording) {
+                    stopRecording()
+                  } else {
+                    startRecording()
+                  }
+                }}
+                disabled={isFetchingData}
+                className={`button-7 sm:mr-[1.3rem] mr-[0.8rem] ${hasStartedRecording ? "button-8" : "button-9"}`}
+              >
                 {hasStartedRecording ? <FaRegStopCircle /> : <FaMicrophone />}
               </button>
             </div>
@@ -2531,7 +2486,7 @@ const DynamicVoiceChat = ({
                 name="message-box"
                 value={textMessage}
                 autoFocus={false}
-                disabled={isOffline || hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
+                disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                 ref={textAreaCallbackRef}
                 onInput={e => {
                   e.target.style.height = "auto"
@@ -2559,6 +2514,7 @@ const DynamicVoiceChat = ({
                   if (e.key === "Enter") {
                     if (e.shiftKey) {
                       e.preventDefault()
+                      if (checkIsOffline()) return
                       e.target.form.requestSubmit()
                       setTimeout(() => {
                         e.target.value = ""
@@ -2570,7 +2526,17 @@ const DynamicVoiceChat = ({
             </div>
             {isTyping && !hasStartedListening && !isFetchingData && (
               <div className="button-container">
-                <button type="submit" disabled={isOffline || hasStartedRecording || isFetchingData} className="button-6 sm:ml-[1.3rem] ml-[0.8rem]">
+                <button
+                  type={isOffline ? "button" : "submit"}
+                  disabled={hasStartedRecording || isFetchingData}
+                  onClick={e => {
+                    if (checkIsOffline()) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }
+                  }}
+                  className={`button-6 sm:ml-[1.3rem] ml-[0.8rem] ${isOffline ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
                   <MdSend />
                 </button>
               </div>

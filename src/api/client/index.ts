@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios"
 import env from "utils/env"
+import { showOfflineNotification } from "components/ToastMessage/showNotification"
 
 type TAPIConfig = {
   headers?: {
@@ -42,5 +43,15 @@ const axiosInstance = axios.create({
   baseURL: env.LOCAL_PROXY(),
   params: {},
 })
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== "undefined" && (!navigator.onLine || error?.code === "ERR_NETWORK")) {
+      showOfflineNotification()
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const apiClient = new ApiClient(axiosInstance)

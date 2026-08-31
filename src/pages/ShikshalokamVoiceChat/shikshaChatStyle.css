@@ -1477,6 +1477,36 @@ html, body {
   flex-shrink: 0;
 }
 
+.chat-sidebar-user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.chat-sidebar-user-card:hover {
+  background: #f3eef9;
+}
+
+.chat-sidebar-user-info-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
 .chat-sidebar-logout-btn {
   display: flex;
   align-items: center;
@@ -1499,27 +1529,30 @@ html, body {
   color: #fff;
 }
 
-.chat-sidebar-logout-icon {
-  font-size: 1rem;
+.chat-sidebar-logout-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
   flex-shrink: 0;
 }
 
-.chat-sidebar-user-trigger {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
+.chat-sidebar-logout-icon-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
 }
 
-.chat-sidebar-user-trigger:hover {
-  background: #f3eef9;
+.chat-sidebar-logout-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
 }
 
 .chat-sidebar-user-avatar {
@@ -1640,12 +1673,26 @@ html, body {
 .feedback-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1200;
   padding: 16px;
+}
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10001;
 }
 
 .feedback-modal {
@@ -1915,13 +1962,32 @@ html, body {
 
 .source-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.source-item.source-item--top {
+  align-items: flex-start;
+}
+
+.source-item.source-item--top .source-item-logo,
+.source-item.source-item--top .source-item-icon {
+  margin-top: 2px;
+}
+
+.source-item-anchor {
+  display: flex;
+  align-items: inherit;
+  gap: inherit;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
 }
 
 .source-item:hover {
@@ -1932,7 +1998,6 @@ html, body {
 .source-item-icon {
   font-size: 1.1rem;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .source-item-icon--web {
@@ -1944,11 +2009,10 @@ html, body {
 }
 
 .source-item-logo {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   flex-shrink: 0;
-  margin-top: 2px;
   border-radius: 4px;
 }
 
@@ -1971,11 +2035,6 @@ html, body {
   white-space: normal;
 }
 
-.source-item-title:hover {
-  color: #572e91;
-  text-decoration: underline;
-}
-
 .source-item-meta {
   display: flex;
   align-items: center;
@@ -1990,13 +2049,12 @@ html, body {
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  background: #ede9f5;
+  color: #572e91;
+  display: inline-block;
 }
 
-.source-item-badge--web {
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
+.source-item-badge--web,
 .source-item-badge--kb {
   background: #ede9f5;
   color: #572e91;
