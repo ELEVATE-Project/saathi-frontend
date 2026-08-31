@@ -8,7 +8,7 @@ import "./privacyPolicyPopup.css";
 import { useTranslation } from "react-i18next";
 
 
-const PrivacyPolicyPopup = ({ tncText, onAccept, onDecline, useStaticText=false, isGuestChat = true }) => {
+const PrivacyPolicyPopup = ({ tncText, onAccept, onDecline, useStaticText=false, isGuestChat = false }) => {
 
   useEffect(() => {
     document.body.style.overflow = "hidden";

@@ -2,7 +2,7 @@ import Notification, { showNotification } from "../../components/ToastMessage/To
 import "../../components/custom-style.css"
 import "../../index.css"
 import "./commonPageStyle.css"
-import { LANGUAGE_ENUMS } from "pages/ShikshalokamVoiceChat/enum"
+import { DEFAULT_LANGUAGE } from "pages/ShikshalokamVoiceChat/enum"
 import { useAudio } from "../../hooks/useAudio"
 import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useEffect, useMemo, useState, useCallback } from "react"
@@ -64,9 +64,7 @@ function CommonHomePage() {
 
   const languageSelected = hasSelectedLanguage || !!urlLanguage
   const saathiOnboardingDone =
-    isTncAccepted === true &&
-    isProfileComplete === true &&
-    !showProfilePopup
+    isTncAccepted === true
 
   const showTnCPopup =
     languageSelected &&
@@ -93,9 +91,8 @@ function CommonHomePage() {
     const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
     ;(async () => {
       try {
-        const data = await readElevateProfileApi(storedToken)
+        const data = await readElevateProfileApi(storedToken, { silent: true })
         if (data) {
-          clearFromStorage()
           const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
           store.setAccessToken(env.AUTH_METHOD() === "url" ? storedToken : true)
@@ -142,7 +139,7 @@ function CommonHomePage() {
     if (chatLanguage) return
 
     if (!urlLanguage && !languageButtonSelect) {
-      setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+      setChatLanguage(DEFAULT_LANGUAGE)
     }
   }, [chatLanguage])
 
@@ -400,10 +397,6 @@ function CommonHomePage() {
           useStaticText={false}
           isGuestChat={false}
         />
-      )}
-
-      {showProfilePopup && (
-        <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} />
       )}
 
       <div className="container max-w-full md mt-0 mx-auto grid md:grid-cols-2 px-0">

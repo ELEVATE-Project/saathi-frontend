@@ -1,15 +1,13 @@
 import "../../style.css"
 import "./shikshaChatStyle.css"
-import { AiOutlineEye } from "react-icons/ai"
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { clearFromStorage, handleS3Upload } from "../../services/storage_service"
-import { createUserProfileApi, updateUserProfileApi } from "api/endpoints/user"
+import { updateUserProfileApi } from "api/endpoints/user"
 import { validateSession } from "utils/session"
 import { logoutApi } from "api/endpoints/auth"
 import { createMessage } from "../interview-voice"
-import { getChatsFromDB, endStoryV2Api, getStoryBySessionAPI, updateStoryMediaApi, updateReflectionStatusApi, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
-import { extractStoryData, extractTextBlocks, getEditorContentBlocks, handleMultipleUploads } from "../../utils/story"
+import { getChatsFromDB, getAI4BharatAudioApi, ai4BharatASRApi, getFlowInfoApi } from "../../api/endpoints"
 import { FaCircle } from "react-icons/fa6"
 import { FaMicrophone, FaRegStopCircle } from "react-icons/fa"
 import { FiDownload, FiLogOut, FiPlus } from "react-icons/fi"
@@ -17,19 +15,14 @@ import UserProfileModal from "components/UserProfileModal"
 import MessageActionBar from "components/MessageActionBar"
 import SourcesPanel from "components/SourcesPanel"
 import { PROFILE_FORM_SCHEMA, PROFILE_MODAL_CONFIG, extractUserProfileData } from "constants/profileForm"
-import { FLOW_CONFIG } from "../../config/flowConfig"
 import { getChatSessionApi, getCompanyBotApi, fetchChatSessionPageApi } from "api/endpoints/chat"
 import { getSessionDetails } from "../../services/api.service"
-import { getStoryAllMedia, partialUpdateStoryById } from "api/endpoints/story"
 import { getTranslatedIntroMessageApi } from "api/endpoints/ai"
-import { GrGallery } from "react-icons/gr"
 import { HiMiniSpeakerWave, HiMiniSpeakerXMark } from "react-icons/hi2"
-import { LANGUAGE_ENUMS, languageList } from "./enum"
+import { languageList } from "./enum"
 import { sessionFlowName } from "../../constants/session"
-import { MdAccountCircle, MdEdit, MdSend } from "react-icons/md"
-import { RxCross2 } from "react-icons/rx"
+import { MdAccountCircle, MdSend } from "react-icons/md"
 import { setLanguage } from "../../i18n"
-import { TbReload } from "react-icons/tb"
 import { toast } from "react-toastify"
 import { useAudio } from "hooks/useAudio"
 import { useCallback, useEffect, useRef, useState, useMemo } from "react"
@@ -42,22 +35,15 @@ import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import Cookies from "universal-cookie"
 import DOMPurify from "dompurify"
-import EditorJS from "@editorjs/editorjs"
 import env from "../../utils/env"
-import Header from "@editorjs/header"
-import List from "@editorjs/list"
 import MainHeader from "./shikshaChatHeader"
 import Notification, { showNotification, showOfflineNotification } from "../../components/ToastMessage/TotastMessage"
-import PdfDownloader from "../story/upload-content/pdfDownloader"
 import ReactMarkdown from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 import Popup from "components/Popup"
 import Chip from "components/Chip"
-import ReportEditor from "components/ReportEditor"
-import ReportEditorAuth from "../../components/ReportEditorAuth"
 import ROUTES from "../../url"
 import Swal from "sweetalert2"
 import useCustomMediaQuery from "hooks/useCustomMediaQuery"
@@ -66,7 +52,6 @@ import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-vo
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
 
-const cookies = new Cookies()
 
 const PROFILE_FLOW = "saathi_profile"
 const SAATHI_PROFILE_BOT_ROUTE = "/saathi-profile"
@@ -110,18 +95,12 @@ const DynamicVoiceChat = ({
   const [audioCache, setAudioCache] = useState({})
   const [botNameToDisplay, setBotNameToDisplay] = useState("Bot")
   const [companySlug, setCompanySlug] = useState("")
-  const [editor, setEditor] = useState(null)
-  const [editorCopyChanges, setEditorCopyChanges] = useState(null)
-  const [fileErrorText, setFileErrorText] = useState("")
-  const [files, setFiles] = useState([])
   const [hasOverRideId, setHasOverRideId] = useState(null)
   const [hasStartedListening, setHasStartedListening] = useState(false)
   const [hasStartedRecording, setHasStartedRecording] = useState(false)
   const [intervalId, setIntervalId] = useState(null)
   const [isFetchingData, setIsFetchingData] = useState(false)
-  const [isImageUploading, setIsImageUploading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMute, setIsMute] = useState(true)
   const [speakerEnabled, setSpeakerEnabled] = useState(() => {
     try {
@@ -132,27 +111,18 @@ const DynamicVoiceChat = ({
     }
   })
   const [isNextAllowed, setIsNextAllowed] = useState(true)
-  const [isPdfDownloading, setIsPdfDownloading] = useState(false)
   const [isRecognizing, setIsRecognizing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [isStreamingComplete, setIsStreamingComplete] = useState(true)
   const [isTalking, setTalking] = useState(0)
   const [mediaRecorder, setMediaRecorder] = useState(null)
-  const [noStoryFound, setNoStoryFound] = useState(false)
-  const [reconText, setReconText] = useState("")
   const [activeSourcesChatId, setActiveSourcesChatId] = useState(null)
   const [activeSources, setActiveSources] = useState([])
   const hasActiveFlexLayout = showHistorySidebar || isPopupMode || !!activeSourcesChatId
   const [seconds, setSeconds] = useState(0)
   const [sentences, setSentences] = useState([])
   const [shouldFetchIntro, setShouldFetchIntro] = useState(false)
-  const [shouldSendMessage] = useState(true)
   const [ssoNavigationTriggered, setSsoNavigationTriggered] = useState(false)
-  const [storyData, setStoryData] = useState(null)
-  const [storyMediaIdArray] = useState(null)
   const [textMessage, setTextMessage] = useState("")
-  const [trigger, setTrigger] = useState(false)
-  const [triggerDownload, setTriggerDownload] = useState(false)
   const [downloadFileErrors, setDownloadFileErrors] = useState({})
   const [chatTitle, setChatTitle] = useState([])
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -183,7 +153,6 @@ const DynamicVoiceChat = ({
   const accessToken = _userData?.access_token ?? null
   const botName = useChatStorage()(state => state.botName)
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
-  const companyName = useUserStorage()(state => state.companyName)
   const firstName = useUserStorage()(state => state.firstName)
   const introMessage = useChatStorage()(state => state.introMessage)
   const isNewChatOpen = useChatStorage()(state => state.isNewChatOpen)
@@ -192,11 +161,9 @@ const DynamicVoiceChat = ({
   const preferredLanguage = useUserStorage()(state => state.preferredLanguage)
   const previousUrl = useSiteStorage()(state => state.previousUrl)
   const profileToUse = useUserStorage()(state => state.profileId)
-  const projectIdStore = useChatStorage()(state => state.projectId)
   const sessionId = useChatStorage()(state => state.sessionId)
   const setChatLanguage = useSiteDataSessionStore(state => state.setChatLanguage)
   const setHasSelectedLanguage = useSiteDataSessionStore(state => state.setHasSelectedLanguage)
-  const setLangProgress = useChatStorage()(state => state.setLangProgress)
   const setStorageFlow = useChatStorage()(state => state.setFlow)
   const setStrandStep = useChatDataSessionStore(state => state.setStrandStep)
   const showHomepage = useChatStorage()(state => state.showHomepage)
@@ -204,11 +171,10 @@ const DynamicVoiceChat = ({
   const stateMachineLength = useChatStorage()(state => state.stateMachineLength)
   const strandStep = useChatDataSessionStore(state => state.strandStep)
   const taskId = useChatStorage()(state => state.taskId)
-  const userState = useUserStorage()(state => state.state)
 
 
   // chat data actions
-  const { setShowHomepage, setBotName, setChatbotClickedOn, setDefaultBotName, setIntroMessage, setIsChatVisible, setIsNewChatOpen, setIsOldChatOpen, setSelectedType, setSessionId, setStateMachineLength } = useChatStorage().getState()
+  const { setShowHomepage, setBotName, setIntroMessage, setIsNewChatOpen, setIsOldChatOpen, setSessionId, setStateMachineLength } = useChatStorage().getState()
 
   // user data actions
   const { setCompanyName, setFirstName, setState } = useUserStorage().getState()
@@ -222,8 +188,6 @@ const DynamicVoiceChat = ({
   const [placeholderIsMultiLine, setPlaceholderIsMultiLine] = useState(false)
   const [placeholderHeight, setPlaceholderHeight] = useState(null)
   const lastBotMessageIndex = useRef(-1)
-  const isInitialLoadRef = useRef(true)
-  const endPageToScrollRef = useRef(null)
   const isIntroPlayed = useRef(false)
   const streamingBotMessageRef = useRef(null)
   const profileCompletedRef = useRef(false)
@@ -272,8 +236,6 @@ const DynamicVoiceChat = ({
   }, [isOffline]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== react query hooks ==========
-  const endStoryMutation = useMutation({ mutationFn: (data) => endStoryV2Api(data) })
-
   const {
     data: flowInfo,
     isError: isFlowInfoError,
@@ -327,8 +289,6 @@ const DynamicVoiceChat = ({
       botRoute
     ),
   })
-
-  const partialUpdateStoryByIdMutation = useMutation({ mutationFn: partialUpdateStoryById })
 
   const isSimpleBot = useMemo(() => {
     const bots = companyBotData?.results
@@ -474,14 +434,14 @@ const DynamicVoiceChat = ({
       type: "authenticate",
       sessionid: sessionId,
       profileid: profileToUse,
-      projectid: projectIdStore || searchParams.get("projectId") || "",
+      projectid: "",
       taskid: searchParams.get("taskId") || taskId,
       access_token: accessToken,
       route: chatLanguage,
       bot_route: botRoute,
       flow_name: storageFlow,
     })
-  }, [sessionId, profileToUse, projectIdStore, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
+  }, [sessionId, profileToUse, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
 
 
   
@@ -489,7 +449,7 @@ const DynamicVoiceChat = ({
     if (profileCompletedRef.current) return
     profileCompletedRef.current = true
     setShowHomepage(false)
-    setIsChatVisible(true)
+
     // Stop TTS from re-playing earlier sentences (audio queue flush).
     setSentences(prev => prev.map(s => ({ ...s, isNarrated: true })))
     // Write the thank-you bubble directly into chatHistory.
@@ -678,12 +638,6 @@ const DynamicVoiceChat = ({
 
   // ========== useMemo Hooks ==========
 
-  const projectId = useMemo(() => projectIdStore || searchParams.get("projectId"), [projectIdStore, searchParams])
-
-  const shouldFetchChatSession = useMemo(() => {
-    return storageFlow && [sessionFlowName.Reflection].includes(storageFlow)
-  }, [storageFlow])
-
   const isInitialising = useMemo(() => {
     return !sessionId || chatHistory?.length === 0
   }, [sessionId, chatHistory])
@@ -742,98 +696,6 @@ const DynamicVoiceChat = ({
     setChatHistory(chat_history)
 
     return chat_history
-  }
-
-  async function partialMediaUpdate(updateId, include_in_story = false) {
-    try {
-      setIsLoading(true)
-      const formData = {
-        include_in_story: include_in_story,
-        flow: storageFlow,
-        access_token: accessToken,
-        session: sessionId,
-      }
-      await updateStoryMediaApi({ token: accessToken, data: formData, mediaId: updateId, partialUpdate: true })
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  async function onEditorSave() {
-    try {
-      setIsLoading(true)
-      setIsSaving(true)
-      const outputData = await editor.save()
-      const flow = storageFlow
-
-      let updatePayload = {
-        id: storyData?.id,
-        access_token: accessToken,
-        session: sessionId,
-        flow,
-      }
-
-      const blocks = outputData?.blocks || []
-      const story_params = extractStoryData(flow, blocks)
-
-      if (story_params) {
-        updatePayload["other_params"] = {
-          ...story_params,
-        }
-
-        if (storyData?.other_params) {
-          updatePayload["other_params"] = {
-            ...storyData?.other_params,
-            ...story_params,
-          }
-        }
-      } else {
-        updatePayload["formatted_content"] = outputData?.blocks
-      }
-
-      const result = await partialUpdateStoryByIdMutation.mutateAsync({
-        token: accessToken,
-        data: updatePayload,
-        storyId: updatePayload.id,
-      })
-      setStoryData(result)
-      
-      /**
-       * * Navigation handled differently if authenticated user
-       */
-      if (accessToken) {
-        await updateReflectionStatusApi(projectId, "completed", sessionFlowName.SsoFlow, accessToken)
-        console.log("clearing storage")
-        clearFromStorage()
-        console.log("History length:", window.history.length)
-        console.log("Can go back 1?", window.history.length > 1)
-        console.log("Can go back 3?", window.history.length > 3)
-        setSsoNavigationTriggered(true)
-        const message = { type: "MItra", name: "MItra" }
-        setTimeout(() => {
-          window.postMessage(message, "*")
-          console.log("Postmessage called")
-        }, 500)
-
-        console.log("navigating from the condtion to -3")
-        navigate(-3, { replace: true })
-      }
-      setEditorCopyChanges(extractTextBlocks(result.formatted_content))
-      setIsModalOpen(false)
-    } catch (error) {
-      console.error("Saving failed: ", error)
-      if (accessToken) {
-        clearFromStorage()
-        navigate(-1)
-      } else {
-        window.location.reload()
-      }
-    } finally {
-      setIsLoading(false)
-      setIsSaving(false)
-    }
   }
 
   /**
@@ -950,7 +812,7 @@ const DynamicVoiceChat = ({
 
     setLlmError("")
     handleOnStopSpeaking()
-    setIsChatVisible(true)
+
     setShowHomepage(false)
     setIsMute(true)
     if (audioRef.current) {
@@ -967,7 +829,7 @@ const DynamicVoiceChat = ({
         type: "authenticate",
         sessionid: sessionId,
         profileid: profileToUse,
-        projectid: projectIdStore || searchParams.get("projectId") || "",
+        projectid: "",
         taskid: searchParams.get("taskId") || taskId,
         access_token: accessToken,
         route: chatLanguage,
@@ -1160,9 +1022,6 @@ const DynamicVoiceChat = ({
   // SECTION: Variable Definitions
   // ========================================================================
   // const { access_token } =  getStorageSlice(STORE_NAME_CONSTANTS.USER_DATA, 'localStorage').getState();
-  const { showFileInput, setShowFileInput } = useChatDataSessionStore.getState()
-  const fileExceedText = t("fileExceedText")
-  const fileSizeText = t("fileSizeText")
   let isMobile = useCustomMediaQuery("(max-width: 500px)")
 
   useEffect(() => {
@@ -1177,16 +1036,12 @@ const DynamicVoiceChat = ({
     const botName = introMessageData[0]?.name || "Bot"
 
     setBotName(botName)
-    setDefaultBotName(introMessageData[0]?.default_name)
     setBotNameToDisplay(botName)
 
     if (isOldChatOpen) {
       getSessionInfo().then(sessionInfo => {
         if (sessionInfo && sessionInfo.length > 0) {
           setStrandStep(sessionInfo[0]?.current_step)
-          if (sessionInfo[0]?.session_type) {
-            setSelectedType(sessionInfo[0]?.session_type)
-          }
         }
       })
     }
@@ -1206,6 +1061,11 @@ const DynamicVoiceChat = ({
           id: "intro_msg_id",
         },
       ])
+      // Add intro to chatHistory so isInitialising becomes false and the loader clears
+      const currentHistory = getChatHistory()
+      if (!currentHistory.some(c => c.updated_at === "intro_msg_id")) {
+        setChatHistory([...currentHistory, { msg: message, source: "bot", updated_at: "intro_msg_id", received: true }])
+      }
       setHasOverRideId("intro_msg_id")
       setIsMute(false)
       setIsNextAllowed(true)
@@ -1275,11 +1135,7 @@ const DynamicVoiceChat = ({
         setLanguage(languageList[0].value)
         setChatLanguage(languageList[0].value)
         stopAllAudio()
-        if (accessToken) {
-          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
-        } else {
-          navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
-        }
+        navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
       }
     }
 
@@ -1319,89 +1175,13 @@ const DynamicVoiceChat = ({
     }
   }, [])
 
-  /**
-   * Initialize language selection for guest flows on mount
-   * Handles language change for guest users
-   */
-  useEffect(() => {
-    const handleLanguageSelect = language => {
-      if (chatHistory && !chatHistory.length) {
-        stopAllAudio()
-        isIntroPlayed.current = false
-        // setIsLoading(true)
-        // setIntroMessage(null)
-        setChatHistory([])
-        setSentences([])
-        setLangProgress("IN_PROGRESS")
-        setAudioCache({})
-        setLanguage(language)
-        setShouldFetchIntro(true)
-      }
-    }
-    if (chatLanguage && storageFlow) {
-      // setIsLoading(true)
-      handleLanguageSelect(chatLanguage)
-    }
-  }, [chatLanguage, storageFlow])
-
   // ========================================================================
   // SECTION: User Profile & Authentication (Execution Order: 3 - On Token Available)
   // These effects handle user authentication and profile creation
   // ========================================================================
 
-  /**
-   * Create user profile for authenticated users
-   * Fetches user details, creates session, and initializes user-specific data
-   */
   useEffect(() => {
-    async function createUserProfile() {
-      try {
-        setIsLoading(true)
-
-        const response = await createUserProfileApi({
-          access_token: accessToken,
-        })
-
-        if (response) {
-          const data = response.profile_details
-          const userPreferredLanguage = preferredLanguage || {}
-          let language = LANGUAGE_ENUMS.ENGLISH
-          if (userPreferredLanguage) {
-            language = userPreferredLanguage.value
-          } else if (languageToUse) {
-            language = languageToUse
-          }
-          // setStorageFlow(type)
-          setChatLanguage(language)
-          setLanguage(language)
-          setProfileToUse(data?.id)
-          if (!sessionId) {
-            let session = await getSessionDetails()
-            setSessionId(session.sessionid)
-          }
-          setFirstName(data?.first_name)
-          setCompanyName(data?.company?.slug)
-          setState(data?.profile_address[0]?.state)
-          setIsNewChatOpen(true)
-        } else {
-          if (!isPopupMode) {
-            clearFromStorage()
-            navigate(-1)
-          }
-        }
-      } catch (error) {
-        console.error(error)
-        if (!isPopupMode) {
-          clearFromStorage()
-          navigate(-1)
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     if (!profileToUse && accessToken) {
-      // createUserProfile()
       setShouldFetchIntro(true)
       setIsStreamingComplete(true)
     }
@@ -1422,15 +1202,20 @@ const DynamicVoiceChat = ({
         setIsLoading(true)
         const existingHistory = getChatHistory()
         if (!sessionId) {
+          removeChatHistory()
           const session = await getSessionDetails()
           setSessionId(session.sessionid)
+          setIsOldChatOpen(false)
           setIsNewChatOpen(true)
+          setShowHomepage(true)
         } else if (existingHistory.length > 0) {
           // Reload mid-onboarding: restore existing conversation
           setIsOldChatOpen(true)
           setIsNewChatOpen(false)
         } else {
+          setIsOldChatOpen(false)
           setIsNewChatOpen(true)
+          setShowHomepage(true)
         }
         setShouldFetchIntro(true)
         setIsStreamingComplete(true)
@@ -1441,25 +1226,6 @@ const DynamicVoiceChat = ({
       }
     })()
   }, [isPopupMode, accessToken, profileToUse])
-
-  /**
-   * Fetch chat session for Reflection flow based on projectId
-   * Retrieves existing session for project-based reflections
-   */
-  useEffect(() => {
-    async function fetchChatSession() {
-      let response = null
-      response = await getChatSessionApi({ projectId, sessionId }).then(res => res.data)
-      if (!response) return
-      if (response.results.length === 0) return
-      setSessionId(response.results[0].session)
-      setIsOldChatOpen(true)
-      setIsNewChatOpen(false)
-    }
-
-    if (!shouldFetchChatSession) return
-    fetchChatSession()
-  }, [projectId, shouldFetchChatSession])
 
   // ========================================================================
   // SECTION: Session & Chat Configuration (Execution Order: 4 - After Auth)
@@ -1478,6 +1244,25 @@ const DynamicVoiceChat = ({
   }, [isShikshalokamPublicType])
 
   /**
+   * Initialize i18next language and trigger intro fetch.
+   * On new chat (empty session storage): clears state and fetches intro.
+   * On refresh (session storage has history): syncs language, preserves chat.
+   */
+  useEffect(() => {
+    if (!chatLanguage || !storageFlow) return
+    setLanguage(chatLanguage)
+
+    if (getChatHistory().length > 0) return
+
+    stopAllAudio()
+    isIntroPlayed.current = false
+    setChatHistory([])
+    setSentences([])
+    setAudioCache({})
+    setShouldFetchIntro(true)
+  }, [chatLanguage, storageFlow])
+
+  /**
    * Handle chat history feature visibility and homepage display
    * Controls homepage vs chat view based on new/old chat state
    */
@@ -1485,7 +1270,10 @@ const DynamicVoiceChat = ({
     if (shouldShowChatHistoryFeature) {
       if (isOldChatOpen === true) {
         setShouldFetchIntro(true)
-        setShowHomepage(false)
+        // Only hide homepage if there are real conversation messages beyond the intro
+        const history = getChatHistory()
+        const hasRealMessages = history.some(c => c.updated_at !== "intro_msg_id")
+        setShowHomepage(!hasRealMessages)
       } else if (isNewChatOpen === true) {
         setShowHomepage(true)
       }
@@ -1532,175 +1320,8 @@ const DynamicVoiceChat = ({
   // These effects fetch bot information and set up language-specific configuration
   // ========================================================================
 
-  /**
-   * Set language progress to complete when intro message loads
-   * Marks language selection as complete after successful load
-   */
-  useEffect(() => {
-    if (introMessage && !isLoading) {
-      setLangProgress(true)
-    }
-  }, [isLoading, introMessage])
-
-  // ========================================================================
-  // SECTION: Story & Media Management (Execution Order: 6 - When Session Ready)
-  // These effects handle story creation, media uploads, and completion
-  // ========================================================================
-
-  /**
-   * Fetch story content by session ID
-   * Retrieves story data and prepares editor content blocks
-   */
-  useEffect(() => {
-    if (!sessionId || isSimpleBot) return
-
-    async function fetchStory() {
-      const story_data = await getStoryBySessionAPI(sessionId, accessToken)
-      if (story_data && story_data?.length > 0 && story_data[0]) {
-        setStoryData(story_data[0])
-        const formatted_content = story_data[0].formatted_content
-        const textBlocks = extractTextBlocks(formatted_content)
-        setEditorCopyChanges(textBlocks)
-        setNoStoryFound(false)
-        setShowFileInput(true)
-        setIsLoading(false)
-      } else {
-        setIsLoading(false)
-        if (!llmError) {
-          setNoStoryFound(true)
-        }
-      }
-    }
-
-    fetchStory()
-  }, [sessionId])
-
-  /**
-   * Fetch media files associated with story
-   * Loads images and media items included in the story
-   */
-  useEffect(() => {
-    const fetchMedia = async () => {
-      if (storyData && storyData?.id !== "") {
-        if (accessToken) {
-          openModal()
-        }
-        const story_id = storyData?.id
-        const tempMediaArr = []
-        setIsImageUploading(true)
-
-        try {
-          const data = await getStoryAllMedia({
-            data: {
-              story: story_id,
-            },
-          })
-
-          for (let item of Object.values(data?.results || [])) {
-            if (item.include_in_story) {
-              tempMediaArr.push(item)
-            }
-          }
-          setFiles(tempMediaArr)
-          setIsImageUploading(false)
-        } catch (error) {
-          console.error("Error fetching story media:", error)
-          setIsImageUploading(false)
-        }
-      }
-    }
-
-    fetchMedia()
-
-    return () => {}
-  }, [accessToken, storyData])
-
-  /**
-   * Trigger story completion when conversation reaches end
-   * Calls end-story API when all state machine steps complete
-   * * DO NOT END STORY FOR PARENT PERCEPTION SURVEY
-   */
-  useEffect(() => {
-    if (!flowInfo) return
-
-    if (flowInfo.create_story === "none" || isSimpleBot) {
-      return
-    }
-
-    if (!endStoryMutation.isPending && isStreamingComplete && stateMachineLength && strandStep >= stateMachineLength && noStoryFound && (!llmError || llmError === "")) {
-      callEndStory()
-    }
-  }, [isStreamingComplete, accessToken, stateMachineLength, languageToUse, noStoryFound, storageFlow, sentences])
 
 
-
-
-
-  /**
-   * * Display Popup for the flows where end story api is not being called
-   */
-  useEffect(() => {
-    if (isPopupMode) return
-
-    let survey_title = "PPsCompletionMessage"
-
-    const paramsMap = {
-      [sessionFlowName.ShikshaSamvad]: "shiksha_samvad_", 
-      [sessionFlowName.DelhiShikshaSamvad]: "delhi_shiksha_",
-      [sessionFlowName.OdishaYouth]: "odisha_youth_",
-      [sessionFlowName.OdishaYouthAI]: "odisha_youth_",
-      [sessionFlowName.StudyTeacherInterview]: "fgd_teacher_",
-      [sessionFlowName.StakeholderFGD]: "stakeholder_fgd_",
-      [sessionFlowName.BiharStudentFGD]: "bihar_student_fgd_",
-      [sessionFlowName.CommunityFGD]: "bihar_student_fgd_",
-      [sessionFlowName.XylemX_entrepreneurship_development]: "xylemx_entrepreneurship_development_",
-    }
-
-    if (paramsMap[storageFlow]) {
-      survey_title = paramsMap[storageFlow] + survey_title
-    }
-
-    const isLastMessageFromBot = chatHistory.length > 0 && chatHistory[chatHistory.length - 1]?.source === "bot"
-    if (
-      storageFlow &&
-      flowInfo?.create_story === "none" &&
-      isSimpleBot === false &&
-      isStreamingComplete &&
-      stateMachineLength &&
-      strandStep >= stateMachineLength &&
-      isLastMessageFromBot
-    ) {
-      Swal.fire({
-        title: t(survey_title),
-        showCancelButton: false,
-        confirmButtonText: t("PPsCompletionCTA"),
-        showConfirmButton: ![sessionFlowName.ShikshaSamvad, sessionFlowName.DelhiShikshaSamvad, sessionFlowName.OdishaYouth, sessionFlowName.OdishaYouthAI, sessionFlowName.TelanganaPTMPilot].includes(storageFlow),
-        showCloseButton: false,
-        allowEscapeKey: false,
-        allowOutsideClick: false,
-        imageUrl: "https://static-media.gritworks.ai/fe-images/PNG/Shikshalokam/check-mark.png",
-        imageHeight: "100",
-      }).then(result => {
-        if (result.isConfirmed) {
-          clearFromStorage()
-          setLanguage(LANGUAGE_ENUMS.ENGLISH)
-          setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
-          setHasSelectedLanguage(false)
-          stopAllAudio()
-          navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
-          window.location.reload()
-        }
-      })
-    }
-  }, [
-    isStreamingComplete,
-    strandStep,
-    stateMachineLength,
-    storageFlow,
-    chatHistory,
-    flowInfo,
-    isPopupMode,
-  ])
 
   // ========================================================================
   // SECTION: UI State Management (Execution Order: 7 - Throughout Lifecycle)
@@ -1712,7 +1333,7 @@ const DynamicVoiceChat = ({
    * Prevents background scrolling when modals or loaders are active
    */
   useEffect(() => {
-    if (isLoading || endStoryMutation.isPending || isModalOpen) {
+    if (isLoading) {
       document.body.style.overflowY = "hidden"
     } else {
       document.body.style.overflowY = "auto"
@@ -1721,21 +1342,7 @@ const DynamicVoiceChat = ({
     return () => {
       document.body.style.overflowY = "auto"
     }
-  }, [isLoading, endStoryMutation.isPending, isModalOpen])
-
-  /**
-   * Auto-dismiss file upload error messages after 5 seconds
-   * Clears error text to improve user experience
-   */
-  useEffect(() => {
-    const textErrorTime = setTimeout(() => {
-      setFileErrorText("")
-    }, 5000)
-
-    return () => {
-      clearTimeout(textErrorTime)
-    }
-  }, [fileErrorText])
+  }, [isLoading])
 
   /**
    * Track voice recording duration with timer
@@ -1777,18 +1384,8 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     lastBotMessageIndex.current = chatHistory?.length - 1
-    if (!showFileInput && !(isOldChatOpen && !hasScrolledToBottomRef.current)) handleScrollToView()
+    if (!(isOldChatOpen && !hasScrolledToBottomRef.current)) handleScrollToView()
   }, [chatHistory])
-
-  /**
-   * Scroll to end of page when file input section appears
-   * Ensures user sees upload controls after story completion
-   */
-  useEffect(() => {
-    if (!isLoading && showFileInput) {
-      endPageToScrollRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [isLoading, showFileInput])
 
   /**
    * Attach audio recordings to user messages in chat history
@@ -1807,20 +1404,6 @@ const DynamicVoiceChat = ({
     return () => {}
   }, [recordings, chatHistory])
 
-  /**
-   * Reset recognition text and trigger state after processing
-   * Manages voice recognition cleanup after message processing
-   */
-  useEffect(() => {
-    try {
-      if (!!trigger && !!reconText) {
-        setReconText("")
-        setTrigger(false)
-      }
-    } catch (error) {
-      console.error({ error })
-    }
-  }, [reconText, trigger, recordings])
 
   // ========================================================================
   // SECTION: Audio & TTS Management (Execution Order: 9 - During Message Playback)
@@ -1854,9 +1437,7 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     let shouldPlay = false
-    if (showFileInput) {
-      shouldPlay = true
-    } else if ((noStoryFound || noStoryFound === null) && !isIntroMessageLoading && !isLoading && !endStoryMutation.isPending) {
+    if (!isIntroMessageLoading && !isLoading) {
       const currentFlow = storageFlow
 
       if (currentFlow) {
@@ -1867,11 +1448,11 @@ const DynamicVoiceChat = ({
         } else {
           shouldPlay = true
         }
-      } else if (chatHistory && chatHistory.length > 0 && chatHistory[chatHistory.length - 1]?.source === "bot" && !isIntroMessageLoading && !isLoading && !endStoryMutation.isPending) {
+      } else if (chatHistory && chatHistory.length > 0 && chatHistory[chatHistory.length - 1]?.source === "bot" && !isIntroMessageLoading && !isLoading) {
         shouldPlay = true
       }
     }
-    if (isStreamingComplete && hasStreamedRef.current && shouldPlay && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && isMute && !isIntroMessageLoading && speakerEnabled) {
+    if (isStreamingComplete && hasStreamedRef.current && shouldPlay && !isLoading && isMute && !isIntroMessageLoading && speakerEnabled) {
       const speakerButtons = document.querySelectorAll(".button-11.button-3")
       const lastSpeakerButton = speakerButtons[speakerButtons.length - 1]
 
@@ -1879,7 +1460,7 @@ const DynamicVoiceChat = ({
         lastSpeakerButton.click()
       }
     }
-  }, [isStreamingComplete, showFileInput, showHomepage, endStoryMutation.isPending, isLoading, isPdfDownloading, storyData, chatHistory, isMute, isIntroMessageLoading, noStoryFound, speakerEnabled])
+  }, [isStreamingComplete, showHomepage, isLoading, chatHistory, isMute, isIntroMessageLoading, speakerEnabled])
 
   /**
    * Process TTS requests for unnarrated bot messages
@@ -1889,269 +1470,12 @@ const DynamicVoiceChat = ({
     let unnarratedMessages = sentences.filter(x => !x?.isNarrated)
     let hasUnnarratedMessages = !!unnarratedMessages?.length
     let sourceLanguage = languageToUse
-    if (isNextAllowed && hasUnnarratedMessages && !isLoading && !endStoryMutation.isPending && flowInfo) {
+    if (isNextAllowed && hasUnnarratedMessages && !isLoading && flowInfo) {
       handleAI4BharatTTSRequest(unnarratedMessages[0].message, unnarratedMessages[0].id, sourceLanguage)
     }
 
     return () => {}
-  }, [isNextAllowed, sentences, languageToUse, isLoading, endStoryMutation.isPending, flowInfo])
-
-  // ========================================================================
-  // SECTION: Editor Management (Execution Order: 10 - When Modal Opens)
-  // These effects initialize and manage the EditorJS instance for story editing
-  // ========================================================================
-
-  /**
-   * Initialize EditorJS when modal opens with story data
-   * Configures editor with flow-specific content (challenges/solutions or Q&A)
-   */
-  useEffect(() => {
-    if (!!editorCopyChanges && isModalOpen && storyData) {
-      const flow = storageFlow
-      let parsed_content = getEditorContentBlocks(storyData?.other_params, flow, editorCopyChanges)
-
-      if (!document.getElementById("editorjs")) {
-        return
-      }
-
-      const _editor = new EditorJS({
-        holder: "editorjs",
-        placeholder: t("editorPlaceholder"),
-        autofocus: true,
-        hideToolbar: true,
-        tools: {
-          header: {
-            class: Header,
-            inlineToolbar: false,
-          },
-          list: {
-            class: List,
-            inlineToolbar: false,
-            config: {
-              defaultStyle: "unordered",
-            },
-          },
-        },
-        onReady: () => {
-          setEditor(_editor)
-          const style = document.createElement("style")
-          style.innerHTML = `
-            .ce-toolbar__plus, .ce-toolbar__actions { display: none !important; }
-            .ce-popover, .ce-settings, .ce-settings__button { display: none !important; }
-            .ce-block--selected .ce-block__drag-handle { display: none !important; }
-            .ce-inline-toolbar { display: none !important; }
-            .ce-block--selected { outline: none !important; }
-            
-            /* Style for spacer blocks */
-            .spacer-block {
-              min-height: 0.75rem !important;
-              background: transparent !important;
-              border: none !important;
-              pointer-events: none !important;
-              user-select: none !important;
-              cursor: default !important;
-              margin: 0.5rem 0 !important;
-              position: relative;
-            }
-            
-            .spacer-block .ce-paragraph {
-              pointer-events: none !important;
-              user-select: none !important;
-              outline: none !important;
-              cursor: default !important;
-              opacity: 0 !important;
-              min-height: 0.75rem !important;
-            }
-            
-            .spacer-block::before {
-              content: '';
-              display: block;
-              width: 100%;
-              height: 1px;
-              background-color: #e5e7eb;
-              position: absolute;
-              top: 50%;
-              left: 0;
-              transform: translateY(-50%);
-            }
-            
-            /* Add visual separation after answer paragraphs */
-            .answer-paragraph {
-              margin-bottom: 0.5rem !important;
-              padding-bottom: 0.5rem !important;
-            }
-            
-            /* Question header styling */
-            .question-header {
-              color: #374151 !important;
-              font-weight: bold !important;
-              margin-top: 2rem !important;
-              margin-bottom: 1rem !important;
-            }
-            
-            .question-header:first-child {
-              margin-top: 0 !important;
-            }
-            
-            /* Non-deletable block styling */
-            .non-deletable {
-              position: relative;
-            }
-            
-            .non-deletable::after {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              pointer-events: none;
-              z-index: 1;
-            }
-          `
-          document.head.appendChild(style)
-          setTimeout(() => {
-            const blocks = document.querySelectorAll(".ce-block")
-
-            blocks.forEach(block => {
-              const headerEl = block.querySelector(".ce-header")
-              const paragraphEl = block.querySelector(".ce-paragraph")
-
-              if (headerEl) {
-                const text = headerEl.innerText.trim().toLowerCase()
-
-                if (text === t("challengesHeader").toLowerCase() || text === t("solutionsHeader").toLowerCase() || (text.startsWith("q") && text.includes(":"))) {
-                  headerEl.setAttribute("contenteditable", "false")
-                  headerEl.style.pointerEvents = "none"
-                  headerEl.style.color = "#374151"
-                  headerEl.style.fontWeight = "bold"
-
-                  if (text.startsWith("q") && text.includes(":")) {
-                    headerEl.classList.add("question-header")
-
-                    block.classList.add("non-deletable")
-                    block.setAttribute("data-readonly", "true")
-
-                    const preventDeletion = e => {
-                      if (e.key === "Backspace" || e.key === "Delete") {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        return false
-                      }
-                    }
-
-                    block.addEventListener("keydown", preventDeletion, true)
-                    headerEl.addEventListener("keydown", preventDeletion, true)
-
-                    block.addEventListener(
-                      "contextmenu",
-                      e => {
-                        e.preventDefault()
-                        return false
-                      },
-                      true
-                    )
-
-                    block.style.userSelect = "none"
-                    block.style.webkitUserSelect = "none"
-                    block.style.mozUserSelect = "none"
-                    block.style.msUserSelect = "none"
-                  }
-                }
-              } else if (paragraphEl) {
-                const paragraphText = paragraphEl.textContent || paragraphEl.innerText || ""
-                const isEmpty = !paragraphText.trim() || paragraphText === "​" || paragraphText === " "
-
-                const prevBlock = block.previousElementSibling
-                const prevPrevBlock = prevBlock?.previousElementSibling
-
-                const isPrevBlockAnswer = prevBlock?.querySelector(".ce-paragraph")
-                const isPrevPrevBlockQuestion = prevPrevBlock?.querySelector(".ce-header")?.innerText.toLowerCase().startsWith("q")
-
-                if (isEmpty && isPrevBlockAnswer && isPrevPrevBlockQuestion) {
-                  block.classList.add("spacer-block")
-                  paragraphEl.setAttribute("contenteditable", "false")
-                  paragraphEl.style.pointerEvents = "none"
-                  paragraphEl.style.userSelect = "none"
-                  paragraphEl.style.cursor = "default"
-
-                  const preventInteraction = e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.stopImmediatePropagation()
-                    return false
-                  }
-
-                  block.addEventListener("click", preventInteraction, true)
-                  block.addEventListener("mousedown", preventInteraction, true)
-                  block.addEventListener(
-                    "focus",
-                    e => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (e.target.blur) e.target.blur()
-                      return false
-                    },
-                    true
-                  )
-                  block.addEventListener("keydown", preventInteraction, true)
-                  block.addEventListener("keyup", preventInteraction, true)
-                  block.addEventListener("input", preventInteraction, true)
-
-                  block.style.userSelect = "none"
-                  block.style.webkitUserSelect = "none"
-                  block.style.mozUserSelect = "none"
-                  block.style.msUserSelect = "none"
-                }
-                //  else if (isPrevBlockAnswer === false && prevBlock?.querySelector(".ce-header")?.innerText.toLowerCase().startsWith("q")) {
-                //   paragraphEl.classList.add("answer-paragraph")
-                // }
-              }
-            })
-          }, 500)
-        },
-        defaultBlock: "paragraph",
-        data: {
-          blocks: parsed_content.length > 0 ? parsed_content : [{ type: "paragraph", data: { text: "" } }],
-        },
-        onChange: async (api) => {
-          setIsSaving(false)
-          const savedData = await api.saver.save()
-
-          const filteredBlocks = savedData.blocks.filter((block) => {
-            if (block.type === "paragraph") {
-              const isEmpty = !block.data.text.trim() || block.data.text === "​" || block.data.text === " "
-              return !isEmpty
-            }
-            return true
-          })
-
-          const imageBlocks = filteredBlocks.filter(block => block.type === "image")
-          if (!isInitialLoadRef.current) {
-            if (storyMediaIdArray?.length !== imageBlocks?.length) {
-              for (let i = 0; i < storyMediaIdArray?.length; i++) {
-                const storyFile = storyMediaIdArray[i]
-                let fileFound = false
-                for (let j = 0; j < imageBlocks?.length; j++) {
-                  if (storyFile?.file === imageBlocks[j]?.data?.url) {
-                    fileFound = true
-                    break
-                  }
-                }
-                if (!fileFound) {
-                  partialMediaUpdate(storyFile?.id)
-                }
-              }
-            }
-          }
-        },
-      })
-    }
-
-    return () => {
-      if (!!Object.keys(editor || {})?.length) editor.destroy()
-    }
-  }, [editorCopyChanges, isModalOpen, storyData])
+  }, [isNextAllowed, sentences, languageToUse, isLoading, flowInfo])
 
   const formatTime = secs => {
     const minutes = Math.floor(secs / 60)
@@ -2159,52 +1483,10 @@ const DynamicVoiceChat = ({
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
   }
 
-  async function callEndStory(hasClickedOnRegenerate = false) {
-    let endStoryResponse
-    if ((isStreamingComplete && strandStep >= stateMachineLength) || hasClickedOnRegenerate) {
-      try {
-        setIsLoading(true)
-
-        let sourceLanguage = preferredLanguage?.value || languageToUse
-        endStoryResponse = await endStoryMutation.mutateAsync({
-          token: accessToken,
-          data: {
-            session: sessionId,
-            profile_id: profileToUse,
-            stage: "COMPLETED",
-            flow: storageFlow,
-            language: sourceLanguage,
-          },
-        })
-
-        if (endStoryResponse?.id) {
-          setFiles([])
-          setShowFileInput(true)
-          setLlmError("")
-          window.location.reload()
-        } else {
-          setLlmError(endStoryResponse?.error_message)
-          setIsLoading(false)
-        }
-      } catch (error) {
-        console.error("Error completing the story:", error)
-        setLlmError(error?.response?.data?.error_message)
-        setIsLoading(false)
-      } finally {
-        setNoStoryFound(false)
-      }
-    }
-  }
-
   const navigateBack = () => {
     stopAllAudio()
     setHasSelectedLanguage(false)
     navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE, { replace: true })
-  }
-
-  function navigateSsoFlow() {
-    console.log("navigating -2")
-    navigate(-2)
   }
 
   async function downloadFileFromUrl(url, fileName, onError) {
@@ -2226,13 +1508,6 @@ const DynamicVoiceChat = ({
       console.error("Download failed:", error)
       onError?.()
     }
-  }
-
-  const handleDownloadStop = () => {
-    setTriggerDownload(false)
-    setIsLoading(false)
-    setIsPdfDownloading(false)
-    window.location.reload()
   }
 
   async function resetChat(e) {
@@ -2266,14 +1541,13 @@ const DynamicVoiceChat = ({
     setActiveSources([])
     setIsOldChatOpen(false)
     setIsNewChatOpen(true)
-    setShowFileInput(false)
     setLlmError("")
     setSessionId(null)
     setStrandStep(null)
     const session = await getSessionDetails()
     setSessionId(session.sessionid)
-    setIsChatVisible(false)
-    setChatbotClickedOn("")
+
+
     setShowHomepage(true)
     setIsLoading(false)
 
@@ -2315,14 +1589,6 @@ const DynamicVoiceChat = ({
   }
 
   // ========================================================================
-  const closeModal = () => {
-    setIsModalOpen(false)
-  }
-
-  const openModal = () => {
-    setIsModalOpen(true)
-  }
-
   function handleScrollToView() {
     try {
       document?.querySelector("#last-chat-boundary")?.scrollIntoView({
@@ -2330,57 +1596,6 @@ const DynamicVoiceChat = ({
       })
     } catch (error) {
       console.error({ error })
-    }
-  }
-
-  const pdfDownloadSidebar = async sessionid => {
-    try {
-      setIsLoading(true)
-      setIsPdfDownloading(true)
-
-      const story = await getStoryBySessionAPI(sessionid, accessToken)
-
-      const story_media = story[0]?.story_media
-      const pdfMedia = story_media?.filter(media => media.media_type === "application/pdf") || []
-
-      const pdfFileName = story[0]?.title + ".pdf"
-      const fileUrl = pdfMedia[0]?.public_url
-
-      if (fileUrl && pdfFileName) {
-        const response = await fetch(fileUrl)
-
-        if (response.ok) {
-          const reader = response.body.getReader()
-          const chunks = []
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            chunks.push(value)
-          }
-
-          const blob = new Blob(chunks)
-          const a = document.createElement("a")
-          const url = window.URL.createObjectURL(blob)
-          a.href = url
-          a.download = pdfFileName
-          document.body.appendChild(a)
-          a.click()
-
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
-        } else {
-          console.error("Network response was not ok.")
-        }
-      } else {
-        console.error("No PDF media found or invalid file URL.")
-      }
-    } catch (error) {
-      setIsLoading(false)
-      console.error("Error downloading file:", error)
-    } finally {
-      setIsPdfDownloading(false)
-      setIsLoading(false)
     }
   }
 
@@ -2608,7 +1823,7 @@ const DynamicVoiceChat = ({
               }
               setIsFetchingData(true)
               let transcriptResult = ""
-              let s3Url = await handleS3Upload(audioBlob, `${Date.now()}`, `chatbot/companychat/${sessionId}/`, storyData)
+              let s3Url = await handleS3Upload(audioBlob, `${Date.now()}`, `chatbot/companychat/${sessionId}/`, null)
               if (!s3Url || s3Url === "") {
                 transcriptResult = t("asrError")
               }
@@ -2650,19 +1865,6 @@ const DynamicVoiceChat = ({
       mediaRecorder.stop()
       setHasStartedRecording(false)
     }
-  }
-
-  function downloadPdf() {
-    let current_company = companyName ? companyName : null
-    let currentState = userState ? userState : null
-    if (!currentState) {
-      currentState = cookies.get("state")
-    }
-    if (!current_company) {
-      current_company = cookies.get("company")
-    }
-
-    return <PdfDownloader key={new Date().getTime()} storyData={storyData} isShikshalokam={true} downloadTriggered={triggerDownload} handleDownloadStop={handleDownloadStop} storyMediaArr={files} currentState={currentState} current_company={current_company} />
   }
 
   const handleOpenProfileModal = async () => {
@@ -2986,47 +2188,14 @@ const DynamicVoiceChat = ({
             </div>
           </div>
         )}
-      {(isInitialising || isLoading || (!introMessageData && !introMessage) || endStoryMutation.isPending) && (
+      {(isInitialising || isLoading || (!introMessageData && !introMessage)) && (
         <div className="loader-load-spinner">
           <div className="div67">
             <BiLoader className="loader-rotate-loader loader-icon" />
-            {isPdfDownloading && (
-              <div className="div68">
-                <label className="form-label label1">{t("downloadLoader")}</label>
-              </div>
-            )}
-            {endStoryMutation.isPending && (
-              <div className="div69 text-center">
-                <h2 className="form-label label1 font-bold text-lg sm:text-2xl text-center">
-                  {storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("feedbackLoaderHeading") : storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoaderHeading") : storageFlow && [sessionFlowName.GuestMiStory].includes(storageFlow) ? t("storyGuestLoaderHeading") : t("storyLoaderHeading")}
-                </h2>
-                <label className="form-label label1 text-center">{storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportLoader") : t("storyLoader")}</label>
-              </div>
-            )}
           </div>
         </div>
       )}
-      {storyData &&
-        isModalOpen &&
-        (accessToken ? (
-          <ReportEditorAuth title={storyData?.title} name={firstName} location={storyData?.location} onSave={onEditorSave} stopAllAudio={stopAllAudio} storyData={storyData} isLoading={isLoading} setIsLoading={setIsLoading} fileErrorText={fileErrorText} setFileErrorText={setFileErrorText} isSaving={isSaving} />
-        ) : (
-          <ReportEditor onClose={closeModal} onSave={onEditorSave} disabled={isLoading || isSaving} />
-        ))}
       <div className={`${accessToken ? "div72" : ""}`} style={hasActiveFlexLayout ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
-        {shouldFetchChatSession && !isPopupMode &&(
-          <button
-            onClick={() => {
-              if (accessToken) {
-                clearFromStorage()
-                navigate(-2)
-              }
-            }}
-            className="button-13"
-          >
-            <div>{t("doLater")}</div>
-          </button>
-        )}
         <HiddenRecorder />
         <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={hasActiveFlexLayout ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
           {!showHomepage && (
@@ -3201,220 +2370,11 @@ const DynamicVoiceChat = ({
               )}
             </>
           )}
-          {isStreamingComplete && showFileInput && !showHomepage && !endStoryMutation.isPending && !isLoading && !isPdfDownloading && storyData?.id !== "" && !([sessionFlowName.GuestMiStory].includes(storageFlow) && accessToken) && (
-            <>
-              {(flowInfo && flowInfo.image_config) && 
-                <div className="div13">
-                  <ChatMessage
-                    botNameToDisplay={botNameToDisplay}
-                    userType="bot"
-                    message={(() => {
-                      const flow = storageFlow
-                      return flow && [sessionFlowName.GuestMiStory].includes(flow) ? t("evidenceStory") : t("evidence")
-                    })()}
-                    isTalking={false}
-                    handleOnStopSpeaking={() => handleOnStopSpeaking()}
-                    handleOnSpeaking={() => {
-                      const flow = storageFlow
-                      const message_to_use = flow && [sessionFlowName.GuestMiStory].includes(flow) ? t("evidenceStory") : t("evidence")
-                      handleOnSpeaking(message_to_use, "upload-img-id", { msg: message_to_use, updated_at: "upload-img-id", source: "bot" })
-                    }}
-                    isAnyPlaying={!!hasOverRideId || isTalking}
-                    isPlaying={hasOverRideId === "upload-img-id"}
-                    isStreamingComplete={isStreamingComplete}
-                    setNotMute={setIsMute}
-                    setSpeakerEnabled={setSpeakerEnabled}
-                    chatId={"upload-img-id"}
-                    isStaticMessage={true}
-                  />
-                  <div className="div14">
-                    <label className="clickable-label" htmlFor="file-upload">
-                      <GrGallery className="icon-1" />
-                      <span className="div16">{t("upload")}</span>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        accept="image/jpeg, image/png, image/svg+xml, image/webp, image/heif, image/heic"
-                        // multiple
-                        onChange={e => {
-                          setIsLoading(true)
-                          handleMultipleUploads(e, storyData, files, sessionId, flowInfo.image_config.max_images, flowInfo.image_config.image_size_mb)
-                            .then(uploadedFiles => {
-                              if (uploadedFiles && uploadedFiles.error) {
-                                setFileErrorText(uploadedFiles.error)
-                              }
-                              if (uploadedFiles && uploadedFiles.files) {
-                                setFiles(uploadedFiles.files)
-                              }
-                            })
-                            .catch(error => {
-                              console.error(error)
-                              setFileErrorText(t("somethingWentWrong") || "Upload failed")
-                            })
-                            .finally(() => {
-                              setIsLoading(false)
-                            })
-                        }}
-                        onClick={() => {
-                          if (files?.length >= 10) {
-                            setFileErrorText(fileExceedText)
-                          } else {
-                            setFileErrorText("")
-                          }
-                        }}
-                        disabled={isLoading || isImageUploading || (fileErrorText !== "" && fileErrorText !== fileSizeText && fileErrorText === fileExceedText)}
-                        className="div17"
-                      />
-                    </label>
-                  </div>
-                  <div className="div18">
-                    <p className="li-message">{t("photosLimitMsgDyn", { image_limit: flowInfo.image_config.max_images })}</p>
-                  </div>
-                  {isImageUploading && (
-                    <div className="div18">
-                      <p className="li-3">{t("uploadLoadMsg")}</p>
-                    </div>
-                  )}
-
-                  {files?.length > 0 ? (
-                    <div className="div18">
-                      <h4 className="h4-1">{t("uploadedFiles")}:</h4>
-                      <ul>
-                        {fileErrorText && <li className="li-1">{fileErrorText}</li>}
-                        {files.map((file, index) => (
-                          <li key={index} className="li-2">
-                            {file.name.slice(0, 20)}
-                            {file.name.length > 20 && "..."}
-                            <button
-                              className="button-1"
-                              onClick={() => {
-                                setFiles(files.filter(f => f.id !== file.id))
-                                partialMediaUpdate(file?.id, false)
-                              }}
-                            >
-                              <RxCross2 />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="div18">
-                      <ul>{fileErrorText && <li className="li-1">{fileErrorText}</li>}</ul>
-                    </div>
-                  )}
-                </div>
-              }
-
-              {![sessionFlowName.ParentPerceptionSurvey].includes(storageFlow) && (
-                <div className="div19">
-                  <ChatMessage
-                    botNameToDisplay={botNameToDisplay}
-                    userType="bot"
-                    message={storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")}
-                    isTalking={false}
-                    handleOnStopSpeaking={() => handleOnStopSpeaking()}
-                    handleOnSpeaking={() => {
-                      const message_to_use = storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("reportText") : storageFlow && [sessionFlowName.ListeningActivity].includes(storageFlow) ? t("reportFeedbackText") : t("storyText")
-                      console.log("message_to_use", message_to_use)
-                      handleOnSpeaking(message_to_use, "download-story-id", { msg: message_to_use, updated_at: "download-story-id", source: "bot" })
-                    }}
-                    isAnyPlaying={!!hasOverRideId || isTalking}
-                    isPlaying={hasOverRideId === "download-story-id"}
-                    isStreamingComplete={isStreamingComplete}
-                    setNotMute={setIsMute}
-                    setSpeakerEnabled={setSpeakerEnabled}
-                    chatId={"download-story-id"}
-                    isStaticMessage={true}
-                  />
-                  {!projectId && (
-                    <div className="div20">
-                      <button
-                        className="clickable-button"
-                        onClick={() => {
-                          if (sessionId) {
-                            pdfDownloadSidebar(sessionId)
-                          }
-                        }}
-                        disabled={isLoading || isPdfDownloading}
-                      >
-                        <div className="download-story-div">
-                          <FiDownload className="icon-1" />
-                          <span className="div16" ref={endPageToScrollRef}>
-                            {storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("downloadReportText") : t("downloadStoryText")}
-                          </span>
-                        </div>
-                      </button>
-
-                      {triggerDownload && isPdfDownloading && !isLoading && downloadPdf()}
-                    </div>
-                  )}
-                  <div className="div20">
-                    <button className="clickable-button" onClick={openModal} disabled={isLoading || isPdfDownloading}>
-                      <div className="download-story-div">
-                        <MdEdit className="icon-1" />
-                        <span className="div16" ref={endPageToScrollRef}>
-                          {storageFlow && [sessionFlowName.GuestDiscussion, sessionFlowName.ListeningActivity, sessionFlowName.LoginDiscussion].includes(storageFlow) ? t("editReportText") : t("editStoryText")}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                  {projectId && (
-                    <div className="div20">
-                      <button
-                        className="clickable-button"
-                        onClick={async () => {
-                          if (projectId) {
-                            setIsLoading(true)
-                            await updateReflectionStatusApi(projectId, "completed", storageFlow, accessToken)
-                          } else {
-                            window.location.reload()
-                          }
-                        }}
-                        disabled={isLoading || isPdfDownloading}
-                      >
-                        <div className="download-story-div">
-                          <AiOutlineEye className="icon-1" />
-                          <span className="div16" ref={endPageToScrollRef}>
-                            {t("viewStoryText")}
-                          </span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-          {llmError && llmError !== "" && (
-            <>
-              <p className="error-para">{llmError}</p>
-              <div className="div20">
-                <button
-                  className="clickable-button"
-                  onClick={async () => {
-                    setIsLoading(true)
-                    await callEndStory(true)
-                  }}
-                  disabled={isLoading || isPdfDownloading}
-                >
-                  <div className="download-story-div">
-                    <TbReload className="icon-1" />
-                    <span className="div16" ref={endPageToScrollRef}>
-                      {FLOW_CONFIG[storageFlow] ? t(FLOW_CONFIG[storageFlow].storyActions?.downloadReportText) : t("reDownloadStoryText")}
-                    </span>
-                  </div>
-                </button>
-
-                {triggerDownload && isPdfDownloading && !isLoading && downloadPdf()}
-              </div>
-            </>
-          )}
           <div id="last-chat-boundary" className="div38" />
         </div>
         <Notification />
 
-        {(!showFileInput || showFileInput === null) && !isLoading && !endStoryMutation.isPending && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
+        {!isLoading && (llmError === "" || !llmError) && Array.isArray(chatHistory) && chatHistory.some(item => item && Object.keys(item).length > 0) && (
           <form
             className="form-1 flex flex-col"
             style={hasActiveFlexLayout ? { position: "relative", bottom: "auto", left: "auto", width: "100%", flexShrink: 0, zIndex: "auto" } : undefined}

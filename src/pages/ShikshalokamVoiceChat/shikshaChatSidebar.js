@@ -6,12 +6,12 @@ import { FaArrowLeft, FaPowerOff } from "react-icons/fa6"
 import "./shikshaChatStyle.css"
 import { useTranslation } from "react-i18next"
 import { setLanguage } from "../../i18n"
-import { LANGUAGE_ENUMS } from "./enum"
+import { DEFAULT_LANGUAGE } from "./enum"
 import { sessionFlowName } from "../../constants/session"
 import { clearFromStorage } from "../../services/storage_service"
 import { useSiteStorage, useChatStorage } from "hooks/useStorage"
 
-const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, showScrollbarContent, resetChat, setIsResetCalled, showGuestPopup, stopAllAudio }) => {
+const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, showScrollbarContent, resetChat, setIsResetCalled, stopAllAudio }) => {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -31,13 +31,13 @@ const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, sho
     if (stopAllAudio) {
       stopAllAudio()
     }
-    setLanguage(LANGUAGE_ENUMS.ENGLISH)
-    setChatLanguage(LANGUAGE_ENUMS.ENGLISH)
+    setLanguage(DEFAULT_LANGUAGE)
+    setChatLanguage(DEFAULT_LANGUAGE)
     if (storageFlow === sessionFlowName.SsoFlow) {
       clearFromStorage(true)
       navigateSsoFlow()
     } else {
-      navigate(ROUTES.SHIKSHALOKAM_VOICE_CHAT_LOGIN)
+      navigate(ROUTES.SHIKSHALOKAM_HOME_PAGE)
     }
   }
 
@@ -63,11 +63,7 @@ const Sidebar = ({ isOpen, toggle, isMobileFirst = false, showLogout = true, sho
                   className="button-4"
                   onClick={e => {
                     setIsResetCalled(true)
-                    if (showGuestPopup) {
-                      showGuestPopup()
-                    } else {
-                      resetChat(e)
-                    }
+                    resetChat(e)
                   }}
                 >
                   <FiPlus className="icon-2" /> {t("newChat")}

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary-color: #572E91;
+  --primary-font-family: "Manrope", sans-serif;
+  --secondary-font-family: "Urbanist", sans-serif;
+  --primary-highlighted-color: #f1ebfa;
+}
+
 .top-to-btm{
     position: relative;
   }

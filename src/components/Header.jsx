@@ -1,6 +1,5 @@
 // components/Header.js
 import { useTranslation } from "react-i18next"
-import LanguageSelector from "./LanguageSelector"
 import useSiteDataSessionStore from "store/slices/siteData/siteDataSession"
 
 const Header = ({

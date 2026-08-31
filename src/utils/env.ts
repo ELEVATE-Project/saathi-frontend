@@ -31,16 +31,11 @@ export const env = {
   WEBSOCKET_RECONNECT_INTERVAL: () => parseInt(getEnv("REACT_APP_WEBSOCKET_RECONNECT_INTERVAL", "3000"), 10),
   S3_UPLOAD_RETRY_NUM: () => parseInt(getEnv("REACT_APP_S3_UPLOAD_RETRY_NUM", "3"), 10),
 
-  // Profile IDs
-  MEGA_PTM_PROFILE_ID: () => getEnv("REACT_APP_MEGA_PTM_PROFILE_ID", "3"),
-  YLC_PROFILE_ID: () => getEnv("REACT_APP_YLC_PROFILE_ID", "127"),
+  // Language
+  DEFAULT_LANGUAGE: () => getEnv("REACT_APP_DEFAULT_LANGUAGE", "en"),
 
   // Paths
-  AUDIO_PATH: () => getEnv("REACT_APP_ADUIO_PATH", "/"),
   ROOT_PATH: () => getEnv("REACT_APP_ROOT_PATH", ""),
-
-  // URLs
-  RECORD_STORY_URL: () => getEnv("REACT_APP_RECORD_STORY_URL", ""),
 
   WS_PROTOCOL: () => getEnv("REACT_APP_WS_PROTOCOL", "wss"),
 

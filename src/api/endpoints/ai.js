@@ -47,40 +47,6 @@ export const ai4BharatASRApi = async (base64, sourceLanguage = "en", storedRoute
 }
 
 /**
- * Transliterate text from one language to another
- * @param {string} message - The message to transliterate
- * @param {string} [sourceLanguage="en"] - Source language code
- * @param {string} [targetLanguage="en"] - Target language code
- * @param {string} [storedRoute=bot_routes.shikshalokam_chaupal] - Bot route configuration
- * @param {boolean} [detect_language=false] - Whether to detect language automatically
- * @returns {Promise<string>} The transliterated text
- */
-export const transliterateApiFunc = async (message, sourceLanguage = "en", targetLanguage = "en", storedRoute = bot_routes.shikshalokam_chaupal, detect_language = false) => {
-  try {
-    const response = await apiClient.post(API_ENDPOINTS.TEXT_TRANSLITERATE, {
-      message_body: message,
-      source_language: sourceLanguage,
-      target_language: targetLanguage,
-      route: storedRoute,
-      detect_language: detect_language,
-    })
-
-    const content = response.data?.transcript?.content
-    if (Array.isArray(content)) {
-      return content[0]
-    } else if (typeof content === "string") {
-      return content
-    } else {
-      console.warn("Unexpected content type:", content)
-      return ""
-    }
-  } catch (error) {
-    console.error("Error fetching Transliterate text:", error)
-    return ""
-  }
-}
-
-/**
  * Retrieves translated introduction message based on language and bot route
  * @param {Object} params - The parameters object
  * @param {string} params.language - The language code for translation
