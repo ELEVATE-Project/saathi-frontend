@@ -2561,12 +2561,8 @@ const DynamicVoiceChat = ({
 
 export default DynamicVoiceChat
 
-export function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
+ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
   let sanitizedContent = DOMPurify.sanitize(message)
-  if (userType === CHAT_SOURCE.BOT) {
-    // Escape asterisks in math/multiplication expressions to prevent markdown parser from treating them as italics/emphasis
-    sanitizedContent = sanitizedContent.replace(/(\d\s*)\*(\s*\d)/g, '$1\\*$2')
-  }
   return (
     <div className="div41">
       {userType === "bot" && (
