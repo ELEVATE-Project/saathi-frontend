@@ -750,6 +750,8 @@ const DynamicVoiceChat = ({
         source: isBot ? "bot" : "user",
         updated_at: chat?.id,
         received: true,
+        thumbs_up: chat?.thumbs_up,
+        thumbs_down: chat?.thumbs_down,
         ...(isBot && chat?.other_params?.extra_content != null ? {
           extra_content: chat.other_params.extra_content,
         } : {}),
@@ -2276,6 +2278,8 @@ const DynamicVoiceChat = ({
                         isMobile={isMobile}
                         accessToken={accessToken}
                         activeSourcesChatId={activeSourcesChatId}
+                        thumbsUp={chat?.thumbs_up}
+                        thumbsDown={chat?.thumbs_down}
                         onToggleSources={(sourcesList) => {
                           if (activeSourcesChatId === chat.updated_at) {
                             setActiveSourcesChatId(null)

@@ -1,10 +1,12 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { FiCopy, FiThumbsUp, FiThumbsDown, FiGlobe } from "react-icons/fi"
 import { BiLibrary } from "react-icons/bi"
 import { showNotification } from "components/ToastMessage/TotastMessage"
-import FeedbackModal from "components/FeedbackModal"
-import { DEFAULT_KB_LOGO, DEFAULT_WEB_LOGO, FEEDBACK_TYPE } from "constants/dynamic-chat"
+import FeedbackModal, { resolveValidCompanyChatId } from "components/FeedbackModal"
+import { DEFAULT_KB_LOGO, DEFAULT_WEB_LOGO, FEEDBACK_TYPE, DESELECT_FEEDBACK_PAYLOAD } from "constants/dynamic-chat"
+import { submitChatFeedbackApi } from "api/endpoints/feedback"
+import { useChatStorage } from "hooks/useStorage"
 // SourcesPanel is now imported and rendered at the top-level DynamicVoiceChat component to allow layout squeezing
 
 /**
@@ -20,10 +22,45 @@ function MessageActionBar({
   accessToken,
   activeSourcesChatId,
   onToggleSources,
+  thumbs_up,
+  thumbs_down,
 }) {
   const { t } = useTranslation()
-  const [activeFeedback, setActiveFeedback] = useState(null) 
+  const chatStore = useChatStorage()
+  const chatHistory = chatStore(state => state.chatHistory)
+  const setChatHistory = chatStore(state => state.setChatHistory)
+
+  const isUp = Boolean(thumbs_up)
+  const isDown = Boolean(thumbs_down)
+
+  const [activeFeedback, setActiveFeedback] = useState(() => {
+    if (isUp) return FEEDBACK_TYPE.THUMBS_UP
+    if (isDown) return FEEDBACK_TYPE.THUMBS_DOWN
+    return null
+  })
   const [feedbackModal, setFeedbackModal] = useState(null)
+
+  useEffect(() => {
+    if (isUp) {
+      setActiveFeedback(FEEDBACK_TYPE.THUMBS_UP)
+    } else if (isDown) {
+      setActiveFeedback(FEEDBACK_TYPE.THUMBS_DOWN)
+    } else {
+      setActiveFeedback(null)
+    }
+  }, [isUp, isDown])
+
+  const updateStoreFeedback = (isPositive, isNegative) => {
+    if (typeof setChatHistory === "function" && Array.isArray(chatHistory)) {
+      const updated = chatHistory.map(item => {
+        if (item.updated_at === companyChatId) {
+          return { ...item, thumbs_up: isPositive, thumbs_down: isNegative }
+        }
+        return item
+      })
+      setChatHistory(updated)
+    }
+  }
 
   const sourcesOpen = activeSourcesChatId === companyChatId
 
@@ -48,11 +85,21 @@ function MessageActionBar({
     }
   }
 
-  const handleFeedbackClick = (type) => {
+  const handleFeedbackClick = async (type) => {
     if (!accessToken) return
     if (activeFeedback === type) {
       // Toggle off — no re-open, just deselect
       setActiveFeedback(null)
+      updateStoreFeedback(false, false)
+      try {
+        const finalCompanyChatId = await resolveValidCompanyChatId(companyChatId, sessionId, chatHistory)
+        await submitChatFeedbackApi({
+          company_chat: finalCompanyChatId,
+          ...DESELECT_FEEDBACK_PAYLOAD,
+        })
+      } catch (error) {
+        console.error("Error submitting deselect feedback:", error)
+      }
       return
     }
     setFeedbackModal(type)
@@ -60,6 +107,7 @@ function MessageActionBar({
 
   const handleFeedbackSubmitted = (type) => {
     setActiveFeedback(type)
+    updateStoreFeedback(type === FEEDBACK_TYPE.THUMBS_UP, type === FEEDBACK_TYPE.THUMBS_DOWN)
   }
 
   // Don't render during active streaming

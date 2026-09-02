@@ -22,7 +22,7 @@ const cleanText = (text) => {
     .toLowerCase()
 }
 
-const resolveValidCompanyChatId = async (chatId, sessionId, chatHistory = []) => {
+export const resolveValidCompanyChatId = async (chatId, sessionId, chatHistory = []) => {
   if (isInvalidOrTempId(chatId) && sessionId) {
     try {
       const freshData = await getChatsFromDB(sessionId)
@@ -83,7 +83,9 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [targetCompanyChatId, setTargetCompanyChatId] = useState(companyChatId)
-  const chatHistory = useChatStorage()(state => state.chatHistory)
+  const chatStore = useChatStorage()
+  const chatHistory = chatStore(state => state.chatHistory)
+  const setChatHistory = chatStore(state => state.setChatHistory)
 
   useEffect(() => {
     let isMounted = true
@@ -122,6 +124,17 @@ function FeedbackModal({ isOpen, type, companyChatId, sessionId, onClose, onSubm
         thumbs_down: !isPositive,
         comment: comment.trim(),
       })
+
+      if (typeof setChatHistory === "function" && Array.isArray(chatHistory)) {
+        const updated = chatHistory.map(item => {
+          if (item.updated_at === companyChatId || item.updated_at === targetCompanyChatId || item.updated_at === finalCompanyChatId) {
+            return { ...item, thumbs_up: isPositive, thumbs_down: !isPositive }
+          }
+          return item
+        })
+        setChatHistory(updated)
+      }
+
       showNotification({
         message: t("feedbackSubmitted"),
         type: "success",
