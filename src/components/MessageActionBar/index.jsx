@@ -39,6 +39,7 @@ function MessageActionBar({
     return null
   })
   const [feedbackModal, setFeedbackModal] = useState(null)
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
 
   useEffect(() => {
     if (isUp) {
@@ -86,9 +87,10 @@ function MessageActionBar({
   }
 
   const handleFeedbackClick = async (type) => {
-    if (!accessToken) return
+    if (!accessToken || isSubmittingFeedback) return
     if (activeFeedback === type) {
       // Toggle off — no re-open, just deselect
+      setIsSubmittingFeedback(true)
       setActiveFeedback(null)
       updateStoreFeedback(false, false)
       try {
@@ -99,6 +101,8 @@ function MessageActionBar({
         })
       } catch (error) {
         console.error("Error submitting deselect feedback:", error)
+      } finally {
+        setIsSubmittingFeedback(false)
       }
       return
     }
@@ -131,6 +135,7 @@ function MessageActionBar({
           <button
             className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_UP ? "msg-action-btn--active msg-action-btn--positive" : ""}`}
             onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_UP)}
+            disabled={isSubmittingFeedback}
             title={t("goodResponse")}
             aria-label={t("goodResponse")}
             aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_UP}
@@ -144,6 +149,7 @@ function MessageActionBar({
           <button
             className={`msg-action-btn ${activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN ? "msg-action-btn--active msg-action-btn--negative" : ""}`}
             onClick={() => handleFeedbackClick(FEEDBACK_TYPE.THUMBS_DOWN)}
+            disabled={isSubmittingFeedback}
             title={t("badResponse")}
             aria-label={t("badResponse")}
             aria-pressed={activeFeedback === FEEDBACK_TYPE.THUMBS_DOWN}

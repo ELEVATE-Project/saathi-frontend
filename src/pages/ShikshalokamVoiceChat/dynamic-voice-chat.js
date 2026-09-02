@@ -2278,8 +2278,8 @@ const DynamicVoiceChat = ({
                         isMobile={isMobile}
                         accessToken={accessToken}
                         activeSourcesChatId={activeSourcesChatId}
-                        thumbsUp={chat?.thumbs_up}
-                        thumbsDown={chat?.thumbs_down}
+                        thumbs_up={chat?.thumbs_up}
+                        thumbs_down={chat?.thumbs_down}
                         onToggleSources={(sourcesList) => {
                           if (activeSourcesChatId === chat.updated_at) {
                             setActiveSourcesChatId(null)
