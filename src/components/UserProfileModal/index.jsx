@@ -106,14 +106,14 @@ function UserProfileModal({
         const isRequiredField = isParentRequired || Boolean(subField.required)
         if (isRequiredField) {
           const val = formValues[subField.id]
-          return !val || typeof val !== "string" || !val.trim()
+          return !val?.trim()
         }
         return false
       })
     } else {
       if (field.required) {
         const val = formValues[field.id]
-        return !val || typeof val !== "string" || !val.trim()
+        return !val?.trim()
       }
       return false
     }
