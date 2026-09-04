@@ -225,7 +225,6 @@ const DynamicVoiceChat = ({
       return true
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
-      return false
     } finally {
       setIsTokenValidated(true)
     }
@@ -1904,11 +1903,7 @@ const DynamicVoiceChat = ({
 
   async function handleSaveProfile(formValues) {
     try {
-      const isValid = await validateToken()
-      if (!isValid) {
-        console.error("Session validation failed before profile update")
-        return
-      }
+      await validateToken()
     } catch (error) {
       console.error("Session validation failed before profile update:", error)
       return
