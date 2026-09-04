@@ -212,7 +212,7 @@ const DynamicVoiceChat = ({
     if (token === null) {
       clearFromStorage()
       window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
-      return
+      return false
     }
     try {
       const res = await validateSession()
@@ -222,8 +222,10 @@ const DynamicVoiceChat = ({
         setProfileApiData(normalized)
         if (normalized.name) setFirstName(normalized.name)
       }
+      return true
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
+      return false
     } finally {
       setIsTokenValidated(true)
     }
@@ -1902,7 +1904,11 @@ const DynamicVoiceChat = ({
 
   async function handleSaveProfile(formValues) {
     try {
-      await validateToken()
+      const isValid = await validateToken()
+      if (!isValid) {
+        console.error("Session validation failed before profile update")
+        return
+      }
     } catch (error) {
       console.error("Session validation failed before profile update:", error)
       return

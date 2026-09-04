@@ -53,8 +53,8 @@ function SourceItem({ src }) {
     <>
       <SourceIcon src={src} />
       <div className="source-item-content">
-        <span ref={titleRef} className="source-item-title" title={src.title}>
-          {src.title}
+        <span ref={titleRef} className="source-item-title" title={src?.title}>
+          {src?.title}
         </span>
       </div>
     </>
@@ -64,7 +64,7 @@ function SourceItem({ src }) {
     <li className={`source-item ${validUrl ? "cursor-pointer" : ""} ${isMultiLine ? "source-item--top" : ""}`}>
       {validUrl ? (
         <a
-          href={src.url}
+          href={src?.url}
           target="_blank"
           rel="noopener noreferrer"
           className="source-item-anchor"
@@ -84,6 +84,7 @@ function SourceItem({ src }) {
  */
 function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
   const { t } = useTranslation()
+  const activeSources = Array.isArray(sources) ? sources.filter(Boolean) : []
 
   // Lock body scroll when open on mobile
   useEffect(() => {
@@ -114,11 +115,11 @@ function SourcesPanel({ isOpen, sources = [], isMobile, onClose }) {
           </button>
         </div>
         <div className="sources-panel-body">
-          {sources.length === 0 ? (
+          {activeSources.length === 0 ? (
             <p className="sources-empty">{t("noSources")}</p>
           ) : (
             <ul className="sources-list">
-              {sources.map((src, idx) => (
+              {activeSources.map((src, idx) => (
                 <SourceItem key={idx} src={src} />
               ))}
             </ul>
