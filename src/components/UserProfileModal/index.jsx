@@ -119,6 +119,11 @@ function UserProfileModal({
     }
   })
 
+  function showRequired(isRequired) {
+    if (isRequired) return <span className="text-red-500">*</span>
+    return null
+  }
+
   function renderField(field) {
     if (field.type === "split") {
       return (
@@ -126,7 +131,7 @@ function UserProfileModal({
           <div className="mb-1">
             <b className={labelStyleClasses}>
               {t(field.labelName)}
-              {field.required && <span className="text-red-500">*</span>}
+              {showRequired(field.required)}
             </b>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">

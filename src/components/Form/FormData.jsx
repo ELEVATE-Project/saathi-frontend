@@ -82,7 +82,7 @@ function FormData({
     )
   }
 
-  function showStar() {
+  function showRequired() {
     if (isimportant === "true") return <span style={{ color: "red" }}>* </span>
   }
 
@@ -91,7 +91,7 @@ function FormData({
       <div className={labelDivClass}>
         <b htmlFor={id} className={labelClass}>
           {labelName}
-          {showStar()}
+          {showRequired()}
         </b>
       </div>
     )
