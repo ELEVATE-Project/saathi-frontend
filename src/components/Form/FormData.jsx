@@ -90,8 +90,8 @@ function FormData({
     return (
       <div className={labelDivClass}>
         <b htmlFor={id} className={labelClass}>
-          {showStar()}
           {labelName}
+          {showStar()}
         </b>
       </div>
     )

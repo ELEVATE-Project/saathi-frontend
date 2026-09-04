@@ -125,8 +125,8 @@ function UserProfileModal({
         <div key={field.id} className="mb-3 sm:mb-4">
           <div className="mb-1">
             <b className={labelStyleClasses}>
-              {field.required && <span className="text-red-500 mr-0.5">*</span>}
               {t(field.labelName)}
+              {field.required && <span className="text-red-500">*</span>}
             </b>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
@@ -211,10 +211,10 @@ function UserProfileModal({
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex items-center justify-between gap-2 flex-shrink-0 bg-white">
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors py-1"
+            className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-[#D11F44] hover:bg-[#D11F4433] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
-            <FiLogOut size={15} />
-            {t("logout")}
+            <FiLogOut size={16} />
+            <span>{t("logout")}</span>
           </button>
           <div className="flex items-center gap-2">
             <button

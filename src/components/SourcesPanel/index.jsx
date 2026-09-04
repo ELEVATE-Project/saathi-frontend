@@ -5,16 +5,13 @@ import { FiGlobe } from "react-icons/fi"
 import { BiLibrary } from "react-icons/bi"
 import { SOURCE_TYPE, DEFAULT_KB_LOGO, DEFAULT_WEB_LOGO } from "constants/dynamic-chat"
 
-function getSourceIcon(sourceType) {
-  if (sourceType === SOURCE_TYPE.WEB_SEARCH) {
-    return <img src={DEFAULT_WEB_LOGO} className="source-item-logo" alt="Web search source" />
-  }
-  return <img src={DEFAULT_KB_LOGO} className="source-item-logo" alt="Knowledge base source" />
+function getSourceIcon() {
+  return <img src={DEFAULT_WEB_LOGO} className="source-item-logo" alt="Source logo" />
 }
 
 function SourceIcon({ src }) {
   const [imgError, setImgError] = useState(false)
-  if (src.logo && !imgError) {
+  if (src?.logo && !imgError) {
     return (
       <img
         src={src.logo}
@@ -24,7 +21,7 @@ function SourceIcon({ src }) {
       />
     )
   }
-  return getSourceIcon(src.source)
+  return getSourceIcon()
 }
 
 function isValidUrl(urlString) {

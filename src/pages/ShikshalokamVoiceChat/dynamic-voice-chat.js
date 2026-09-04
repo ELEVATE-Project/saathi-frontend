@@ -222,16 +222,20 @@ const DynamicVoiceChat = ({
         setProfileApiData(normalized)
         if (normalized.name) setFirstName(normalized.name)
       }
-      setIsTokenValidated(true)
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
-      throw error
+    } finally {
+      setIsTokenValidated(true)
     }
   }
 
   useEffect(() => {
     if (!isOffline && navigator.onLine) {
-      validateToken().catch(() => {})
+      validateToken().catch(() => {
+        setIsTokenValidated(true)
+      })
+    } else {
+      setIsTokenValidated(true)
     }
   }, [isOffline]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1897,6 +1901,13 @@ const DynamicVoiceChat = ({
   }
 
   async function handleSaveProfile(formValues) {
+    try {
+      await validateToken()
+    } catch (error) {
+      console.error("Session validation failed before profile update:", error)
+      return
+    }
+
     const token = _userData?.access_token || accessToken
     const payload = {
       name: formValues.name ?? "",
@@ -2059,6 +2070,12 @@ const DynamicVoiceChat = ({
   }
 
   return (
+    <>
+      {accessToken && !isTokenValidated && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#faf6fb]">
+          <BiLoader className="loader-rotate-loader text-4xl text-[#572e91]" />
+        </div>
+      )}
       <div style={hasActiveFlexLayout ? { display: "flex", flexDirection: "row", height: isPopupMode ? "100%" : "100dvh", overflow: "hidden", position: "relative" } : undefined}>      {/* ===== CHAT HISTORY SIDEBAR (popup mode, non-profile flows) ===== */}
       {showHistorySidebar && (
         <>
@@ -2234,10 +2251,18 @@ const DynamicVoiceChat = ({
                             <button
                               onClick={() => {
                                 setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
+                                if (isOffline || !navigator.onLine) {
+                                  showOfflineNotification()
+                                  return
+                                }
                                 downloadFileFromUrl(
                                   chat.extra_content.download.pdf_url,
                                   chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null,
-                                  () => setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                  () => {
+                                    if (!isOffline && navigator.onLine) {
+                                      setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                    }
+                                  }
                                 )
                               }}
                               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
@@ -2250,10 +2275,18 @@ const DynamicVoiceChat = ({
                             <button
                               onClick={() => {
                                 setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
+                                if (isOffline || !navigator.onLine) {
+                                  showOfflineNotification()
+                                  return
+                                }
                                 downloadFileFromUrl(
                                   chat.extra_content.download.docx_url,
                                   chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null,
-                                  () => setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                  () => {
+                                    if (!isOffline && navigator.onLine) {
+                                      setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
+                                    }
+                                  }
                                 )
                               }}
                               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "14px 20px", background: "#F1F5F9", border: "none", borderRadius: "10px", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.5)", minWidth: "80px" }}
@@ -2263,7 +2296,7 @@ const DynamicVoiceChat = ({
                             </button>
                           )}
                         </div>
-                        {downloadFileErrors[chat.updated_at] && (
+                        {downloadFileErrors[chat.updated_at] && !isOffline && navigator.onLine && (
                           <p style={{ fontSize: "13px", color: "#dc2626", marginTop: "6px" }}>{t("downloadFileError")}</p>
                         )}
                       </div>
@@ -2560,6 +2593,7 @@ const DynamicVoiceChat = ({
         }}
       />
     </div>
+    </>
   )
 }
 
