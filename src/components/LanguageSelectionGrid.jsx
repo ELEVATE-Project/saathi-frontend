@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from "../constants/urls"
-import { useSiteStorage } from "hooks/useStorage"
+import { LANGUAGE_SELECTION_TEXT } from "constants/common"
 import { clearFromStorage } from "../services/storage_service"
 import { getFlowLanguagesApi } from "../api/endpoints/flow"
 import { languageList, languageValueMap } from "../pages/ShikshalokamVoiceChat/enum"
@@ -7,13 +7,11 @@ import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { useSiteDataSessionStore } from "store"
-import { useTranslation } from "react-i18next"
 import ROUTES from "../url"
 import { env } from "utils/env"
 import { validateSession } from "../utils/session"
 
 const LanguageSelectionGrid = () => {
-  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const setChatLanguage = useSiteDataSessionStore(state => state.setChatLanguage)
@@ -57,9 +55,9 @@ const LanguageSelectionGrid = () => {
   return (
     <>
       <div className="text-center text-lg md:text-2xl sm:text-md mt-0 sm:mt-[100px] text-slate-700">
-        <b>{t("welcome_text")}</b>
+        <b>{LANGUAGE_SELECTION_TEXT.WELCOME}</b>
       </div>
-      <p className="sm:text-xl text-md font-semibold text-center">{t("languageQuestion")}</p>
+      <p className="sm:text-xl text-md font-semibold text-center">{LANGUAGE_SELECTION_TEXT.SELECT_PREFERRED_LANGUAGE}</p>
       <div className="mt-4 mb-10 grid grid-cols-2 gap-3 md:gap-6 lg:px-[80px] md:px-[20px] sm:px-[20px] px-[10px]">
         {isFlowLanguagesLoading &&
           Array.from({ length: 2 }).map((_, index) => (
