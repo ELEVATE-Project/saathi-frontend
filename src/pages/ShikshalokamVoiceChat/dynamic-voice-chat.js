@@ -133,6 +133,7 @@ const DynamicVoiceChat = ({
   const [textMessage, setTextMessage] = useState("")
   const [downloadFileErrors, setDownloadFileErrors] = useState({})
   const [chatTitle, setChatTitle] = useState([])
+  const [isSidebarLoading, setIsSidebarLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [sidebarNextPageUrl, setSidebarNextPageUrl] = useState(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -184,7 +185,13 @@ const DynamicVoiceChat = ({
   const showHomepageStore = useChatStorage()(state => state.showHomepage)
   // In popup mode, use local state so the popup doesn't read/write the shared
   // showHomepage flag that the main chat manages.
-  const [popupShowHomepage, setPopupShowHomepage] = useState(isPopupMode)
+  const [popupShowHomepage, setPopupShowHomepage] = useState(() => {
+    if (!isPopupMode) return false
+    const history = getChatHistory()
+    const flowHistory = storageFlow ? history.filter(msg => msgBelongsToFlow(msg, storageFlow)) : history
+    const hasReal = flowHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
+    return !hasReal
+  })
   const showHomepage = isPopupMode ? popupShowHomepage : showHomepageStore
   const updateShowHomepage = useCallback((value) => {
     if (isPopupMode) {
@@ -209,6 +216,8 @@ const DynamicVoiceChat = ({
 
   // ========== useRef Hooks ==========
   const textAreaRef = useRef(null)
+  const chatContainerRef = useRef(null)
+  const lastChatBoundaryRef = useRef(null)
   const _roRef = useRef(null)
   const _placeholderDepsRef = useRef(null)
   const [placeholderIsMultiLine, setPlaceholderIsMultiLine] = useState(false)
@@ -261,10 +270,21 @@ const DynamicVoiceChat = ({
       validateToken().catch(() => {
         setIsTokenValidated(true)
       })
+      setDownloadFileErrors({})
     } else {
       setIsTokenValidated(true)
     }
   }, [isOffline]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setDownloadFileErrors({})
+    }
+    window.addEventListener("online", handleOnline)
+    return () => {
+      window.removeEventListener("online", handleOnline)
+    }
+  }, [])
 
 
   // ========== react query hooks ==========
@@ -476,8 +496,31 @@ const DynamicVoiceChat = ({
     })
   }, [sessionId, profileToUse, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
 
+  const handleScrollToView = useCallback((behavior = "smooth") => {
+    const doScroll = () => {
+      try {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior,
+          })
+        }
+        if (lastChatBoundaryRef.current) {
+          lastChatBoundaryRef.current.scrollIntoView({
+            behavior,
+            block: "end",
+          })
+        }
+      } catch (error) {
+        console.error({ error })
+      }
+    }
 
-  
+    doScroll()
+    setTimeout(doScroll, 50)
+    setTimeout(doScroll, 150)
+  }, [])
+
   const completeProfileExtraction = useCallback(() => {
     if (profileCompletedRef.current) return
     profileCompletedRef.current = true
@@ -1085,14 +1128,17 @@ const DynamicVoiceChat = ({
   }, [storageFlow, isPopupMode])
 
   useEffect(() => {
+    const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
     if (isPopupMode) {
       // Popup manages its own homepage state locally.
-      if (filteredChatHistory.length > 1) {
-        setPopupShowHomepage(false)
+      setPopupShowHomepage(!hasRealMessages)
+      if (hasRealMessages) {
+        setIsOldChatOpen(true)
+        setIsNewChatOpen(false)
       }
       return
     }
-    if (filteredChatHistory.length > 1) {
+    if (hasRealMessages) {
       setShowHomepage(false)
       setIsOldChatOpen(true)
       setIsNewChatOpen(false)
@@ -1294,7 +1340,7 @@ const DynamicVoiceChat = ({
           setSessionId(session.sessionid)
           setIsOldChatOpen(false)
           setIsNewChatOpen(true)
-          setShowHomepage(true)
+          updateShowHomepage(true)
         } else if (existingHistory.length > 0) {
           // Reload mid-onboarding: restore existing conversation
           setIsOldChatOpen(true)
@@ -1302,7 +1348,7 @@ const DynamicVoiceChat = ({
         } else {
           setIsOldChatOpen(false)
           setIsNewChatOpen(true)
-          setShowHomepage(true)
+          updateShowHomepage(true)
         }
         setShouldFetchIntro(true)
         setIsStreamingComplete(true)
@@ -1360,11 +1406,11 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     if (shouldShowChatHistoryFeature) {
+      const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
       if (isOldChatOpen === true) {
         setShouldFetchIntro(true)
         // Only hide homepage if there are real conversation messages beyond the intro
         // for the active flow — prevents messages from other flows from toggling state.
-        const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
         if (isPopupMode) {
           setPopupShowHomepage(!hasRealMessages)
         } else {
@@ -1372,9 +1418,9 @@ const DynamicVoiceChat = ({
         }
       } else if (isNewChatOpen === true) {
         if (isPopupMode) {
-          setPopupShowHomepage(true)
+          setPopupShowHomepage(!hasRealMessages)
         } else {
-          setShowHomepage(true)
+          setShowHomepage(!hasRealMessages)
         }
       }
     } else {
@@ -1413,6 +1459,8 @@ const DynamicVoiceChat = ({
   useEffect(() => {
     if (isTokenValidated && showHistorySidebar && profileToUse && storageFlow) {
       showChatTitle()
+    } else if (isTokenValidated && showHistorySidebar && (!profileToUse || !storageFlow)) {
+      setIsSidebarLoading(false)
     }
   }, [isTokenValidated, profileToUse, storageFlow, showHistorySidebar])
 
@@ -1471,8 +1519,9 @@ const DynamicVoiceChat = ({
     if (textAreaRef.current) {
       textAreaRef.current.style.height = "auto"
       textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`
+      handleScrollToView("smooth")
     }
-  }, [textMessage])
+  }, [textMessage, handleScrollToView])
 
   // ========================================================================
   // SECTION: Chat History & Messages (Execution Order: 8 - During Conversation)
@@ -1485,8 +1534,8 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     lastBotMessageIndex.current = filteredChatHistory?.length - 1
-    if (!(isOldChatOpen && !hasScrolledToBottomRef.current)) handleScrollToView()
-  }, [filteredChatHistory])
+    handleScrollToView("smooth")
+  }, [filteredChatHistory, handleScrollToView])
 
   /**
    * Attach audio recordings to user messages in chat history
@@ -1694,16 +1743,6 @@ const DynamicVoiceChat = ({
   }
 
   // ========================================================================
-  function handleScrollToView() {
-    try {
-      document?.querySelector("#last-chat-boundary")?.scrollIntoView({
-        behavior: "smooth",
-      })
-    } catch (error) {
-      console.error({ error })
-    }
-  }
-
   const handleOnInputText = e => {
     e.preventDefault()
     const value = e.target.value
@@ -1718,6 +1757,8 @@ const DynamicVoiceChat = ({
       setIsRecognizing(false)
       setHasStartedListening(false)
     }
+
+    handleScrollToView("smooth")
   }
 
   const handleAI4BharatTTSRequest = async (text, id, sourceLanguage) => {
@@ -2120,6 +2161,7 @@ const DynamicVoiceChat = ({
   }
 
   async function showChatTitle() {
+    setIsSidebarLoading(true)
     try {
       const currentFlow = storageFlow
       const response = await getChatSessionApi({
@@ -2132,6 +2174,8 @@ const DynamicVoiceChat = ({
       }
     } catch (error) {
       console.error("showChatTitle error:", error)
+    } finally {
+      setIsSidebarLoading(false)
     }
   }
 
@@ -2199,8 +2243,12 @@ const DynamicVoiceChat = ({
               </button>
             </div>
 
-            {/* Empty state */}
-            {(!chatTitle || chatTitle.length === 0) ? (
+            {/* Loading state, Empty state, or Session list */}
+            {isSidebarLoading ? (
+              <div className="chat-sidebar-loading">
+                <BiLoader className="loader-rotate-loader loader-icon" />
+              </div>
+            ) : (!chatTitle || chatTitle.length === 0) ? (
               <div className="chat-sidebar-empty">
                 <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -2315,7 +2363,7 @@ const DynamicVoiceChat = ({
       )}
       <div className={`${accessToken ? "div72" : ""}`} style={hasActiveFlexLayout ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : undefined}>
         <HiddenRecorder />
-        <div className={`${accessToken ? "div33-a" : "div33"} div9`} style={hasActiveFlexLayout ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
+        <div ref={chatContainerRef} className={`${accessToken ? "div33-a" : "div33"} div9`} style={hasActiveFlexLayout ? { flex: 1, overflowY: "auto", minHeight: 0, paddingTop: 0, paddingBottom: 0 } : undefined}>
           {!showHomepage && (
             <ul className="div34">
               {filteredChatHistory &&
@@ -2352,15 +2400,14 @@ const DynamicVoiceChat = ({
                                 setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
                                 if (isOffline || !navigator.onLine) {
                                   showOfflineNotification()
+                                  setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
                                   return
                                 }
                                 downloadFileFromUrl(
                                   chat.extra_content.download.pdf_url,
                                   chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.pdf` : null,
                                   () => {
-                                    if (!isOffline && navigator.onLine) {
-                                      setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
-                                    }
+                                    setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
                                   }
                                 )
                               }}
@@ -2376,15 +2423,14 @@ const DynamicVoiceChat = ({
                                 setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: false }))
                                 if (isOffline || !navigator.onLine) {
                                   showOfflineNotification()
+                                  setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
                                   return
                                 }
                                 downloadFileFromUrl(
                                   chat.extra_content.download.docx_url,
                                   chat.extra_content.download.file_name ? `${chat.extra_content.download.file_name}.docx` : null,
                                   () => {
-                                    if (!isOffline && navigator.onLine) {
-                                      setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
-                                    }
+                                    setDownloadFileErrors((prev) => ({ ...prev, [chat.updated_at]: true }))
                                   }
                                 )
                               }}
@@ -2395,7 +2441,7 @@ const DynamicVoiceChat = ({
                             </button>
                           )}
                         </div>
-                        {downloadFileErrors[chat.updated_at] && !isOffline && navigator.onLine && (
+                        {downloadFileErrors[chat.updated_at] && (
                           <p style={{ fontSize: "13px", color: "#dc2626", marginTop: "6px" }}>{t("downloadFileError")}</p>
                         )}
                       </div>
@@ -2512,7 +2558,11 @@ const DynamicVoiceChat = ({
               })()}
             </>
           )}
-          <div id="last-chat-boundary" className="div38" />
+          <div
+            ref={lastChatBoundaryRef}
+            id={isPopupMode ? "popup-last-chat-boundary" : "last-chat-boundary"}
+            className="div38"
+          />
         </div>
         <Notification />
 
@@ -2629,6 +2679,7 @@ const DynamicVoiceChat = ({
                 autoFocus={false}
                 disabled={hasStartedRecording || isFetchingData || (isSimpleBot === false && strandStep >= stateMachineLength)}
                 ref={textAreaCallbackRef}
+                enterKeyHint="enter"
                 onInput={e => {
                   e.target.style.height = "auto"
                   const maxHeight = 150
@@ -2641,25 +2692,38 @@ const DynamicVoiceChat = ({
                   }
                 }}
                 onFocus={() => {
+                  handleScrollToView("smooth")
                   setTimeout(() => {
-                    handleScrollToView()
-                    if (textAreaRef.current) {
-                      textAreaRef.current.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      })
-                    }
-                  }, 300)
+                    handleScrollToView("smooth")
+                  }, 150)
+                  setTimeout(() => {
+                    handleScrollToView("smooth")
+                  }, 350)
                 }}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    if (e.nativeEvent?.isComposing) return
-                    if (checkIsOffline()) return
-                    if (!textMessage?.trim()) return
-                    e.target.form?.requestSubmit()
-                    if (textAreaRef.current) {
-                      textAreaRef.current.style.height = "auto"
+                  if (e.key === "Enter") {
+                    const isMobileDevice =
+                      isMobile ||
+                      (typeof navigator !== "undefined" &&
+                        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ||
+                      (typeof window !== "undefined" &&
+                        window.matchMedia &&
+                        window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches)
+
+                    // On mobile virtual keyboards, the return/next line key inserts a newline
+                    if (isMobileDevice) {
+                      return
+                    }
+
+                    if (!e.shiftKey) {
+                      e.preventDefault()
+                      if (e.nativeEvent?.isComposing) return
+                      if (checkIsOffline()) return
+                      if (!textMessage?.trim()) return
+                      e.target.form?.requestSubmit()
+                      if (textAreaRef.current) {
+                        textAreaRef.current.style.height = "auto"
+                      }
                     }
                   }
                 }}

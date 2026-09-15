@@ -11,11 +11,16 @@ import { useTranslation } from "react-i18next";
 const PrivacyPolicyPopup = ({ tncText, onAccept, onDecline, useStaticText=false, isGuestChat = false }) => {
 
   useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     window.scrollTo(0, 0);
   
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
     };
   }, []);
   
@@ -23,7 +28,7 @@ const PrivacyPolicyPopup = ({ tncText, onAccept, onDecline, useStaticText=false,
 
   return (
     <>
-        <div className="tnc-cover"></div>
+        <div className="tnc-cover" onWheel={(e) => e.preventDefault()}></div>
         <div className="tnc-bg">
             <div className="tnc-container">
             <div className="tnc-content">
