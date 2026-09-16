@@ -252,7 +252,8 @@ const DynamicVoiceChat = ({
     }
     try {
       const res = await validateSession()
-      const details = res?.profile_details || {}
+      if (!res) return false
+      const details = res?.profile_details
       if (details) {
         const normalized = extractUserProfileData(details, firstName)
         setProfileApiData(normalized)
@@ -261,6 +262,7 @@ const DynamicVoiceChat = ({
       return true
     } catch (error) {
       showNotification({ message: error?.message || String(error), type: "error" })
+      return false
     } finally {
       setIsTokenValidated(true)
     }
@@ -905,7 +907,8 @@ const DynamicVoiceChat = ({
     const messageToSend = (overrideText ?? textMessage)?.trim() || ""
 
     try {
-      await validateToken()
+      const isValid = await validateToken()
+      if (!isValid) return false
     } catch {
       return false
     }
@@ -1338,7 +1341,11 @@ const DynamicVoiceChat = ({
         if (!sessionId) {
           removeChatHistory()
           const session = await getSessionDetails()
-          setSessionId(session.sessionid)
+          if (session?.sessionid) {
+            setSessionId(session.sessionid)
+          } else {
+            console.error("[initChat] Failed to generate new session ID:", session)
+          }
           setIsOldChatOpen(false)
           setIsNewChatOpen(true)
           updateShowHomepage(true)
@@ -1671,7 +1678,8 @@ const DynamicVoiceChat = ({
     }
 
     try {
-      await validateToken()
+      const isValid = await validateToken()
+      if (!isValid) return
     } catch {
       return
     }
@@ -1700,6 +1708,11 @@ const DynamicVoiceChat = ({
     setSessionId(null)
     setStrandStep(null)
     const session = await getSessionDetails()
+    if (!session?.sessionid) {
+      console.error("[resetChat] Failed to generate new session ID:", session)
+      setIsLoading(false)
+      return
+    }
     setSessionId(session.sessionid)
 
 
@@ -1915,7 +1928,8 @@ const DynamicVoiceChat = ({
   const startRecording = async () => {
     if (checkIsOffline()) return
     try {
-      await validateToken()
+      const isValid = await validateToken()
+      if (!isValid) return
     } catch {
       return
     }
@@ -1964,7 +1978,8 @@ const DynamicVoiceChat = ({
               }
 
               try {
-                await validateToken()
+                const isValid = await validateToken()
+                if (!isValid) return
               } catch {
                 return
               }
@@ -2202,7 +2217,8 @@ const DynamicVoiceChat = ({
     setActiveSourcesChatId(null)
     setActiveSources([])
     try {
-      await validateToken()
+      const isValid = await validateToken()
+      if (!isValid) return
     } catch {
       return
     }

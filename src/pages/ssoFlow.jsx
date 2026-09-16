@@ -61,7 +61,9 @@ function SsoFlow() {
             setSessionId(sessionId)
           } else {
             let session = await getSessionDetailsApi()
+            if (session?.sessionid) {
             setSessionId(session.sessionid)
+            }
           }
           if (languagePassed && languagePassed !== "" && languagePassed !== "null" && languageList.some(l => l.value === languagePassed)) {
             setHasSelectedLanguage(true)
