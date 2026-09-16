@@ -51,7 +51,7 @@ import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
-import { isMobileUserAgent } from "utils/util"
+import { isMobileUserAgent } from "utils/utils"
 
 
 
