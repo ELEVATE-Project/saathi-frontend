@@ -48,6 +48,3 @@ export const SOURCE_TYPE = {
  * Default source logos
  */
 export const DEFAULT_SOURCE_LOGO = "/assets/source_logo.svg"
-
-// Re-export mobile device user agent detection
-export { MOBILE_USER_AGENT_REGEX, isMobileUserAgent } from "./common"

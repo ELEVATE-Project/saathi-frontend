@@ -50,7 +50,8 @@ import useCustomMediaQuery from "hooks/useCustomMediaQuery"
 import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
-import { CHAT_SOURCE, CHAT_SPECIAL_IDS, isMobileUserAgent } from "constants/dynamic-chat"
+import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
+import { isMobileUserAgent } from "utils/util"
 
 
 
@@ -1406,7 +1407,7 @@ const DynamicVoiceChat = ({
    */
   useEffect(() => {
     if (shouldShowChatHistoryFeature) {
-      const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
+      const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG))
       if (isOldChatOpen === true) {
         setShouldFetchIntro(true)
         // Only hide homepage if there are real conversation messages beyond the intro
@@ -1433,7 +1434,7 @@ const DynamicVoiceChat = ({
    * Loads existing conversation when user selects from history
    */
   useEffect(() => {
-    const realMessages = filteredChatHistory?.filter(c => !String(c.updated_at).startsWith("intro_msg_id")) ?? []
+    const realMessages = filteredChatHistory?.filter(c => !String(c.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG)) ?? []
     if (isOldChatOpen === true && introMessage && realMessages.length === 0 && sentences?.length === 0) {
       handleChatSessionButtonClick()
     }
