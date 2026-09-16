@@ -43,7 +43,8 @@ const LanguageSelectionGrid = () => {
 
   const handleLanguageClick = async langValue => {
     try {
-      await validateSession()
+      const session = await validateSession()
+      if (!session) return
     } catch (error) {
       console.error("[LanguageSelectionGrid] Session validation failed:", error)
       return

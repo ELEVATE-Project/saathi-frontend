@@ -76,15 +76,23 @@ export const readElevateProfileApi = async (accessToken, { silent = false } = {}
       if (_sessionInvalidPopupShown) return
       _sessionInvalidPopupShown = true
       setShowProfileModal(false)
+      try {
       await Swal.fire({
         text: i18n.t("sessionExpiredMessage"),
         confirmButtonText: i18n.t("confirmChanges"),
         allowOutsideClick: false,
         allowEscapeKey: false,
       })
+      } finally {
+        _sessionInvalidPopupShown = false
+      }
       useUserDataLocalStore.getState().setAccessToken(null)
       clearFromStorage()
-      window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
+      if (window.location.pathname === ROUTES.SHIKSHALOKAM_HOME_PAGE && !window.location.search) {
+        window.location.reload()
+      } else {
+        window.location.href = ROUTES.SHIKSHALOKAM_HOME_PAGE
+      }
     }
     else {
       throw error
