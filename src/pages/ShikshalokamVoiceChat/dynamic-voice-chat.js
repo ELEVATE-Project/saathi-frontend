@@ -2716,8 +2716,8 @@ const DynamicVoiceChat = ({
                     }
 
                     if (!e.shiftKey) {
-                      e.preventDefault()
                       if (e.nativeEvent?.isComposing) return
+                      e.preventDefault()
                       if (checkIsOffline()) return
                       if (!textMessage?.trim()) return
                       e.target.form?.requestSubmit()
