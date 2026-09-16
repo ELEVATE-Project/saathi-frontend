@@ -189,8 +189,8 @@ const DynamicVoiceChat = ({
     if (!isPopupMode) return false
     const history = getChatHistory()
     const flowHistory = storageFlow ? history.filter(msg => msgBelongsToFlow(msg, storageFlow)) : history
-    const hasReal = flowHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
-    return !hasReal
+    const hasRealMessages = flowHistory.some(c => !String(c.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG))
+    return !hasRealMessages
   })
   const showHomepage = isPopupMode ? popupShowHomepage : showHomepageStore
   const updateShowHomepage = useCallback((value) => {
@@ -1128,7 +1128,7 @@ const DynamicVoiceChat = ({
   }, [storageFlow, isPopupMode])
 
   useEffect(() => {
-    const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith("intro_msg_id"))
+    const hasRealMessages = filteredChatHistory.some(c => !String(c.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG))
     if (isPopupMode) {
       // Popup manages its own homepage state locally.
       setPopupShowHomepage(!hasRealMessages)
@@ -1180,10 +1180,10 @@ const DynamicVoiceChat = ({
       message = words.join(" ")
     }
     const isRestoringOldChat = isOldChatOpen && getChatHistory().filter(
-      msg => msgBelongsToFlow(msg, storageFlow) && !String(msg.updated_at).startsWith("intro_msg_id")
+      msg => msgBelongsToFlow(msg, storageFlow) && !String(msg.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG)
     ).length > 0
     // Use a flow-specific intro ID so each flow (main vs profile popup) gets its own entry.
-    const introId = isPopupMode ? `intro_msg_id_${storageFlow}` : "intro_msg_id"
+    const introId = isPopupMode ? `${CHAT_SPECIAL_IDS.INTRO_MSG}_${storageFlow}` : CHAT_SPECIAL_IDS.INTRO_MSG
     if (!isRestoringOldChat && message && !!message?.trim() && filteredChatHistory[filteredChatHistory?.length - 1]?.msg !== message && !sentences.some(msg => msg.message === message)) {
       setIntroMessage(message)
       setSentences(prev => [
