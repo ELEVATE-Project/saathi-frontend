@@ -50,7 +50,7 @@ import useCustomMediaQuery from "hooks/useCustomMediaQuery"
 import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
-import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
+import { CHAT_SOURCE, CHAT_SPECIAL_IDS, isMobileUserAgent } from "constants/dynamic-chat"
 
 
 
@@ -2704,8 +2704,7 @@ const DynamicVoiceChat = ({
                   if (e.key === "Enter") {
                     const isMobileDevice =
                       isMobile ||
-                      (typeof navigator !== "undefined" &&
-                        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ||
+                      isMobileUserAgent() ||
                       (typeof window !== "undefined" &&
                         window.matchMedia &&
                         window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches)
