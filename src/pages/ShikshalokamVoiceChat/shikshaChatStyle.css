@@ -1333,6 +1333,15 @@ html, body {
   color: #fff;
 }
 
+.chat-sidebar-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
 .chat-sidebar-empty {
   flex: 1;
   display: flex;
