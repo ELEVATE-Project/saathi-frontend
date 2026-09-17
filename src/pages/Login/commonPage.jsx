@@ -8,7 +8,7 @@ import { useNetworkStatus } from "../../hooks/useNetworkStatus"
 import { useEffect, useMemo, useState, useCallback } from "react"
 import env from "../../utils/env"
 import { useLanguage } from "../../hooks/useLanguage"
-import { useSearchParams, useNavigate } from "react-router-dom"
+import { useSearchParams, useNavigate, useNavigationType } from "react-router-dom"
 import { useSiteDataSessionStore } from "store"
 import { useSiteStorage } from "hooks/useStorage"
 import Header from "../../components/Header"
@@ -16,14 +16,8 @@ import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
 import ROUTES from "../../url"
 import { LANDING_PAGE_TEXT } from "constants/common"
-import { useUserDataLocalStore, useChatDataLocalStore } from "store"
-import { useTranslation } from "react-i18next"
-import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
-import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
-import { getProfileApi, acceptTncApi, readElevateProfileApi } from "api/endpoints/user"
-import { validateSession } from "../../utils/session"
-import { clearFromStorage } from "../../services/storage_service"
-import { getSessionDetails } from "../../services/api.service"
+import { useUserDataLocalStore } from "store"
+import { readElevateProfileApi } from "api/endpoints/user"
 
 function CommonHomePage() {
   const { audioRef, stopAudioTriggered, setStopAudioTriggered, stopAllAudio } = useAudio()
@@ -44,8 +38,6 @@ function CommonHomePage() {
   const profileId =
     zustandProfileId ??
     JSON.parse(localStorage.getItem("profileid") || "null")
-
-  const { t } = useTranslation()
 
   const [isTokenValidating, setIsTokenValidating] = useState(() => {
     if (accessToken) return true
@@ -68,19 +60,18 @@ function CommonHomePage() {
   const [searchParams] = useSearchParams()
   const urlLanguage = useMemo(() => searchParams.get("language"), [searchParams])
 
-  const [isTncAccepted, setIsTncAccepted] = useState(null)
-  const [isProfileComplete, setIsProfileComplete] = useState(null)
-  const [showProfilePopup, setShowProfilePopup] = useState(false)
-  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const navigationType = useNavigationType()
+  const setHasSelectedLanguage = useSiteDataSessionStore(state => state.setHasSelectedLanguage)
 
   const languageSelected = hasSelectedLanguage || !!urlLanguage
-  const saathiOnboardingDone =
-    isTncAccepted === true
 
-  const showTnCPopup =
-    languageSelected &&
-    isTncAccepted === false &&
-    !isProfileLoading
+  // If the user pressed back to return here, reset language selection
+  // so they stay on the language grid instead of bouncing forward.
+  useEffect(() => {
+    if (navigationType === "POP" && hasSelectedLanguage) {
+      setHasSelectedLanguage(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Record the history length at the very first home page visit, exactly once per
   // browser tab/session. Never overwritten on any subsequent mount.
@@ -148,7 +139,7 @@ function CommonHomePage() {
     if (showLanding) return
     if (!accessToken) return
     if (isTokenValidating) return
-    if (hasSelectedLanguage && saathiOnboardingDone) return
+    if (hasSelectedLanguage) return
 
     const handleBack = () => {
       navigate(-2)
@@ -162,7 +153,7 @@ function CommonHomePage() {
     return () => {
       window.removeEventListener("popstate", handleBack)
     }
-  }, [accessToken, showLanding, navigate, isTokenValidating, hasSelectedLanguage, saathiOnboardingDone])
+  }, [accessToken, showLanding, navigate, isTokenValidating, hasSelectedLanguage])
 
   // Initialize language and flow processing
   useEffect(() => {
@@ -173,17 +164,7 @@ function CommonHomePage() {
     }
   }, [chatLanguage])
 
-  useEffect(() => {
-    if (isTokenValidating) return
-    if (showLanding) return
-    if (!saathiOnboardingDone) return
-
-    if (!hasSelectedLanguage) return
-
-    navigate(ROUTES.COMMON_CHAT)
-  }, [isTokenValidating, hasSelectedLanguage, showLanding, saathiOnboardingDone])
-
-  // Process language selection
+  // Navigate to chat once language is selected (via button or URL param)
   useEffect(() => {
     if (isTokenValidating) return
     if (showLanding) return
@@ -191,12 +172,11 @@ function CommonHomePage() {
       setIsLoading(false)
       return
     }
-    if (!saathiOnboardingDone) return
 
     setPreviousUrl(window.location.href)
 
-    navigate(ROUTES.COMMON_CHAT)
-  }, [isTokenValidating, chatLanguage, urlLanguage, hasSelectedLanguage, showLanding, saathiOnboardingDone])
+    navigate(ROUTES.COMMON_CHAT, { replace: true })
+  }, [isTokenValidating, chatLanguage, urlLanguage, hasSelectedLanguage, showLanding])
 
   useEffect(() => {
     handleLanguageChange(chatLanguage, audioRef, stopAllAudio, setStopAudioTriggered)
@@ -208,109 +188,7 @@ function CommonHomePage() {
     }
   }, [showLanding, setIsLoading])
 
-  useEffect(() => {
-    if (showLanding) return
-    if (!languageSelected) return
-    if (isTncAccepted !== null) return
 
-    if (!profileId) {
-      setIsProfileLoading(false)
-      setIsTncAccepted(true)
-      setIsProfileComplete(true)
-      useUserDataLocalStore.getState().setAcceptedTnC(true)
-      return
-    }
-
-    let cancelled = false
-    setIsProfileLoading(true)
-
-    ;(async () => {
-      try {
-        const data = await getProfileApi(profileId, accessToken)
-        if (cancelled) return
-
-        if (
-          typeof data?.is_tnc_accepted !== "boolean" ||
-          typeof data?.is_profile_complete !== "boolean"
-        ) {
-          setIsTncAccepted(true)
-          setIsProfileComplete(true)
-          useUserDataLocalStore.getState().setAcceptedTnC(true)
-          return
-        }
-
-        setIsTncAccepted(data.is_tnc_accepted)
-        setIsProfileComplete(data.is_profile_complete)
-
-        if (data.is_tnc_accepted !== false) {
-          useUserDataLocalStore.getState().setAcceptedTnC(true)
-        }
-
-        if (data.is_tnc_accepted === true && data.is_profile_complete === false) {
-          setShowProfilePopup(true)
-        }
-      } catch (error) {
-        if (cancelled) return
-        setIsTncAccepted(true)
-        setIsProfileComplete(true)
-        useUserDataLocalStore.getState().setAcceptedTnC(true)
-      } finally {
-        if (!cancelled) setIsProfileLoading(false)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      setIsProfileLoading(false)
-    }
-  }, [showLanding, profileId, languageSelected, isTncAccepted, accessToken])
-
-  const handleAcceptTnC = useCallback(async () => {
-    try {
-      await validateSession()
-      await acceptTncApi(profileId, accessToken)
-      setIsTncAccepted(true)
-      useUserDataLocalStore.getState().setAcceptedTnC(true)
-      if (isProfileComplete === false) {
-        setShowProfilePopup(true)
-      }
-    } catch (error) {
-      console.error(error)
-    }
-  }, [profileId, isProfileComplete, accessToken])
-
-  const handleProfilePopupClose = useCallback(async () => {
-    const {
-      setIsOldChatOpen,
-      setIsNewChatOpen,
-      setShowHomepage,
-      setSessionId,
-      setIntroMessage,
-      setStrandStep,
-      setChatHistory,
-    } = useChatDataLocalStore.getState()
-
-    // Mirror resetChat() (without reload)
-    setIsOldChatOpen(false)
-    setIsNewChatOpen(true)
-    setShowHomepage(true)
-    setIntroMessage(null)
-    setSessionId(null)
-    setStrandStep(null)
-    setChatHistory([])
-
-    try {
-      const session = await getSessionDetails()
-      if (session?.sessionid) {
-      setSessionId(session.sessionid)
-      }
-    } catch (error) {
-      console.error("[handleProfilePopupClose] getSessionDetails failed:", error)
-    } finally {
-      setShowProfilePopup(false)
-      setIsProfileComplete(true)
-    }
-  }, [showProfilePopup])
 
   const handleLoginRedirect = useCallback(() => {
     const loginRedirectUrl = env.LOGIN_REDIRECT_URL()
@@ -333,7 +211,7 @@ function CommonHomePage() {
   }, [navigate])
 
   // Auto-navigating to common-chat — show spinner while effect navigates
-  if (!isTokenValidating && !showLanding && hasSelectedLanguage && saathiOnboardingDone) {
+  if (!isTokenValidating && !showLanding && hasSelectedLanguage) {
     return <LoadingSpinner isVisible={true} />
   }
 
@@ -422,14 +300,6 @@ function CommonHomePage() {
   return (
     <>
       <Notification />
-      {showTnCPopup && (
-        <PrivacyPolicyPopup
-          tncText={t("tncText")}
-          onAccept={handleAcceptTnC}
-          useStaticText={false}
-          isGuestChat={false}
-        />
-      )}
 
       <div className="container max-w-full md mt-0 mx-auto grid md:grid-cols-2 px-0">
         {/* Desktop Header */}
@@ -448,7 +318,7 @@ function CommonHomePage() {
         </div>
 
         {/* Loading Spinner */}
-        <LoadingSpinner isVisible={isLoading || isProfileLoading} />
+        <LoadingSpinner isVisible={isLoading} />
       </div>
     </>
   )

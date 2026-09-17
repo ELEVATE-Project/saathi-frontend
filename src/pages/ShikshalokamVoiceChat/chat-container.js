@@ -1,7 +1,7 @@
 import { API_ENDPOINTS } from "../../constants/urls"
 import { BiLoader } from "react-icons/bi"
 import { getFlowInfoApi } from "../../api/endpoints"
-import { getProfileApi } from "../../api/endpoints/user"
+import { getProfileApi, acceptTncApi } from "../../api/endpoints/user"
 import { getSessionDetails } from "../../services/api.service"
 import { languageList } from "./enum"
 import { setLanguage } from "../../i18n"
@@ -9,8 +9,11 @@ import { useChatStorage, useUserStorage } from "../../hooks/useStorage"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
+import { useTranslation } from "react-i18next"
 import { useSiteDataSessionStore } from "store"
+import { validateSession } from "../../utils/session"
 import DynamicVoiceChat from "./dynamic-voice-chat"
+import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
 import ProfileChatPopup from "../../components/ProfileChatPopup/ProfileChatPopup"
 import ROUTES from "../../url"
 import useSmartChatStorage from "../../hooks/useSmartChatStorage"
@@ -21,6 +24,7 @@ import { env } from "utils/env"
 function ChatContainer() {
   const navigate = useNavigate()
   const flowName = env.FLOW_NAME()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
@@ -32,6 +36,9 @@ function ChatContainer() {
   const [showProfilePopup, setShowProfilePopup] = useState(false)
   const [profileCheckDone, setProfileCheckDone] = useState(false)
   const [profileSessionId, setProfileSessionId] = useState(null)
+  const [isTncAccepted, setIsTncAccepted] = useState(null)
+  const [isProfileComplete, setIsProfileComplete] = useState(null)
+  const [isTncLoading, setIsTncLoading] = useState(false)
 
   const chatLanguage = useSiteDataSessionStore(state => state.chatLanguage)
   const ipFetched = useUserStorage()(state => state.ipFetched)
@@ -64,38 +71,94 @@ function ChatContainer() {
     setChatHistory(updated_chat_history)
   }, [])
 
-  // Check if profile onboarding is needed
+  // Check TnC acceptance status
+  useEffect(() => {
+    if (!accessToken || !profileId) {
+      // No auth or profile — skip TnC, treat as accepted
+      setIsTncAccepted(true)
+      setIsProfileComplete(true)
+      return
+    }
+    if (isTncAccepted !== null) return
+
+    let cancelled = false
+    setIsTncLoading(true)
+
+    ;(async () => {
+      try {
+        const data = await getProfileApi(profileId, accessToken)
+        if (cancelled) return
+
+        if (
+          typeof data?.is_tnc_accepted !== "boolean" ||
+          typeof data?.is_profile_complete !== "boolean"
+        ) {
+          setIsTncAccepted(true)
+          setIsProfileComplete(true)
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+          return
+        }
+
+        setIsTncAccepted(data.is_tnc_accepted)
+        setIsProfileComplete(data.is_profile_complete)
+
+        if (data.is_tnc_accepted !== false) {
+          useUserDataLocalStore.getState().setAcceptedTnC(true)
+        }
+      } catch (error) {
+        if (cancelled) return
+        console.error("[ChatContainer] TnC check failed:", error)
+        setIsTncAccepted(true)
+        setIsProfileComplete(true)
+        useUserDataLocalStore.getState().setAcceptedTnC(true)
+      } finally {
+        if (!cancelled) setIsTncLoading(false)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [accessToken, profileId, isTncAccepted])
+
+  const handleAcceptTnC = useCallback(async () => {
+    try {
+      await validateSession()
+      await acceptTncApi(profileId, accessToken)
+      setIsTncAccepted(true)
+      useUserDataLocalStore.getState().setAcceptedTnC(true)
+    } catch (error) {
+      console.error("[ChatContainer] TnC accept failed:", error)
+    }
+  }, [profileId, accessToken])
+
+  const showTnCPopup = isTncAccepted === false && !isTncLoading
+
+  // Check if profile onboarding is needed (only after TnC accepted)
   useEffect(() => {
     setProfileCheckDone(false)
     if (!accessToken || !profileId) {
       setProfileCheckDone(true)
       return
     }
-    const acceptedTnC = useUserDataLocalStore.getState().has_accepted_tnc
-    if (acceptedTnC !== true) {
+    if (isTncAccepted !== true) {
       setProfileCheckDone(true)
       return
     }
 
-    ;(async () => {
-      try {
-        const data = await getProfileApi(profileId, accessToken)
-        if (data?.is_profile_complete === false) {
-          try {
-            const profileSession = await getSessionDetails()
-            setProfileSessionId(profileSession.sessionid)
-          } catch (err) {
-            console.error("[ChatContainer] profile session fetch failed:", err)
-          }
-          setShowProfilePopup(true)
+    if (isProfileComplete === false) {
+      ;(async () => {
+        try {
+          const profileSession = await getSessionDetails()
+          setProfileSessionId(profileSession.sessionid)
+        } catch (err) {
+          console.error("[ChatContainer] profile session fetch failed:", err)
         }
-      } catch (error) {
-        console.error("[ChatContainer] profile check failed:", error)
-      } finally {
+        setShowProfilePopup(true)
         setProfileCheckDone(true)
-      }
-    })()
-  }, [accessToken, profileId])
+      })()
+    } else {
+      setProfileCheckDone(true)
+    }
+  }, [accessToken, profileId, isTncAccepted, isProfileComplete])
 
   const handleProfilePopupClose = useCallback(async () => {
     // 1. Hide the popup first — this unmounts the popup's DynamicVoiceChat
@@ -163,13 +226,21 @@ function ChatContainer() {
 
   return (
     <>
+      {showTnCPopup && (
+        <PrivacyPolicyPopup
+          tncText={t("tncText")}
+          onAccept={handleAcceptTnC}
+          useStaticText={false}
+          isGuestChat={false}
+        />
+      )}
       <div style={showProfilePopup ? { filter: "blur(10px)", pointerEvents: "none", position: "fixed", inset: 0, overflow: "hidden" } : undefined}>
-        {accessToken && !isLoading && profileCheckDone && <DynamicVoiceChat key={showProfilePopup ? "onboarding" : "main"} />}
+        {accessToken && !isLoading && profileCheckDone && isTncAccepted === true && <DynamicVoiceChat key={showProfilePopup ? "onboarding" : "main"} />}
       </div>
       {showProfilePopup && (
         <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} sessionId={profileSessionId} />
       )}
-      {!showProfilePopup && (isLoading || !ipFetched || !profileCheckDone) && (
+      {!showProfilePopup && !showTnCPopup && (isLoading || !ipFetched || !profileCheckDone || isTncLoading) && (
         <div className="loader-load-spinner">
           <div className="div67">
             <BiLoader className="loader-rotate-loader loader-icon" />
