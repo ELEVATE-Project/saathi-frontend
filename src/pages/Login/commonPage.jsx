@@ -94,8 +94,22 @@ function CommonHomePage() {
     }
   }, [])
 
+  // When the browser restores this page from bfcache (back-forward cache),
+  // the old pre-login DOM snapshot is shown without re-running JS.
+  // Detect this and reload so the current auth state is used.
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.location.reload()
+      }
+    }
+    window.addEventListener("pageshow", handlePageShow)
+    return () => window.removeEventListener("pageshow", handlePageShow)
+  }, [])
+
   useEffect(() => {
     if (!accessToken) return
+    if (!isTokenValidating) return // already validated, don't re-run
 
     const storedToken = accessToken
     const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
@@ -118,31 +132,12 @@ function CommonHomePage() {
         setIsTokenValidating(false)
       }
     })()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (zustandProfileId || !profileId) return
     useUserDataLocalStore.getState().setProfileId(profileId)
   }, [zustandProfileId, profileId])
-
-  // Intercept browser back button: SSO users should skip past the SSO redirect page
-  useEffect(() => {
-    if (showLanding) return
-    if (!accessToken) return
-
-    const handleBack = () => {
-      navigate(-2)
-    }
-
-    if (!window.history.state?.isCustom) {
-      window.history.pushState({ isCustom: true }, "", window.location.href)
-    }
-
-    window.addEventListener("popstate", handleBack)
-    return () => {
-      window.removeEventListener("popstate", handleBack)
-    }
-  }, [accessToken, showLanding, navigate])
 
   // Initialize language and flow processing
   useEffect(() => {
@@ -160,7 +155,7 @@ function CommonHomePage() {
 
     if (!hasSelectedLanguage) return
 
-    navigate(ROUTES.COMMON_CHAT)
+    navigate(ROUTES.COMMON_CHAT, { replace: true })
   }, [isTokenValidating, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   // Process language selection
@@ -175,7 +170,7 @@ function CommonHomePage() {
 
     setPreviousUrl(window.location.href)
 
-    navigate(ROUTES.COMMON_CHAT)
+    navigate(ROUTES.COMMON_CHAT, { replace: true })
   }, [isTokenValidating, chatLanguage, urlLanguage, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   useEffect(() => {
