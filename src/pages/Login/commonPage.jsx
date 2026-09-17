@@ -46,7 +46,17 @@ function CommonHomePage() {
 
   const { t } = useTranslation()
 
-  const [isTokenValidating, setIsTokenValidating] = useState(() => !!accessToken)
+  const [isTokenValidating, setIsTokenValidating] = useState(() => {
+    if (accessToken) return true
+    // Zustand persist rehydrates asynchronously — check localStorage directly
+    // so the login page never flashes while the store is still rehydrating.
+    try {
+      const stored = JSON.parse(localStorage.getItem("userData") || "{}")
+      return !!stored?.state?.access_token
+    } catch {
+      return false
+    }
+  })
 
   const showLanding =
     !Boolean(accessToken) &&
