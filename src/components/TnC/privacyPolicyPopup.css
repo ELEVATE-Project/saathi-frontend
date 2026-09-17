@@ -11,6 +11,22 @@ body {
     /* font-family: Arial, sans-serif; */
 }
 
+.tnc-cover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+    overflow: hidden;
+    background: rgba(124, 122, 122, 0.161);
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+    overscroll-behavior: contain;
+}
+
 .tnc-container {
     width: 100%;
 }
@@ -23,6 +39,7 @@ body {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     height: 100%;
     padding: 10px 10px 100px 10px;
+    overscroll-behavior: contain;
 }
 
 .tnc-text {
@@ -33,12 +50,6 @@ body {
 }
 
 .tnc-buttons {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background-color: #ffffff;
-    border-top: 1px solid #ddd;
-
     display: flex;
     justify-content: space-between;
     padding: 10px 20px;
@@ -74,6 +85,10 @@ body {
     .tnc-container {
         width: 100%;
         position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         z-index: 1000;
         overflow: hidden;
         height: 100%;
@@ -103,20 +118,25 @@ body {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        position: absolute;
+        position: fixed;
         z-index: 1000;
         font-family: var(--secondary-font-family);
     }
 
     .tnc-cover {
-        position: absolute;
-             width: 100vw;
-        height: 999vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
         z-index: 999;
         overflow: hidden;
         background: rgba(124, 122, 122, 0.161);
         backdrop-filter: blur(10px); 
         -webkit-backdrop-filter: blur(10px); 
+        overscroll-behavior: contain;
     }
 
     .tnc-container {
@@ -132,6 +152,7 @@ body {
         overflow-y: auto;
         height: 100%;
         padding: 10px 10px 100px 10px;
+        overscroll-behavior: contain;
     }
   
     .tnc-buttons {

@@ -15,6 +15,7 @@ import Header from "../../components/Header"
 import LanguageSelectionGrid from "../../components/LanguageSelectionGrid"
 import LoadingSpinner from "../../components/LoadingSpinner"
 import ROUTES from "../../url"
+import { LANDING_PAGE_TEXT } from "constants/common"
 import { useUserDataLocalStore, useChatDataLocalStore } from "store"
 import { useTranslation } from "react-i18next"
 import PrivacyPolicyPopup from "../../components/TnC/privacyPolicyPopup"
@@ -116,7 +117,7 @@ function CommonHomePage() {
     const storedRefreshToken = useUserDataLocalStore.getState().getRefreshToken()
     ;(async () => {
       try {
-        const data = await readElevateProfileApi(storedToken, { silent: true })
+        const data = await readElevateProfileApi(storedToken)
         if (data) {
           const profile = data.profile_details
           const store = useUserDataLocalStore.getState()
@@ -300,7 +301,9 @@ function CommonHomePage() {
 
     try {
       const session = await getSessionDetails()
+      if (session?.sessionid) {
       setSessionId(session.sessionid)
+      }
     } catch (error) {
       console.error("[handleProfilePopupClose] getSessionDetails failed:", error)
     } finally {
@@ -342,15 +345,15 @@ function CommonHomePage() {
         <div className="sm:hidden flex flex-col" style={{ height: "100dvh" }}>
           <div className="flex flex-col items-center justify-center px-4" style={{ height: "50dvh" }}>
             <img
-              src={t("pageLogo")}
+              src={LANDING_PAGE_TEXT.LOGO}
               className="h-[45px] w-[130px] object-contain mb-3"
               alt="shikshalokam_logo"
             />
             <div className="text-center text-md text-slate-700 mb-1">
-              <b>{t("landing_heading")}</b>
+              <b>{LANDING_PAGE_TEXT.HEADING}</b>
             </div>
             <p className="text-center text-slate-700 mb-2">
-              {t("landing_tagline")}
+              {LANDING_PAGE_TEXT.TAGLINE}
             </p>
             <img
               src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
@@ -367,7 +370,7 @@ function CommonHomePage() {
                 style={{ backgroundColor: "#572E91" }}
                 onClick={handleLoginRedirect}
               >
-                {t("landing_login_btn")}
+                {LANDING_PAGE_TEXT.LOGIN_BTN}
               </button>
             </div>
           </div>
@@ -378,16 +381,16 @@ function CommonHomePage() {
           <div className="px-8 flex flex-col items-center justify-center">
             <div className="w-full mb-6">
               <img
-                src={t("pageLogo")}
+                src={LANDING_PAGE_TEXT.LOGO}
                 className="h-[100px] w-[200px] object-contain"
                 alt="shikshalokam_logo"
               />
             </div>
             <div className="text-center text-xl mb-2 text-slate-700">
-              <b>{t("landing_heading")}</b>
+              <b>{LANDING_PAGE_TEXT.HEADING}</b>
             </div>
             <p className="text-center text-slate-700 mb-4">
-              {t("landing_tagline")}
+              {LANDING_PAGE_TEXT.TAGLINE}
             </p>
             <img
               src="https://mohini-static.shikshalokam.org/fe-images/PNG/Shikshalokam/innovationpana-1@2x.png"
@@ -405,7 +408,7 @@ function CommonHomePage() {
                 style={{ backgroundColor: "#572E91" }}
                 onClick={handleLoginRedirect}
               >
-                {t("landing_login_btn")}
+                {LANDING_PAGE_TEXT.LOGIN_BTN}
               </button>
             </div>
           </div>
