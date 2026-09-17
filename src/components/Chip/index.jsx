@@ -94,7 +94,7 @@ const Chip = ({
         <span className="inline-flex items-center shrink-0">{startIcon}</span>
       )}
 
-      <span className="break-words max-w-full">{label}</span>
+      <span className="min-w-0 max-w-full break-words">{label}</span>
 
       {endIcon && (
         <span className="inline-flex items-center shrink-0">{endIcon}</span>
