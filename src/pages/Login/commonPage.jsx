@@ -100,6 +100,7 @@ function CommonHomePage() {
   useEffect(() => {
     const handlePageShow = (event) => {
       if (event.persisted) {
+        document.documentElement.style.visibility = "hidden"
         window.location.reload()
       }
     }
@@ -139,6 +140,29 @@ function CommonHomePage() {
     useUserDataLocalStore.getState().setProfileId(profileId)
   }, [zustandProfileId, profileId])
 
+  // Intercept browser back button: SSO users should skip past the SSO redirect page.
+  // Only push the trap entry when the user will stay on this page (language selection).
+  // Skip it when auto-navigate to chat is about to fire — avoids the extra history entry.
+  useEffect(() => {
+    if (showLanding) return
+    if (!accessToken) return
+    if (isTokenValidating) return
+    if (hasSelectedLanguage && saathiOnboardingDone) return
+
+    const handleBack = () => {
+      navigate(-2)
+    }
+
+    if (!window.history.state?.isCustom) {
+      window.history.pushState({ isCustom: true }, "", window.location.href)
+    }
+
+    window.addEventListener("popstate", handleBack)
+    return () => {
+      window.removeEventListener("popstate", handleBack)
+    }
+  }, [accessToken, showLanding, navigate, isTokenValidating, hasSelectedLanguage, saathiOnboardingDone])
+
   // Initialize language and flow processing
   useEffect(() => {
     if (chatLanguage) return
@@ -155,7 +179,7 @@ function CommonHomePage() {
 
     if (!hasSelectedLanguage) return
 
-    navigate(ROUTES.COMMON_CHAT, { replace: true })
+    navigate(ROUTES.COMMON_CHAT)
   }, [isTokenValidating, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   // Process language selection
@@ -170,7 +194,7 @@ function CommonHomePage() {
 
     setPreviousUrl(window.location.href)
 
-    navigate(ROUTES.COMMON_CHAT, { replace: true })
+    navigate(ROUTES.COMMON_CHAT)
   }, [isTokenValidating, chatLanguage, urlLanguage, hasSelectedLanguage, showLanding, saathiOnboardingDone])
 
   useEffect(() => {
