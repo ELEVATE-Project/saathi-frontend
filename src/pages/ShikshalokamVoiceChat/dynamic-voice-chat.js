@@ -51,7 +51,7 @@ import useSmartChatStorage from "hooks/useSmartChatStorage"
 import useVoiceRecord, { default_wave_surfer_config } from "../interview-text-voice/useVoiceRecord"
 import WaveSurferPlayer from "../interview-text-voice/voice-player"
 import { CHAT_SOURCE, CHAT_SPECIAL_IDS } from "constants/dynamic-chat"
-import { isMobileUserAgent } from "services/utils"
+import { isMobileVirtualKeyboard } from "services/utils"
 
 
 
@@ -1520,6 +1520,34 @@ const DynamicVoiceChat = ({
   }, [hasStartedRecording])
 
   /**
+   * On mobile, track the visual viewport (which shrinks when the virtual keyboard
+   * opens) and keep the fixed input bar just above the keyboard by adjusting the
+   * --vkb-offset CSS variable on the document root.
+   */
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv || !isMobileVirtualKeyboard()) return
+
+    const update = () => {
+      // Distance from the bottom of the visual viewport to the bottom of the layout viewport
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      document.documentElement.style.setProperty('--vkb-offset', `${offset}px`)
+      // After the keyboard settles, scroll to the latest message
+      handleScrollToView('smooth')
+    }
+
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+
+    // Reset when component unmounts
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      document.documentElement.style.removeProperty('--vkb-offset')
+    }
+  }, [handleScrollToView])
+
+  /**
    * Dynamically adjust textarea height based on content
    * Provides better UX by expanding textarea as user types
    */
@@ -2630,7 +2658,7 @@ const DynamicVoiceChat = ({
               const chips = lastBotMsg?.extra_content?.quick_reply_chips ?? []
               if (!chips.length || quickReplySentForMsgId === lastBotMsg?.updated_at) return null
               return (
-                <div className="flex flex-wrap gap-2 px-6 pb-2 pt-2 border-b border-slate-200">
+                <div className="flex flex-wrap gap-2 sm:px-6 px-3 pb-2 pt-2 border-b border-slate-200 max-w-full">
                   {chips.map((chip, idx) => (
                     <Chip
                       key={idx}
@@ -2709,25 +2737,22 @@ const DynamicVoiceChat = ({
                   }
                 }}
                 onFocus={() => {
-                  handleScrollToView("smooth")
-                  setTimeout(() => {
+                  // On mobile, wait for the keyboard to fully open before scrolling.
+                  // Without the delay, the viewport hasn't shrunk yet and the scroll
+                  // target is still at the wrong position.
+                  if (isMobileVirtualKeyboard()) {
+                    setTimeout(() => handleScrollToView("smooth"), 300)
+                    setTimeout(() => handleScrollToView("smooth"), 600)
+                  } else {
                     handleScrollToView("smooth")
-                  }, 150)
-                  setTimeout(() => {
-                    handleScrollToView("smooth")
-                  }, 350)
+                    setTimeout(() => handleScrollToView("smooth"), 150)
+                    setTimeout(() => handleScrollToView("smooth"), 350)
+                  }
                 }}
                 onKeyDown={e => {
                   if (e.key === "Enter") {
-                    const isMobileDevice =
-                      isMobile ||
-                      isMobileUserAgent() ||
-                      (typeof window !== "undefined" &&
-                        window.matchMedia &&
-                        window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches)
-
                     // On mobile virtual keyboards, the return/next line key inserts a newline
-                    if (isMobileDevice) {
+                    if (isMobileVirtualKeyboard()) {
                       return
                     }
 

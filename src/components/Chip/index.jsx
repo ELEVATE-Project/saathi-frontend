@@ -22,6 +22,7 @@ const SIZE_CLASSES = {
  * @param {"default"|"primary"|"success"|"warning"|"error"} [variant="default"]
  * @param {"sm"|"md"|"lg"}  [size="md"]
  * @param {boolean}   [disabled=false]   Dims and blocks interaction
+ * @param {boolean}   [wrap=true]        Allow text to wrap to next line when exceeding container width
  * @param {function}  [onClick]          Makes the whole chip clickable
  * @param {ReactNode} [startIcon]        Element/emoji rendered before the label
  * @param {ReactNode} [endIcon]          Element rendered after the label
@@ -39,6 +40,7 @@ const Chip = ({
   variant = "default",
   size = "md",
   disabled = false,
+  wrap = true,
   onClick,
   startIcon,
   endIcon,
@@ -50,8 +52,9 @@ const Chip = ({
 
   const baseClasses = [
     // shape & layout
-    "inline-flex items-center rounded-full border font-bold",
-    "whitespace-nowrap select-none transition-colors duration-150",
+    "inline-flex items-center rounded-2xl border font-bold max-w-full leading-normal",
+    wrap ? "whitespace-normal break-words text-left" : "whitespace-nowrap",
+    "select-none transition-colors duration-150",
     // colour variant
     VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.default,
     // size (includes shadow)
@@ -91,7 +94,7 @@ const Chip = ({
         <span className="inline-flex items-center shrink-0">{startIcon}</span>
       )}
 
-      {label}
+      <span className="break-words max-w-full">{label}</span>
 
       {endIcon && (
         <span className="inline-flex items-center shrink-0">{endIcon}</span>
