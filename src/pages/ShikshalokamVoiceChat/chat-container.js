@@ -143,8 +143,13 @@ function ChatContainer() {
   // Check if profile onboarding is needed (only after TnC accepted)
   useEffect(() => {
     setProfileCheckDone(false)
-    if (!accessToken || !profileId) {
+    if (!accessToken) {
       setProfileCheckDone(true)
+      return
+    }
+    if (!profileId) {
+      // Authenticated but missing profile — keep profileCheckDone false
+      // so the spinner stays visible while we wait for profileId
       return
     }
     if (isTncAccepted !== true) {
@@ -242,8 +247,8 @@ function ChatContainer() {
           isGuestChat={false}
         />
       )}
-      <div style={showProfilePopup ? { filter: "blur(10px)", pointerEvents: "none", position: "fixed", inset: 0, overflow: "hidden" } : undefined}>
-        {accessToken && !isLoading && profileCheckDone && isTncAccepted === true && <DynamicVoiceChat key={showProfilePopup ? "onboarding" : "main"} />}
+      <div>
+        {accessToken && !isLoading && profileCheckDone && isTncAccepted === true && !showProfilePopup && <DynamicVoiceChat key="main" />}
       </div>
       {showProfilePopup && (
         <ProfileChatPopup isOpen={showProfilePopup} onClose={handleProfilePopupClose} sessionId={profileSessionId} />
