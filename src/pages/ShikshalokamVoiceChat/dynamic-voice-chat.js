@@ -1529,9 +1529,11 @@ const DynamicVoiceChat = ({
     }
 
     vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
 
     return () => {
       vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
       document.documentElement.style.removeProperty('--vkb-offset')
     }
   }, [])
