@@ -68,8 +68,18 @@ function CommonHomePage() {
   // If the user pressed back to return here, reset language selection
   // so they stay on the language grid instead of bouncing forward.
   useEffect(() => {
-    if (navigationType === "POP" && hasSelectedLanguage) {
+    if (navigationType === "POP") {
+      if (urlLanguage) {
+        searchParams.delete("language")
+        const newSearch = searchParams.toString()
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname + (newSearch ? `?${newSearch}` : "")
+        )
+      }
       setHasSelectedLanguage(false)
+      return
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

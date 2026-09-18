@@ -73,10 +73,14 @@ function ChatContainer() {
 
   // Check TnC acceptance status
   useEffect(() => {
-    if (!accessToken || !profileId) {
-      // No auth or profile — skip TnC, treat as accepted
+    if (!accessToken) {
+      // Guest — skip TnC, treat as accepted
       setIsTncAccepted(true)
       setIsProfileComplete(true)
+      return
+    }
+    if (!profileId) {
+      // Authenticated but missing profile — block until profile is available
       return
     }
     if (isTncAccepted !== null) return
@@ -93,9 +97,9 @@ function ChatContainer() {
           typeof data?.is_tnc_accepted !== "boolean" ||
           typeof data?.is_profile_complete !== "boolean"
         ) {
-          setIsTncAccepted(true)
-          setIsProfileComplete(true)
-          useUserDataLocalStore.getState().setAcceptedTnC(true)
+          console.error("[ChatContainer] TnC check returned malformed data:", data)
+          setIsTncAccepted(false)
+          setIsProfileComplete(false)
           return
         }
 
@@ -108,9 +112,8 @@ function ChatContainer() {
       } catch (error) {
         if (cancelled) return
         console.error("[ChatContainer] TnC check failed:", error)
-        setIsTncAccepted(true)
-        setIsProfileComplete(true)
-        useUserDataLocalStore.getState().setAcceptedTnC(true)
+        setIsTncAccepted(false)
+        setIsProfileComplete(false)
       } finally {
         if (!cancelled) setIsTncLoading(false)
       }
@@ -122,9 +125,14 @@ function ChatContainer() {
   const handleAcceptTnC = useCallback(async () => {
     try {
       await validateSession()
-      await acceptTncApi(profileId, accessToken)
-      setIsTncAccepted(true)
-      useUserDataLocalStore.getState().setAcceptedTnC(true)
+      const result = await acceptTncApi(profileId, accessToken)
+
+      if (result?.is_tnc_accepted === true) {
+        setIsTncAccepted(true)
+        useUserDataLocalStore.getState().setAcceptedTnC(true)
+      } else {
+        console.error("[ChatContainer] TnC accept returned unexpected result:", result)
+      }
     } catch (error) {
       console.error("[ChatContainer] TnC accept failed:", error)
     }
