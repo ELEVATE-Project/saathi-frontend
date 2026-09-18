@@ -508,12 +508,6 @@ const DynamicVoiceChat = ({
             behavior,
           })
         }
-        if (lastChatBoundaryRef.current) {
-          lastChatBoundaryRef.current.scrollIntoView({
-            behavior,
-            block: "end",
-          })
-        }
       } catch (error) {
         console.error({ error })
       }
@@ -1529,23 +1523,20 @@ const DynamicVoiceChat = ({
     if (!vv || !isMobileVirtualKeyboard()) return
 
     const update = () => {
-      // Distance from the bottom of the visual viewport to the bottom of the layout viewport
+      // Only update the CSS variable for input bar positioning — no scrolling
       const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
       document.documentElement.style.setProperty('--vkb-offset', `${offset}px`)
-      // After the keyboard settles, scroll to the latest message
-      handleScrollToView('smooth')
     }
 
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
 
-    // Reset when component unmounts
     return () => {
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
       document.documentElement.style.removeProperty('--vkb-offset')
     }
-  }, [handleScrollToView])
+  }, [])
 
   /**
    * Dynamically adjust textarea height based on content
@@ -2737,17 +2728,8 @@ const DynamicVoiceChat = ({
                   }
                 }}
                 onFocus={() => {
-                  // On mobile, wait for the keyboard to fully open before scrolling.
-                  // Without the delay, the viewport hasn't shrunk yet and the scroll
-                  // target is still at the wrong position.
-                  if (isMobileVirtualKeyboard()) {
-                    setTimeout(() => handleScrollToView("smooth"), 300)
-                    setTimeout(() => handleScrollToView("smooth"), 600)
-                  } else {
-                    handleScrollToView("smooth")
-                    setTimeout(() => handleScrollToView("smooth"), 150)
-                    setTimeout(() => handleScrollToView("smooth"), 350)
-                  }
+                  // No scrolling on focus — let the keyboard open without
+                  // moving the page or chat position
                 }}
                 onKeyDown={e => {
                   if (e.key === "Enter") {
