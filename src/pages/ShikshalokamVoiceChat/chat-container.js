@@ -160,6 +160,10 @@ function ChatContainer() {
     if (isProfileComplete === false) {
       ;(async () => {
         try {
+          if(useChatStorage.getState().sessionId) {
+            setProfileSessionId(useChatStorage.getState().sessionId)
+            return
+          }
           const profileSession = await getSessionDetails()
           setProfileSessionId(profileSession.sessionid)
         } catch (err) {
