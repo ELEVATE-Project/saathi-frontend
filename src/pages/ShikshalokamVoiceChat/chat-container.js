@@ -21,6 +21,47 @@ import useChatDataLocalStore from "../../store/slices/chatData/chatDataLocal"
 import useUserDataLocalStore from "../../store/slices/userData/userDataLocal"
 import { env } from "utils/env"
 
+// ---------------------------------------------------------------------------
+// Profile-session persistence helpers
+//
+// The profile/onboarding popup runs inside a separate DynamicVoiceChat that
+// shares the same chatData localStorage store as the main chat.  Its session
+// ID must survive page refreshes so the user can continue an in-progress
+// onboarding rather than being sent back to the beginning every time.
+//
+// We persist the session ID to a per-user localStorage key.  Keying by
+// profileId ensures that a session created by User A is never accidentally
+// restored for User B after a logout+login cycle.
+// ---------------------------------------------------------------------------
+const PROFILE_SESSION_STORAGE_KEY = profileId =>
+  `saathi_profile_session_${profileId}`
+
+/** Read the persisted onboarding session ID for the given profile, or null. */
+const getPersistedProfileSessionId = profileId => {
+  if (!profileId) return null
+  try {
+    return localStorage.getItem(PROFILE_SESSION_STORAGE_KEY(profileId)) || null
+  } catch {
+    return null
+  }
+}
+
+/** Write the onboarding session ID to localStorage. */
+const setPersistedProfileSessionId = (profileId, sessionId) => {
+  if (!profileId || !sessionId) return
+  try {
+    localStorage.setItem(PROFILE_SESSION_STORAGE_KEY(profileId), sessionId)
+  } catch {}
+}
+
+/** Remove the persisted onboarding session ID (called on close/complete). */
+const clearPersistedProfileSessionId = profileId => {
+  if (!profileId) return
+  try {
+    localStorage.removeItem(PROFILE_SESSION_STORAGE_KEY(profileId))
+  } catch {}
+}
+
 function ChatContainer() {
   const navigate = useNavigate()
   const flowName = env.FLOW_NAME()
@@ -160,12 +201,24 @@ function ChatContainer() {
     if (isProfileComplete === false) {
       ;(async () => {
         try {
-          if(useChatStorage.getState().sessionId) {
-            setProfileSessionId(useChatStorage.getState().sessionId)
+          // 1. Check localStorage for a session created during a previous
+          //    visit — this is the primary restoration path after a refresh.
+          const persistedSessionId = getPersistedProfileSessionId(profileId)
+          if (persistedSessionId) {
+            setProfileSessionId(persistedSessionId)
+            setShowProfilePopup(true)
+            setProfileCheckDone(true)
             return
           }
+
+          // 2. Fallback: generate a new onboarding session and persist it.
           const profileSession = await getSessionDetails()
-          setProfileSessionId(profileSession.sessionid)
+          if (profileSession?.sessionid) {
+            setPersistedProfileSessionId(profileId, profileSession.sessionid)
+            setProfileSessionId(profileSession.sessionid)
+          } else {
+            console.error("[ChatContainer] profile session fetch returned no sessionid:", profileSession)
+          }
         } catch (err) {
           console.error("[ChatContainer] profile session fetch failed:", err)
         }
@@ -173,7 +226,41 @@ function ChatContainer() {
         setProfileCheckDone(true)
       })()
     } else {
-      setProfileCheckDone(true)
+      // Profile is already complete. However, if the user finished answering
+      // all onboarding questions and then refreshed the page BEFORE
+      // handleProfilePopupClose had a chance to run, localStorage still holds
+      // the stale onboarding session key and the chatData store may still point
+      // at that dead session — causing a blank/stuck loading screen on re-entry.
+      // Detect this and perform the same cleanup that handleProfilePopupClose
+      // would have done.
+      ;(async () => {
+        const staleSessionId = getPersistedProfileSessionId(profileId)
+        if (staleSessionId) {
+          // The key's existence is the definitive signal that the user finished
+          // all onboarding questions but refreshed before handleProfilePopupClose
+          // ran. The popup DVC writes chat history into the shared store but uses
+          // sessionOverride — it never touches store.sessionId — so comparing
+          // store.sessionId === staleSessionId is always false and the old guard
+          // was silently skipping the cleanup entirely.
+          clearPersistedProfileSessionId(profileId)
+          const store = useChatDataLocalStore.getState()
+          store.setChatHistory([])
+          setChatHistory([]) // also clear in-memory React state immediately
+          store.setIntroMessage(null)
+          store.setStrandStep(null)
+          store.setIsNewChatOpen(true)
+          store.setIsOldChatOpen(false)
+          store.setShowHomepage(true)
+          store.setSessionId(null)
+          try {
+            const session = await getSessionDetails()
+            store.setSessionId(session.sessionid)
+          } catch (err) {
+            console.error("[ChatContainer] stale-session recovery failed:", err)
+          }
+        }
+        setProfileCheckDone(true)
+      })()
     }
   }, [accessToken, profileId, isTncAccepted, isProfileComplete])
 
@@ -183,7 +270,12 @@ function ChatContainer() {
     setShowProfilePopup(false)
     setProfileSessionId(null)
 
-    // 2. Now clear the store — no other DVC instance is mounted to write back.
+    // 2. Clear the persisted onboarding session ID so that the next time the
+    //    profile check runs (e.g. after another login) a fresh session is
+    //    created rather than the now-completed one being restored.
+    clearPersistedProfileSessionId(profileId)
+
+    // 3. Now clear the store — no other DVC instance is mounted to write back.
     //    Use a microtask to ensure React has processed the unmount.
     await Promise.resolve()
     const store = useChatDataLocalStore.getState()
@@ -201,7 +293,7 @@ function ChatContainer() {
     } catch (error) {
       console.error("[handleProfilePopupClose] getSessionDetails failed:", error)
     }
-  }, [])
+  }, [profileId])
 
   useEffect(() => {
     const runSetup = async () => {
