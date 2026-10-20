@@ -991,9 +991,12 @@ const DynamicVoiceChat = ({
     // duplicate-guard below (flowHistory filter) prevents cross-flow contamination.
     // We therefore allow DB history to be loaded — this is required for session
     // restoration after a page refresh while onboarding is in progress.
-    // However, if there is no sessionId yet (popup still initialising), bail out
-    // early to avoid a DB request with an undefined session.
-    if (isPopupMode && !sessionId) {
+    // However, if there is no sessionOverride yet (popup still initialising),
+    // bail out early. We guard on sessionOverride specifically — not the computed
+    // sessionId — because sessionId falls back to storeSessionId (the main-chat
+    // session) when sessionOverride is absent. Using storeSessionId here would
+    // cause getChatsFromDB to fetch history for the wrong session.
+    if (isPopupMode && !sessionOverride) {
       if (accessToken) setIsLoading(false)
       return
     }

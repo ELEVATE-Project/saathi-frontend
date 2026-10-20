@@ -251,10 +251,14 @@ function ChatContainer() {
           store.setIsNewChatOpen(true)
           store.setIsOldChatOpen(false)
           store.setShowHomepage(true)
-          store.setSessionId(null)
           try {
             const session = await getSessionDetails()
-            store.setSessionId(session.sessionid)
+            if (session?.sessionid) {
+              store.setSessionId(null)
+              store.setSessionId(session.sessionid)
+            } else {
+              console.error("[ChatContainer] stale-session recovery: no sessionid returned")
+            }
           } catch (err) {
             console.error("[ChatContainer] stale-session recovery failed:", err)
           }
