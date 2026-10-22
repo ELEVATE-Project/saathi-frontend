@@ -986,11 +986,17 @@ const DynamicVoiceChat = ({
    * Transforms and batches chat messages to avoid duplicates
    */
   const handleCompanyChatCall = useCallback(async () => {
-    // Profile onboarding popup is always a fresh conversation — never load
-    // DB history, which belongs to the main chat's session and cannot be
-    // distinguished by flow type.  The popup's conversation comes purely
-    // from the WebSocket intro message + live Q&A.
-    if (isPopupMode) {
+    // In popup mode the sessionId is always the profile-specific sessionOverride
+    // passed from ProfileChatPopup.  DB messages are tagged with flowType so the
+    // duplicate-guard below (flowHistory filter) prevents cross-flow contamination.
+    // We therefore allow DB history to be loaded — this is required for session
+    // restoration after a page refresh while onboarding is in progress.
+    // However, if there is no sessionOverride yet (popup still initialising),
+    // bail out early. We guard on sessionOverride specifically — not the computed
+    // sessionId — because sessionId falls back to storeSessionId (the main-chat
+    // session) when sessionOverride is absent. Using storeSessionId here would
+    // cause getChatsFromDB to fetch history for the wrong session.
+    if (isPopupMode && !sessionOverride) {
       if (accessToken) setIsLoading(false)
       return
     }
@@ -1331,8 +1337,14 @@ const DynamicVoiceChat = ({
     ;(async () => {
       try {
         setIsLoading(true)
-        const existingHistory = getChatHistory()
+        // Filter to only this popup's own flow so that main-chat history
+        // (which belongs to a different flow) never incorrectly triggers an
+        // old-chat restore for the profile popup.
+        const existingFlowHistory = getChatHistory().filter(
+          msg => msgBelongsToFlow(msg, storageFlow)
+        )
         if (!sessionId) {
+          // No session at all — clear any stale history and start fresh.
           removeChatHistory()
           const session = await getSessionDetails()
           if (session?.sessionid) {
@@ -1343,14 +1355,17 @@ const DynamicVoiceChat = ({
           setIsOldChatOpen(false)
           setIsNewChatOpen(true)
           updateShowHomepage(true)
-        } else if (existingHistory.length > 0) {
-          // Reload mid-onboarding: restore existing conversation
+        } else if (existingFlowHistory.length > 0) {
+          // Session ID known + flow history already in store (e.g. page refresh
+          // mid-onboarding): restore the existing conversation without creating
+          // a new session.
           setIsOldChatOpen(true)
           setIsNewChatOpen(false)
         } else {
-          setIsOldChatOpen(false)
-          setIsNewChatOpen(true)
-          updateShowHomepage(true)
+          // Session ID known but no flow history yet (e.g. first popup open, or
+          // history was cleared after completing onboarding).  Fetch from DB.
+          setIsOldChatOpen(true)
+          setIsNewChatOpen(false)
         }
         setShouldFetchIntro(true)
         setIsStreamingComplete(true)
