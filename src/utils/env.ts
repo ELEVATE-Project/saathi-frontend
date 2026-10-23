@@ -1,8 +1,8 @@
 /**
  * Environment configuration utility
- * Supports both build-time (process.env) and runtime (window._env_) variables
+ * Supports both build-time (import.meta.env, via Vite's envPrefix) and runtime (window._env_) variables
  *
- * Priority: window._env_ > process.env
+ * Priority: window._env_ > import.meta.env
  */
 
 const getEnv = (key: string, defaultValue: string = "") => {
@@ -11,9 +11,11 @@ const getEnv = (key: string, defaultValue: string = "") => {
     return (window as any)._env_[key]
   }
 
-  // Fallback to build-time environment variables
-  if (process.env[key] !== undefined) {
-    return process.env[key]
+  // Fallback to build-time environment variables (Vite exposes REACT_APP_*
+  // keys here per vite.config.ts's envPrefix - there is no global `process`
+  // object in Vite's browser output, unlike webpack/CRA)
+  if (import.meta.env[key] !== undefined) {
+    return import.meta.env[key]
   }
 
   // Return default value if not found

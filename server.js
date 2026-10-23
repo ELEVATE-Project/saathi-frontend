@@ -5,7 +5,7 @@ const port = process.env.PORT || 3005;
 
 app.use('/', express.static(path.join(__dirname, 'build')));
 
-app.get('/*', (req, res) => {
+app.get('/{*path}', (req, res) => {
     res.header('Cache-Control', 'private, no-cache, no-store, must-revalidate');
     res.header('Expires', '-1');
     res.header('Pragma', 'no-cache');

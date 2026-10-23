@@ -68,7 +68,7 @@ function ChatContainer() {
   const { t } = useTranslation()
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.DEV) {
       console.log("[CHAT CONTAINER MOUNTED]", { pathname: window.location.pathname })
     }
   }, [])
