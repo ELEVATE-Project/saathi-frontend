@@ -234,6 +234,17 @@ const DynamicVoiceChat = ({
   const isLogoutNavigationRef = useRef(false)
   const hasStreamedRef = useRef(false)
   const quickReplyLockRef = useRef(new Set())
+  // Holds the last user message text to be resent when the socket reconnects
+  // after a page reload mid-response. Consumed once in onWebSocketOpen and
+  // cleared immediately so it never fires on subsequent reconnects.
+  const pendingUserMessageOnReloadRef = useRef(null)
+  // Tracks the last sessionId for which the reload-reconnect check was run.
+  // Prevents the effect from re-running every time hasPendingBotResponse changes
+  // (e.g. when the user sends a new message mid-session).
+  const evaluatedReloadSessionIdRef = useRef(null)
+  // Set by handleSendMessage before it queues an authenticate payload so that
+  // onWebSocketOpen knows the queue already has one and skips sending a duplicate.
+  const isAuthAlreadyQueuedRef = useRef(false)
 
   useEffect(() => {
     onProfileExtractedRef.current = onProfileExtracted
@@ -486,6 +497,11 @@ const DynamicVoiceChat = ({
     // and produce a corrupted duplicate entry in chatHistory.
     streamingBotMessageRef.current = null
 
+    // Skip authenticate if handleSendMessage already queued it via sendSocketMessage
+    // (socket was CONNECTING when handleSendMessage ran, so it went into the queue
+    // and was flushed just before this callback fires). On reconnects the queue is
+    // empty so isAuthAlreadyQueuedRef is false and we always send authenticate here.
+    if (!isAuthAlreadyQueuedRef.current) {
     sendSocketMessage({
       type: "authenticate",
       sessionid: sessionId,
@@ -497,6 +513,20 @@ const DynamicVoiceChat = ({
       bot_route: botRoute,
       flow_name: storageFlow,
     })
+    }
+    isAuthAlreadyQueuedRef.current = false
+
+    // If this reconnect was triggered by a page reload while waiting for a bot reply,
+    // resend the user message now that the socket is open and authenticated.
+    if (pendingUserMessageOnReloadRef.current) {
+      const pendingMsg = pendingUserMessageOnReloadRef.current
+      pendingUserMessageOnReloadRef.current = null
+      sendSocketMessage({
+        text: pendingMsg,
+        context: "",
+        asr_audio: null,
+      })
+    }
   }, [sessionId, profileToUse, searchParams, taskId, accessToken, chatLanguage, storageFlow, botRoute, flowInfo])
 
   const handleScrollToView = useCallback((behavior = "smooth") => {
@@ -763,6 +793,44 @@ const DynamicVoiceChat = ({
     }
   }, [isPopupMode, disconnectFromWebSocket])
 
+  // On page reload while waiting for a bot response, the JS heap is wiped but
+  // localStorage retains chat history. The last message is from the user with no
+  // matching bot reply. Automatically reconnect the socket and resend the user
+  // message so the server generates a response.
+  //
+  // Guards:
+  //  - In popup mode, wait until sessionOverride is passed so we don't evaluate
+  //    using the main-chat storeSessionId.
+  //  - Only runs once per sessionId (evaluatedReloadSessionIdRef) so it never re-triggers
+  //    when a new message is sent mid-session.
+  //  - Evaluates the first time both sessionId and flowInfo are available
+  //    (i.e. right after mount / session change, before the user can type).
+  useEffect(() => {
+    if (isPopupMode && !sessionOverride) return
+    if (!sessionId || !flowInfo?.websocket_url) return
+    if (isSocketConnected) return
+    // Already ran for this session — skip.
+    if (evaluatedReloadSessionIdRef.current === sessionId) return
+    evaluatedReloadSessionIdRef.current = sessionId
+
+    // Check the persisted chat history synchronously (getChatHistory reads Zustand
+    // store state directly, no re-render needed).
+    const history = getChatHistory().filter(
+      msg => msgBelongsToFlow(msg, storageFlow) &&
+             !String(msg.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG)
+    )
+    const lastChat = history[history.length - 1]
+    const lastUserMsg = [...history].reverse().find(m => m.source === CHAT_SOURCE.USER)
+
+    if (lastChat?.source !== CHAT_SOURCE.USER || !lastUserMsg?.msg) return
+
+    // Page was reloaded while waiting for a bot reply — reconnect and resend.
+    pendingUserMessageOnReloadRef.current = lastUserMsg.msg
+    connectToWebSocket()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, flowInfo?.websocket_url])
+
+
   useEffect(() => () => clearTimeout(pendingNewChatTimerRef.current), [])
 
   // ========================================================================
@@ -923,6 +991,10 @@ const DynamicVoiceChat = ({
     const userMsgCount = chat_history.filter(chat => chat.source === "user").length
     if (userMsgCount === 1 || !isSocketConnected) {
       connectToWebSocket()
+      // Flag that this connect was triggered by handleSendMessage, which also
+      // queues an authenticate below. onWebSocketOpen will see this flag and
+      // skip its own authenticate to avoid sending it twice.
+      isAuthAlreadyQueuedRef.current = true
       sendSocketMessage({
         type: "authenticate",
         sessionid: sessionId,
