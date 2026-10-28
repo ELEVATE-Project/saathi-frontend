@@ -1036,6 +1036,7 @@ const DynamicVoiceChat = ({
     // Only clear the textarea when the message came from it (not from a chip)
     if (!overrideText) {
       setTextMessage("")
+    }
       // Dismiss chips by recording the actual bot message ID that had chips.
       // Using Date.now() would fail to match when the next bot reply has no chips
       // (lastBotMsg would still point to the old message and chips would reappear).
@@ -1044,7 +1045,6 @@ const DynamicVoiceChat = ({
         chat => chat.source === CHAT_SOURCE.BOT && Array.isArray(chat.extra_content?.quick_reply_chips) && chat.extra_content.quick_reply_chips.length > 0
       )
       if (lastBotWithChips) setQuickReplySentForMsgId(lastBotWithChips.updated_at)
-    }
     return true
   }
 
@@ -2703,34 +2703,33 @@ const DynamicVoiceChat = ({
             autoComplete="off"
           >
             {/* Quick reply chips — above the input row, below the chat messages.
-                Two cases:
-                  1. WS connected + streaming done → show chips from last bot msg that has chips
-                  2. WS disconnected (history load/refresh) → show chips only if the very last
-                     message in history IS a bot message with chips (i.e. bot was waiting for reply) */}
+                Only show chips if the latest message in history is a bot message with chips,
+                and streaming is complete. If the last message is from the user (waiting for bot reply,
+                or after reload), chips must never be shown. */}
             {(() => {
-              let lastBotMsg
               const history = filteredChatHistory ?? []
 
-              if (isSocketConnected) {
-                // Live session: show chips once streaming has finished
-                if (!isStreamingComplete) return null
-                lastBotMsg = [...history].reverse().find(
-                  chat => chat.source === CHAT_SOURCE.BOT &&
-                    Array.isArray(chat.extra_content?.quick_reply_chips) &&
-                    chat.extra_content.quick_reply_chips.length > 0
-                )
-              } else {
-                // History load / WS not yet connected:
-                // Only show chips if the last real message in history is a bot msg with chips
-                const filtered = history.filter(c => c.updated_at !== CHAT_SPECIAL_IDS.INTRO_MSG)
-                const lastMsg = filtered[filtered.length - 1]
+              // If socket is connected and bot streaming is underway, don't show chips
+              if (isSocketConnected && !isStreamingComplete) return null
+
+              // Filter out intro message placeholders to get real conversation items
+              const filtered = history.filter(
+                c => !String(c.updated_at).startsWith(CHAT_SPECIAL_IDS.INTRO_MSG)
+              )
+              const lastMsg = filtered.length > 0 ? filtered[filtered.length - 1] : history[0]
+
+              // If the last message in history is from the user (e.g. user selected a chip or sent a message,
+              // or page was reloaded while waiting for a bot reply), NEVER show chips.
+              if (!lastMsg || lastMsg.source === CHAT_SOURCE.USER) return null
+
+              // Chips can only belong to the latest bot message
+              let lastBotMsg = null
                 if (
                   lastMsg?.source === CHAT_SOURCE.BOT &&
                   Array.isArray(lastMsg?.extra_content?.quick_reply_chips) &&
                   lastMsg.extra_content.quick_reply_chips.length > 0
                 ) {
                   lastBotMsg = lastMsg
-                }
               }
 
               const chips = lastBotMsg?.extra_content?.quick_reply_chips ?? []
