@@ -865,6 +865,10 @@ html, body {
     -webkit-overflow-scrolling: touch;
 }
 
+.custom-voice-chat-chats .table-responsive-wrapper:focus:not(:focus-visible) {
+    outline: none;
+}
+
 .custom-voice-chat-chats .table-responsive-wrapper table {
     width: 100%;
 }
