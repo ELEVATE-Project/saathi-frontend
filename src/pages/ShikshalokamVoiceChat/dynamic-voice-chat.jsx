@@ -2927,8 +2927,19 @@ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, han
           {userType === CHAT_SOURCE.USER ? (
             <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</span>
           ) : (
-            <ReactMarkdown children={sanitizedContent} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="prose max-w-none" />
-          )}
+          <ReactMarkdown
+                        children={sanitizedContent}
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        className="prose max-w-none"
+                        components={{
+                          table: ({ node, ...props }) => (
+                            <div className="table-responsive-wrapper">
+                              <table {...props} />
+                            </div>
+                          ),
+                        }}
+                      />          )}
         </div>
       </div>
     </div>
