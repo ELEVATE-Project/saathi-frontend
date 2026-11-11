@@ -857,6 +857,27 @@ html, body {
     /* min-width: 100% removed — that's what was forcing full intrinsic width */
 }
 
+/* Responsive markdown table wrapper */
+.custom-voice-chat-chats .table-responsive-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.custom-voice-chat-chats .table-responsive-wrapper:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.custom-voice-chat-chats .table-responsive-wrapper table {
+    width: 100%;
+}
+
+.custom-voice-chat-chats .table-responsive-wrapper th,
+.custom-voice-chat-chats .table-responsive-wrapper td {
+    min-width: 140px;
+}
+
 .div53 {
 
     background-color: rgba(255, 251, 235, 1) !important;
