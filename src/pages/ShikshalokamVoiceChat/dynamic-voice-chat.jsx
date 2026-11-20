@@ -2877,6 +2877,19 @@ const DynamicVoiceChat = ({
 
 export default DynamicVoiceChat
 
+const markdownComponents = {
+  table: ({ node, ...props }) => (
+    <div
+      className="table-responsive-wrapper"
+      role="region"
+      aria-label="Scrollable table"
+      tabIndex={0}
+    >
+      <table {...props} />
+    </div>
+  ),
+}
+
 function ChatMessage({ userType, message, name, recording, handleOnSpeaking, handleOnStopSpeaking, isPlaying, botNameToDisplay, isStreamingComplete, setNotMute, setSpeakerEnabled, chat, staticMessage, chatId }) {
   let sanitizedContent = DOMPurify.sanitize(message)
   return (
@@ -2927,7 +2940,13 @@ function ChatMessage({ userType, message, name, recording, handleOnSpeaking, han
           {userType === CHAT_SOURCE.USER ? (
             <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</span>
           ) : (
-            <ReactMarkdown children={sanitizedContent} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="prose max-w-none" />
+          <ReactMarkdown
+                        children={sanitizedContent}
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        className="prose max-w-none"
+                        components={markdownComponents}
+            />
           )}
         </div>
       </div>
