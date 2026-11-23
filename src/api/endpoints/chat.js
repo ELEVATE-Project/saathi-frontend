@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "constants/urls"
 import { apiClient } from "../client"
+import { getAuthHeaders } from "../client/authHeaders"
 
 /**
  * Generate a new session
@@ -45,13 +46,14 @@ export const getChatSessionApi = async data => {
 
   const response = await apiClient.get(API_ENDPOINTS.GET_CHAT_SESSION, {
     params: { ...params, ordering: "-updated_at", limit: 100 },
+    headers: getAuthHeaders(),
   })
   return response
 }
 
 export const fetchChatSessionPageApi = async url => {
   const parsed = new URL(url)
-  const response = await apiClient.get(parsed.pathname + parsed.search)
+  const response = await apiClient.get(parsed.pathname + parsed.search, { headers: getAuthHeaders() })
   return response
 }
 
